@@ -2,20 +2,25 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>GLOB-OPS // Sélection d'interface</title>
+    <title>TSSR-OPS // Portail d'Entraînement SOC & SysAdmin</title>
     <style>
-        body { background: #141414; color: #ff9d00; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { border: 1px solid #ff9d00; padding: 30px; text-align: center; }
-        a { color: #33ff33; display: block; margin: 15px 0; text-decoration: none; font-weight: bold; }
-        a:hover { text-decoration: underline; }
+        body { background: #0f1419; color: #e6edf3; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { border: 1px solid #30363d; background: #161b22; padding: 36px 44px; text-align: center; border-radius: 6px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+        h2 { color: #39c5cf; margin-top: 0; letter-spacing: 1px; }
+        p { color: #7d8590; margin-bottom: 24px; }
+        a { color: #3fb950; display: block; margin: 14px 0; padding: 10px 16px; border: 1px solid #30363d; border-radius: 4px; text-decoration: none; font-weight: bold; transition: all 0.15s; }
+        a:hover { border-color: #39c5cf; color: #39c5cf; background: rgba(57, 197, 207, 0.08); }
+        .regex-link { color: #bc8cff; }
+        .regex-link:hover { border-color: #bc8cff; color: #bc8cff; background: rgba(188, 140, 255, 0.08); }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2>GLOB-OPS // SÉLECTEUR DE MAINFRAME</h2>
-        <p>Choisis ton interface d'entraînement :</p>
-        <a href="./terminal/">[ 1 ] Version Terminal Minimaliste (CLI)</a>
-        <a href="./graphique/">[ 2 ] Version Graphique (GUI)</a>
+        <h2>TSSR-OPS // SÉLECTEUR DE SIMULATEUR</h2>
+        <p>Choisis ton module d'entraînement Système, Réseau &amp; SOC :</p>
+        <a href="./terminal/">[ 1 ] GLOB-OPS // Simulateur Terminal (Globbing &amp; extglob — 48 Missions)</a>
+        <a href="./graphique/">[ 2 ] GLOB-OPS // Version Graphique (Dashboard Web — 36 Missions)</a>
+        <a class="regex-link" href="./regex/">[ 3 ] REGEX-OPS // Simulateur SIEM &amp; RegEx PCRE (48 Missions + Bonus)</a>
     </div>
 </body>
 </html>

