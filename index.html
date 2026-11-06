@@ -2,25 +2,190 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>TSSR-OPS // Portail d'Entraînement SOC & SysAdmin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSSR Training Center // Mainframe Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { background: #0f1419; color: #e6edf3; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { border: 1px solid #30363d; background: #161b22; padding: 36px 44px; text-align: center; border-radius: 6px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
-        h2 { color: #39c5cf; margin-top: 0; letter-spacing: 1px; }
-        p { color: #7d8590; margin-bottom: 24px; }
-        a { color: #3fb950; display: block; margin: 14px 0; padding: 10px 16px; border: 1px solid #30363d; border-radius: 4px; text-decoration: none; font-weight: bold; transition: all 0.15s; }
-        a:hover { border-color: #39c5cf; color: #39c5cf; background: rgba(57, 197, 207, 0.08); }
-        .regex-link { color: #bc8cff; }
-        .regex-link:hover { border-color: #bc8cff; color: #bc8cff; background: rgba(188, 140, 255, 0.08); }
+        :root {
+            --bg-color: #120f0a;
+            --font-color: #ffb000;
+            --dim-color: #996900;
+            --border-color: #4d3600;
+            --hover-color: #ffd875;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--font-color);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .portal-container {
+            width: 100%;
+            max-width: 800px;
+            border: 1px solid var(--font-color);
+            padding: 40px;
+            box-shadow: 0 0 30px rgba(255, 176, 0, 0.05);
+            background-color: rgba(18, 15, 10, 0.95);
+        }
+
+        .ascii-header {
+            color: var(--font-color);
+            font-weight: bold;
+            font-size: 11px;
+            line-height: 1.2;
+            white-space: pre;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .system-info {
+            color: var(--dim-color);
+            margin-bottom: 30px;
+            font-size: 13px;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .menu-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .menu-item {
+            border: 1px solid var(--border-color);
+            padding: 14px 18px;
+            transition: all 0.2s ease;
+            background: rgba(77, 54, 0, 0.05);
+        }
+
+        .menu-item:hover {
+            border-color: var(--font-color);
+            background: rgba(255, 176, 0, 0.05);
+            transform: translateX(4px);
+        }
+
+        .menu-item a {
+            color: var(--font-color);
+            text-decoration: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .menu-item a:hover {
+            color: var(--hover-color);
+        }
+
+        .menu-desc {
+            font-size: 12px;
+            color: var(--dim-color);
+            margin-top: 4px;
+            font-weight: normal;
+        }
+
+        .tag {
+            font-size: 11px;
+            padding: 2px 6px;
+            border: 1px solid var(--border-color);
+            color: var(--dim-color);
+        }
+
+        .menu-item:hover .tag {
+            border-color: var(--font-color);
+            color: var(--font-color);
+        }
+
+        .footer-prompt {
+            margin-top: 35px;
+            font-size: 13px;
+            color: var(--dim-color);
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background-color: var(--font-color);
+            animation: blink 1s infinite;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>TSSR-OPS // SÉLECTEUR DE SIMULATEUR</h2>
-        <p>Choisis ton module d'entraînement Système, Réseau &amp; SOC :</p>
-        <a href="./terminal/">[ 1 ] GLOB-OPS // Simulateur Terminal (Globbing &amp; extglob — 48 Missions)</a>
-        <a href="./graphique/">[ 2 ] GLOB-OPS // Version Graphique (Dashboard Web — 36 Missions)</a>
-        <a class="regex-link" href="./regex/">[ 3 ] REGEX-OPS // Simulateur SIEM &amp; RegEx PCRE (48 Missions + Bonus)</a>
+
+    <div class="portal-container">
+        <div class="ascii-header">
+████████╗███████╗███████╗███████╗    ████████╗██████0╗  █████╗ ██╗█████╗ ██████╗ 
+╚══██╔══╝██╔════╝██╔════╝██╔════╝    ╚══██╔══╝██╔══██╗██╔══██╗██║██╔══██╗██╔════╝ 
+   ██║   ███████╗███████╗███████╗       ██║   ██████╔╝███████║██║██║  ██║██║  ███╗
+   ██║   ╚════██║╚════██║╚════██║       ██║   ██╔══██╗██╔══██║██║██║  ██║██║   ██║
+   ██║   ███████║███████║███████║       ██║   ██║  ██║██║  ██║██║██████╔╝╚██████╔╝
+   ╚═╝   ╚══════╝╚══════╝╚══════╝       ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═════╝  ╚═════╝ 
+        </div>
+
+        <div class="system-info">
+            [SYS_ID]: TSSR-TRAINING-MAINFRAME-V4<br>
+            [SECURITY_LEVEL]: ACCREDITED_OPERATOR<br>
+            [ACTIVE_THEME]: JENSEN (SARIF AMBER)
+        </div>
+
+        <ul class="menu-list">
+            <li class="menu-item">
+                <a href="./terminal/">
+                    <div>
+                        <div>[ 01 ] GLOB-OPS // Terminal Simulator</div>
+                        <div class="menu-desc">Maîtrise du globbing POSIX et des subtilités bash extglob (48 Missions)</div>
+                    </div>
+                    <span class="tag">CLI_MODE</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="./graphique/">
+                    <div>
+                        <div>[ 02 ] GLOB-OPS // Dashboard Web Graphique</div>
+                        <div class="menu-desc">Interface graphique de campagne et gestion des artefacts (36 Missions)</div>
+                    </div>
+                    <span class="tag">GUI_MODE</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="./regex/">
+                    <div>
+                        <div>[ 03 ] REGEX-OPS // SIEM & Packet Inspection</div>
+                        <div class="menu-desc">Entraînement avancé aux Expressions Régulières PCRE, X-Ray et Lookarounds (48 Missions)</div>
+                    </div>
+                    <span class="tag">SEC_OPS</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="footer-prompt">
+            root@tssr-center:~$ select training module...<span class="cursor"></span>
+        </div>
     </div>
+
 </body>
 </html>
