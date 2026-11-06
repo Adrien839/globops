@@ -3,90 +3,93 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GLOB-OPS // Terminal Training Mainframe</title>
+  <title>GLOB-OPS // SOC & NetAdmin Terminal Simulator</title>
+  <!-- Polices de terminal populaires -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-color: #141414;
-      --font-color: #00d9ff;
+      --c-bg: #0f1419;
+      --c-bar-bg: #090c10;
+      --c-fg: #e6edf3;
+      --c-dim: #7d8590;
+      --c-border: #30363d;
+      --c-cyan: #39c5cf;
+      --c-green: #3fb950;
+      --c-red: #ff7b72;
+      --c-yellow: #d29922;
+      --c-magenta: #bc8cff;
+      --c-blue: #58a6ff;
+      --term-font: 'JetBrains Mono', monospace;
+      --term-size: 14px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      background-color: var(--bg-color);
-      color: var(--font-color);
-      font-family: "Courier New", Courier, monospace;
-      font-size: 15px;
-      line-height: 1.55;
-      min-height: 100vh;
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--c-bg);
+      color: var(--c-fg);
+      font-family: var(--term-font);
+      font-size: var(--term-size);
+      line-height: 1.5;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      padding: 28px 20px;
       transition: background-color 0.15s, color 0.15s;
     }
 
-    h1.main-title {
-      font-size: 36px;
-      font-weight: bold;
-      letter-spacing: 1px;
-      margin-bottom: 22px;
-      text-align: center;
-      user-select: none;
-    }
-
-    .top-nav {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 22px;
-      margin-bottom: 20px;
-      font-size: 14px;
-      user-select: none;
-    }
-
-    .top-nav span {
-      cursor: pointer;
-      opacity: 0.85;
-    }
-
-    .top-nav span:hover {
-      opacity: 1;
-      text-decoration: underline;
-    }
-
-    /* Cadre unique minimaliste type NetWatch */
-    .terminal-frame {
+    /* Zone principale du terminal (95%+ de la hauteur verticale) */
+    .terminal-viewport {
+      flex: 1;
       width: 100%;
-      max-width: 1050px;
-      height: 76vh;
-      min-height: 480px;
-      border: 1px solid var(--font-color);
-      padding: 28px 34px;
       overflow-y: auto;
+      padding: 18px 26px 24px 26px;
       cursor: text;
-      display: flex;
-      flex-direction: column;
     }
 
     #term-output {
       white-space: pre-wrap;
       word-break: break-word;
+      max-width: 1150px;
     }
 
-    .log-line {
-      margin-bottom: 2px;
-    }
+    .log-line { margin-bottom: 1px; }
 
-    .dim { opacity: 0.65; }
+    /* Classes de coloration sémantique ANSI (comme le script .sh) */
+    .c-fg { color: var(--c-fg); }
+    .c-dim { color: var(--c-dim); }
+    .c-cyan { color: var(--c-cyan); }
+    .c-green { color: var(--c-green); }
+    .c-red { color: var(--c-red); }
+    .c-yellow { color: var(--c-yellow); }
+    .c-magenta { color: var(--c-magenta); }
+    .c-blue { color: var(--c-blue); }
     .bold { font-weight: bold; }
 
-    /* Ligne de prompt intégrée au flux */
+    .badge-tier {
+      background-color: var(--c-blue);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-theme {
+      background-color: var(--c-magenta);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+
+    /* Ligne de prompt active */
     .prompt-line {
       display: flex;
       align-items: center;
-      margin-top: 2px;
-      flex-wrap: nowrap;
+      margin-top: 4px;
+      max-width: 1150px;
     }
 
     .prompt-prefix {
@@ -100,50 +103,221 @@
       background: transparent;
       border: none;
       outline: none;
-      color: var(--font-color);
+      color: var(--c-fg);
       font-family: inherit;
       font-size: inherit;
       line-height: inherit;
-      caret-color: var(--font-color);
+      caret-color: var(--c-cyan);
     }
 
-    /* Scrollbar minimaliste */
-    .terminal-frame::-webkit-scrollbar { width: 6px; }
-    .terminal-frame::-webkit-scrollbar-track { background: transparent; }
-    .terminal-frame::-webkit-scrollbar-thumb { background: var(--font-color); opacity: 0.4; }
+    /* Pied de page minimaliste style barre de statut tmux */
+    .status-footer {
+      height: 34px;
+      background-color: var(--c-bar-bg);
+      border-top: 1px solid var(--c-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 12px;
+      user-select: none;
+      flex-shrink: 0;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .footer-left, .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .tmux-tag {
+      background: var(--c-green);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
+
+    .nav-cmd {
+      color: var(--c-dim);
+      cursor: pointer;
+      padding: 2px 4px;
+      transition: color 0.12s;
+    }
+    .nav-cmd:hover {
+      color: var(--c-cyan);
+      text-decoration: underline;
+    }
+    .nav-cmd b { color: var(--c-fg); }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--c-dim);
+    }
+
+    .term-select {
+      background: var(--c-bg);
+      color: var(--c-fg);
+      border: 1px solid var(--c-border);
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      outline: none;
+    }
+    .term-select:hover, .term-select:focus {
+      border-color: var(--c-cyan);
+    }
+
+    /* Scrollbar discrète */
+    .terminal-viewport::-webkit-scrollbar { width: 8px; }
+    .terminal-viewport::-webkit-scrollbar-track { background: var(--c-bg); }
+    .terminal-viewport::-webkit-scrollbar-thumb {
+      background: var(--c-border);
+      border-radius: 4px;
+    }
+    .terminal-viewport::-webkit-scrollbar-thumb:hover { background: var(--c-dim); }
   </style>
 </head>
 <body>
 
-  <h1 class="main-title">GlobWatch</h1>
-
-  <nav class="top-nav">
-    <span onclick="execFromNav('start')">[ Campagne ]</span>
-    <span onclick="execFromNav('custom')">[ Custom ]</span>
-    <span onclick="execFromNav('stats')">[ Profil ]</span>
-    <span onclick="execFromNav('board')">[ Leaderboard ]</span>
-    <span onclick="execFromNav('memo')">[ Memo ]</span>
-    <span onclick="execFromNav('help')">[ Help ]</span>
-  </nav>
-
-  <main class="terminal-frame" id="term-box" onclick="focusPrompt()">
+  <!-- ESPACE TERMINAL PLEIN ÉCRAN -->
+  <main class="terminal-viewport" id="term-box" onclick="focusPrompt()">
     <div id="term-output"></div>
-    <form class="prompt-line" onsubmit="onPromptSubmit(event)" autocomplete="off">
-      <span class="prompt-prefix" id="prompt-label">user@mainframe:~$</span>
+    <form class="prompt-line" id="prompt-form" onsubmit="onPromptSubmit(event)" autocomplete="off">
+      <span class="prompt-prefix" id="prompt-label"></span>
       <input type="text" id="cmd-input" autofocus spellcheck="false" />
     </form>
   </main>
 
+  <!-- PIED DE PAGE STYLE TMUX (Navigation + Sélecteurs Thème / Police / Taille) -->
+  <footer class="status-footer">
+    <div class="footer-left">
+      <span class="tmux-tag">0:glob-ops*</span>
+      <span class="nav-cmd" onclick="execFromNav('start')">[<b>1</b>:Campagne]</span>
+      <span class="nav-cmd" onclick="execFromNav('custom')">[<b>2</b>:Custom]</span>
+      <span class="nav-cmd" onclick="execFromNav('stats')">[<b>3</b>:Profil]</span>
+      <span class="nav-cmd" onclick="execFromNav('board')">[<b>4</b>:Board]</span>
+      <span class="nav-cmd" onclick="execFromNav('memo')">[<b>5</b>:Mémo]</span>
+      <span class="nav-cmd" onclick="execFromNav('hint')">[<b>6</b>:Indice]</span>
+      <span class="nav-cmd" onclick="execFromNav('clear')">[<b>7</b>:Clear]</span>
+      <span class="nav-cmd" onclick="window.location.href='../'">[<b>↩</b>:Portail]</span>
+    </div>
+
+    <div class="footer-right">
+      <div class="ctrl-group">
+        <span>Thème:</span>
+        <select id="theme-select" class="term-select" onchange="setTheme(this.value)">
+          <optgroup label="Standards & Populaires">
+            <option value="bash-classic">Bash / Pop!_OS (Original .sh)</option>
+            <option value="dracula">Dracula</option>
+            <option value="catppuccin">Catppuccin Mocha</option>
+            <option value="tokyo-night">Tokyo Night</option>
+            <option value="gruvbox">Gruvbox Dark</option>
+            <option value="nord">Nord Polar</option>
+            <option value="solarized">Solarized Dark</option>
+          </optgroup>
+          <optgroup label="Thématiques & Rétro">
+            <option value="cyberpunk">Cyberpunk 2077</option>
+            <option value="matrix">Matrix CRT</option>
+            <option value="netwatch">NetWatch Amber</option>
+            <option value="win98">Windows 98 (MS-DOS)</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="ctrl-group">
+        <span>Police:</span>
+        <select id="font-select" class="term-select" onchange="setFontFamily(this.value)">
+          <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+          <option value="'Fira Code', monospace">Fira Code</option>
+          <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
+          <option value="'Source Code Pro', monospace">Source Code Pro</option>
+          <option value="'Share Tech Mono', monospace">Share Tech Mono (Rétro)</option>
+          <option value="'Courier New', Courier, monospace">Courier New</option>
+        </select>
+      </div>
+
+      <div class="ctrl-group">
+        <span>Taille:</span>
+        <select id="size-select" class="term-select" onchange="setFontSize(this.value)">
+          <option value="12px">12px</option>
+          <option value="13px">13px</option>
+          <option value="14px">14px</option>
+          <option value="15px">15px</option>
+          <option value="16px">16px</option>
+          <option value="18px">18px</option>
+          <option value="20px">20px</option>
+        </select>
+      </div>
+    </div>
+  </footer>
+
 <script>
 // =============================================================================
 // CONFIGURATION OPTIONNELLE DU LEADERBOARD PUBLIC (SUPABASE REST API)
-// Laisse vide pour utiliser le classement local de démonstration.
 // =============================================================================
-const SUPABASE_URL = ""; // ex: "https://xyzcompany.supabase.co"
-const SUPABASE_KEY = ""; // ex: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+const SUPABASE_URL = "";
+const SUPABASE_KEY = "";
 
 // =============================================================================
-// 1. BASE DE DONNÉES DES 36 MISSIONS (N1..N4 | NET, SYS, SEC)
+// 1. PALETTES DE THÈMES SÉMANTIQUES (CONFORT VISUEL & CONTRASTE GARANTI)
+// =============================================================================
+const THEMES = {
+  "bash-classic": {
+    bg: "#0f1419", bar: "#090c10", fg: "#e6edf3", dim: "#7d8590", border: "#30363d",
+    cyan: "#39c5cf", green: "#3fb950", red: "#ff7b72", yellow: "#d29922", magenta: "#bc8cff", blue: "#58a6ff"
+  },
+  "dracula": {
+    bg: "#282a36", bar: "#191a21", fg: "#f8f8f2", dim: "#6272a4", border: "#44475a",
+    cyan: "#8be9fd", green: "#50fa7b", red: "#ff5555", yellow: "#f1fa8c", magenta: "#ff79c6", blue: "#bd93f9"
+  },
+  "catppuccin": {
+    bg: "#1e1e2e", bar: "#11111b", fg: "#cdd6f4", dim: "#6c7086", border: "#313244",
+    cyan: "#89dceb", green: "#a6e3a1", red: "#f38ba8", yellow: "#f9e2af", magenta: "#cba6f7", blue: "#89b4fa"
+  },
+  "tokyo-night": {
+    bg: "#1a1b26", bar: "#13141c", fg: "#c0caf5", dim: "#565f89", border: "#292e42",
+    cyan: "#7dcfff", green: "#9ece6a", red: "#f7768e", yellow: "#e0af68", magenta: "#bb9af7", blue: "#7aa2f7"
+  },
+  "gruvbox": {
+    bg: "#282828", bar: "#1d2021", fg: "#ebdbb2", dim: "#928374", border: "#3c3836",
+    cyan: "#8ec07c", green: "#b8bb26", red: "#fb4934", yellow: "#fabd2f", magenta: "#d3869b", blue: "#83a598"
+  },
+  "nord": {
+    bg: "#2e3440", bar: "#242933", fg: "#eceff4", dim: "#81a1c1", border: "#3b4252",
+    cyan: "#88c0d0", green: "#a3be8c", red: "#bf616a", yellow: "#ebcb8b", magenta: "#b48ead", blue: "#5e81ac"
+  },
+  "solarized": {
+    bg: "#002b36", bar: "#001f27", fg: "#93a1a1", dim: "#586e75", border: "#073642",
+    cyan: "#2aa198", green: "#859900", red: "#dc322f", yellow: "#b58900", magenta: "#d33682", blue: "#268bd2"
+  },
+  "cyberpunk": {
+    bg: "#0b001a", bar: "#05000d", fg: "#00f0ff", dim: "#7a5c99", border: "#ff0055",
+    cyan: "#00f0ff", green: "#00ff9f", red: "#ff0055", yellow: "#fcee09", magenta: "#ff00a0", blue: "#7000ff"
+  },
+  "matrix": {
+    bg: "#050d05", bar: "#020602", fg: "#70ff70", dim: "#1f661f", border: "#144514",
+    cyan: "#a8ffa8", green: "#00ff41", red: "#ff5555", yellow: "#d4ff00", magenta: "#50fa7b", blue: "#00cc33"
+  },
+  "netwatch": {
+    bg: "#14120e", bar: "#0a0907", fg: "#ffb000", dim: "#8c6200", border: "#4d3600",
+    cyan: "#ffd066", green: "#a6e22e", red: "#ff5533", yellow: "#ffe066", magenta: "#ff8c00", blue: "#e69500"
+  },
+  "win98": {
+    bg: "#000080", bar: "#c0c0c0", fg: "#ffffff", dim: "#aaaaaa", border: "#ffffff",
+    cyan: "#00ffff", green: "#55ff55", red: "#ff5555", yellow: "#ffff55", magenta: "#ff55ff", blue: "#5555ff"
+  }
+};
+
+// =============================================================================
+// 2. BASE DE DONNÉES DES 36 MISSIONS (N1..N4 | NET, SYS, SEC)
 // =============================================================================
 const MISSIONS = [
   { id: 1, diff: 1, theme: "NET", title: "Isolation de captures PCAP (?)",
@@ -401,7 +575,7 @@ const MISSIONS = [
 ];
 
 // =============================================================================
-// 2. MOTEUR AST BASH GLOB & EXTGLOB (IDENTIQUE À BASH LC_ALL=C)
+// 3. MOTEUR AST BASH GLOB & EXTGLOB (FIDÈLE À BASH LC_ALL=C)
 // =============================================================================
 const POSIX_CLASSES = {
   digit: "0123456789",
@@ -574,19 +748,15 @@ function bashGlobMatch(pattern, filename) {
 }
 
 // =============================================================================
-// 3. ÉTAT DU TERMINAL, PROFIL LOCAL & COMMANDES SHELL
+// 4. GESTION DU PROFIL, DES THÈMES ET DE L'AFFICHAGE ANSI
 // =============================================================================
-const STORAGE_KEY = "globwatch_v3_profile";
-const VALID_COLORS = {
-  orange: "#ff9d00", amber: "#ff9d00", green: "#33ff33", red: "#ff4444",
-  cyan: "#00e5ff", blue: "#4da6ff", white: "#f0f0f0", black: "#0a0a0a",
-  dark: "#141414", yellow: "#ffe600", magenta: "#ff66ff", matrix: "#00ff66"
-};
+const STORAGE_KEY = "glob_ops_v4_terminal";
 
 let profile = {
-  pseudo: "user",
-  bgColor: "#141414",
-  fontColor: "#ff9d00",
+  pseudo: "soc",
+  theme: "bash-classic",
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: "14px",
   campaignUnlocked: 1,
   bestScore: 0,
   totalScore: 0,
@@ -599,9 +769,10 @@ let profile = {
 };
 
 let state = {
-  active: false,       // true quand une mission est en cours
-  awaitingNext: false, // true quand une mission vient d'être résolue
-  wizardStep: 0,       // > 0 pendant la config 'custom'
+  busy: false,         // true pendant une animation asynchrone (ex: rm -rf /*)
+  active: false,       // true pendant une mission
+  awaitingNext: false, // true après réussite d'une mission
+  wizardStep: 0,
   wizardData: {},
   mode: "CAMPAIGN",
   playlist: [],
@@ -619,34 +790,74 @@ const outEl = document.getElementById('term-output');
 const inpEl = document.getElementById('cmd-input');
 const boxEl = document.getElementById('term-box');
 const promptLbl = document.getElementById('prompt-label');
+const promptForm = document.getElementById('prompt-form');
 
-function printLine(text = "", cls = "") {
-  const div = document.createElement('div');
-  div.className = "log-line" + (cls ? " " + cls : "");
-  div.textContent = text;
-  outEl.appendChild(div);
-  boxEl.scrollTop = boxEl.scrollHeight;
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
 }
 
-function printBlock(lines, cls = "") {
-  lines.forEach(l => printLine(l, cls));
+function printHtml(html = "", cls = "") {
+  const div = document.createElement('div');
+  div.className = "log-line" + (cls ? " " + cls : "");
+  div.innerHTML = html;
+  outEl.appendChild(div);
+  boxEl.scrollTop = boxEl.scrollHeight;
+  return div;
+}
+
+function printText(text = "", cls = "") {
+  printHtml(esc(text), cls);
+}
+
+function setTheme(themeKey, silent = false) {
+  if (!THEMES[themeKey]) return false;
+  profile.theme = themeKey;
+  const t = THEMES[themeKey];
+  const r = document.documentElement.style;
+  r.setProperty('--c-bg', t.bg);
+  r.setProperty('--c-bar-bg', t.bar);
+  r.setProperty('--c-fg', t.fg);
+  r.setProperty('--c-dim', t.dim);
+  r.setProperty('--c-border', t.border);
+  r.setProperty('--c-cyan', t.cyan);
+  r.setProperty('--c-green', t.green);
+  r.setProperty('--c-red', t.red);
+  r.setProperty('--c-yellow', t.yellow);
+  r.setProperty('--c-magenta', t.magenta);
+  r.setProperty('--c-blue', t.blue);
+  document.getElementById('theme-select').value = themeKey;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Thème appliqué : <span class="c-cyan bold">${esc(themeKey)}</span>`);
+  return true;
+}
+
+function setFontFamily(fontVal, silent = false) {
+  profile.fontFamily = fontVal;
+  document.documentElement.style.setProperty('--term-font', fontVal);
+  document.getElementById('font-select').value = fontVal;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Police modifiée : <span class="c-cyan bold">${esc(fontVal.split(',')[0])}</span>`);
+}
+
+function setFontSize(sizeVal, silent = false) {
+  const normalized = String(sizeVal).endsWith('px') ? sizeVal : `${sizeVal}px`;
+  profile.fontSize = normalized;
+  document.documentElement.style.setProperty('--term-size', normalized);
+  document.getElementById('size-select').value = normalized;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Taille de police : <span class="c-cyan bold">${esc(normalized)}</span>`);
 }
 
 function updatePromptLabel() {
-  const u = profile.pseudo || "user";
+  const u = esc(profile.pseudo || "soc");
   if (state.wizardStep > 0) {
-    promptLbl.textContent = `${u}@mainframe:~/custom$`;
+    promptLbl.innerHTML = `<span class="c-cyan bold">${u}@glob-ops</span>:<span class="c-blue bold">~/custom</span>$`;
   } else if (state.active) {
     const mid = state.playlist[state.stepIdx];
-    promptLbl.textContent = `${u}@glob-ops:mission-${String(mid).padStart(2, '0')}$`;
+    promptLbl.innerHTML = `<span class="c-cyan bold">${u}@glob-ops</span>:<span class="c-blue bold">mission-${String(mid).padStart(2, '0')}</span>$`;
   } else {
-    promptLbl.textContent = `${u}@mainframe:~$`;
+    promptLbl.innerHTML = `<span class="c-cyan bold">${u}@glob-ops</span>:<span class="c-blue bold">~</span>$`;
   }
-}
-
-function applyTheme() {
-  document.documentElement.style.setProperty('--bg-color', profile.bgColor);
-  document.documentElement.style.setProperty('--font-color', profile.fontColor);
 }
 
 function loadProfile() {
@@ -654,7 +865,9 @@ function loadProfile() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) profile = { ...profile, ...JSON.parse(saved) };
   } catch (e) {}
-  applyTheme();
+  setTheme(profile.theme, true);
+  setFontFamily(profile.fontFamily, true);
+  setFontSize(profile.fontSize, true);
   updatePromptLabel();
 }
 
@@ -664,10 +877,11 @@ function saveProfile() {
 }
 
 function focusPrompt() {
-  if (window.getSelection().toString() === "") inpEl.focus();
+  if (!state.busy && window.getSelection().toString() === "") inpEl.focus();
 }
 
 function execFromNav(cmd) {
+  if (state.busy) return;
   inpEl.value = cmd;
   handleInput(cmd);
   inpEl.value = "";
@@ -675,18 +889,31 @@ function execFromNav(cmd) {
 }
 
 // =============================================================================
-// 4. GESTION DES MISSIONS DANS LE FLUX DU TERMINAL
+// 5. BANNIÈRE ASCII & AFFICHAGE DES MISSIONS (STYLE .SH ORIGINAL)
 // =============================================================================
-function startCampaign(startAt) {
-  const s = startAt || profile.campaignUnlocked || 1;
-  state.playlist = [];
-  for (let i = s; i <= MISSIONS.length; i++) state.playlist.push(i);
-  state.mode = "CAMPAIGN";
-  state.stepIdx = 0;
-  state.sessionScore = 0;
-  state.active = true;
-  state.wizardStep = 0;
-  printMission();
+function drawAsciiHeader() {
+  const banner = [
+    "   ______ __     ____   ____         ____   ____   _____",
+    "  / ____// /    / __ \\ / __ )       / __ \\ / __ \\ / ___/",
+    " / / __ / /    / / / // __  |______/ / / // /_/ / \\__ \\ ",
+    "/ /_/ // /___ / /_/ // /_/ //_____/ /_/ // ____/ ___/ / ",
+    "\\____//_____/ \\____//_____/       \\____//_/     /____/  "
+  ].join("\n");
+
+  printHtml(`<span class="c-cyan bold">${esc(banner)}</span>`);
+  printHtml(`  <span class="c-dim">Simulateur TSSR &amp; SOC — Maîtrise du Globbing POSIX &amp; Bash extglob (v4.0)</span>`);
+  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+  printHtml(`  <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(2, '0')}/36</span>   │   <span class="bold">Campagne :</span> <span class="c-cyan bold">Niv. ${String(profile.campaignUnlocked).padStart(2, '0')}/36</span>   │   <span class="bold">Score Session :</span> <span class="c-yellow bold">${state.sessionScore} pts</span>`);
+  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+}
+
+function tierName(d) {
+  return {
+    1: "TIER 1 : TECHNICIEN RÉSEAU N1 (Globs Standards)",
+    2: "TIER 2 : ADMIN SYSTÈME N2 (Classes POSIX & Dotfiles)",
+    3: "TIER 3 : ANALYSTE SOC (Fondamentaux extglob)",
+    4: "TIER 4 : EXPERT FORENSICS / APT (Exclusions & Imbrications)"
+  }[d] || "MODE MIXTE";
 }
 
 function printMission() {
@@ -696,14 +923,11 @@ function printMission() {
     state.active = false;
     state.awaitingNext = false;
     updatePromptLabel();
-    printBlock([
-      "",
-      "========================================================================",
-      `[SESSION TERMINEE] Score Session : ${state.sessionScore} pts | Maitrise : ${profile.masteredIds.length}/36`,
-      "Tape 'submit' pour publier ton score sur le Leaderboard, ou 'menu'.",
-      "========================================================================",
-      ""
-    ]);
+    printText("");
+    printHtml(`<span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════╗</span>`);
+    printHtml(`<span class="c-green bold">║  🏆 SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(5)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(2, '0')}/36 missions     ║</span>`);
+    printHtml(`<span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════╝</span>`);
+    printHtml(`  Tape <span class="c-cyan bold">submit</span> pour publier ton score sur le Leaderboard, ou <span class="c-cyan bold">start</span>.`);
     return;
   }
 
@@ -713,24 +937,31 @@ function printMission() {
   state.startTimeMs = Date.now();
   updatePromptLabel();
 
-  const mast = profile.masteredIds.includes(m.id) ? " [MAITRISEE]" : "";
-  printLine("");
-  printLine("------------------------------------------------------------------------");
-  printLine(`[MISSION #${String(m.id).padStart(2, '0')}/36] ${m.title} (N${m.diff} | ${m.theme})${mast}`, "bold");
-  printLine("------------------------------------------------------------------------");
-  printLine(m.scenario);
-  printLine("");
+  const mastTag = profile.masteredIds.includes(m.id)
+    ? ` <span class="c-green bold">[✓ MAÎTRISÉE]</span>` : "";
 
-  const colWidth = 36;
-  printLine("TARGETS (a capturer) :".padEnd(colWidth) + "DECOYS (pieges a exclure) :", "bold");
-  const rows = Math.max(m.targets.length, m.decoys.length);
-  for (let i = 0; i < rows; i++) {
-    const t = m.targets[i] ? `  [+] ${m.targets[i]}` : "";
-    const d = m.decoys[i] ? `  [-] ${m.decoys[i]}` : "";
-    printLine(t.padEnd(colWidth) + d);
+  printText("");
+  printHtml(`  <span class="badge-tier"> ${esc(tierName(m.diff))} </span>  <span class="badge-theme"> ${esc(m.theme)} </span>${mastTag}`);
+  printHtml(`  <span class="c-cyan bold">Mission #${String(m.id).padStart(2, '0')} — ${esc(m.title)}</span> <span class="c-dim">(${state.stepIdx + 1}/${state.playlist.length})</span>`);
+  printText("");
+  printHtml(`  <span class="c-fg">${esc(m.scenario)}</span>`);
+  printText("");
+
+  // Tableau ASCII fidèle au script .sh avec couleurs sémantiques
+  printHtml(`  <span class="bold">Contenu du répertoire d'investigation (/tmp/glob_ops_sandbox) :</span>`);
+  printHtml(`  <span class="c-dim">┌──────────────────────────────────────┬──────────────────────────────────────┐</span>`);
+  printHtml(`  <span class="c-dim">│</span> <span class="c-green bold">[✓] CIBLES À CAPTURER (Targets)</span>      <span class="c-dim">│</span> <span class="c-red bold">[✗] PIÈGES À EXCLURE (Decoys)</span>        <span class="c-dim">│</span>`);
+  printHtml(`  <span class="c-dim">├──────────────────────────────────────┼──────────────────────────────────────┤</span>`);
+
+  const maxRows = Math.max(m.targets.length, m.decoys.length);
+  for (let i = 0; i < maxRows; i++) {
+    const tStr = (m.targets[i] || "").padEnd(36);
+    const dStr = (m.decoys[i] || "").padEnd(36);
+    printHtml(`  <span class="c-dim">│</span> <span class="c-green">${esc(tStr)}</span> <span class="c-dim">│</span> <span class="c-red">${esc(dStr)}</span> <span class="c-dim">│</span>`);
   }
-  printLine("");
-  printLine("Tape ton motif glob (ou 'hint', 'sol', 'memo', 'skip', 'goto <N>', 'exit').", "dim");
+  printHtml(`  <span class="c-dim">└──────────────────────────────────────┴──────────────────────────────────────┘</span>`);
+  printHtml(`  <span class="c-dim">Commandes : motif glob, hint, sol, memo, skip, goto &lt;1-36&gt;, clear, exit</span>`);
+  printText("");
 }
 
 function evaluateGlobAttempt(pattern) {
@@ -738,19 +969,20 @@ function evaluateGlobAttempt(pattern) {
   const m = MISSIONS.find(x => x.id === mid);
 
   if (/\s/.test(pattern)) {
-    printLine("Erreur : espaces interdits. Ecris UN SEUL motif glob unifie.");
+    printHtml(`  <span class="c-yellow">[!] Refusé : Les espaces sont interdits. Écris UN SEUL motif glob unifié.</span>`);
     return;
   }
   if (pattern.includes('{') && pattern.includes('}')) {
-    printLine("Piege : '{a,b}' est de la Brace Expansion, pas du globbing ! Utilise '@(a|b)'.");
+    printHtml(`  <span class="c-yellow">[!] Piège classique : '{a,b}' est de la Brace Expansion, pas du globbing !</span>`);
+    printHtml(`  <span class="c-dim">    En Bash, utilise l'opérateur extglob '@(a|b)'.</span>`);
     return;
   }
   if (pattern.includes('/')) {
-    printLine("Erreur : reste dans le repertoire courant (pas de '/').");
+    printHtml(`  <span class="c-yellow">[!] Refusé : Reste dans le répertoire courant (pas de '/').</span>`);
     return;
   }
   if (!/[*?\[(|!]/.test(pattern)) {
-    printLine("Attention : ce motif ne contient aucun operateur glob (*, ?, [...], extglob).");
+    printHtml(`  <span class="c-yellow">[!] Ce motif ne contient aucun opérateur de globbing (*, ?, [...], extglob).</span>`);
     return;
   }
 
@@ -765,12 +997,12 @@ function evaluateGlobAttempt(pattern) {
       if (bashGlobMatch(pattern, d)) fp.push(d);
     }
   } catch (err) {
-    printLine(`Erreur de syntaxe : ${err.message}`);
+    printHtml(`  <span class="c-red">[✗] Erreur de syntaxe : ${esc(err.message)}</span>`);
     return;
   }
 
   if (tp.length === 0 && fp.length === 0) {
-    printLine(`[✗] Aucun fichier ne correspond au motif : ${pattern}`);
+    printHtml(`  <span class="c-red">[✗] Aucun fichier ne correspond au motif :</span> <span class="bold">${esc(pattern)}</span>`);
     return;
   }
 
@@ -792,75 +1024,149 @@ function evaluateGlobAttempt(pattern) {
     saveProfile();
 
     state.awaitingNext = true;
-    printBlock([
-      "",
-      `>>> [✓] MISSION #${String(m.id).padStart(2, '0')} ACCOMPLIE ! (+${totalPts} pts | ${elapsed}s | Bonus vitesse: +${speed})`,
-      `    Ton motif         : ${pattern}`,
-      `    Solution optimale : ${m.solution}`,
-      `    Debriefing        : ${m.debrief}`,
-      "",
-      "Appuie sur [ENTREE] pour passer a la mission suivante..."
-    ]);
+    printText("");
+    printHtml(`  <span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════╗</span>`);
+    printHtml(`  <span class="c-green bold">║  [✓] MISSION #${String(m.id).padStart(2, '0')} ACCOMPLIE ! (+${totalPts} pts | ⏱ ${elapsed}s | Bonus vitesse: +${speed} pts)</span>`);
+    printHtml(`  <span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════╝</span>`);
+    printHtml(`  <span class="bold">Ton motif         :</span> <span class="c-green bold">${esc(pattern)}</span>`);
+    printHtml(`  <span class="bold">Solution optimale :</span> <span class="c-cyan bold">${esc(m.solution)}</span>`);
+    printText("");
+    printHtml(`  <span class="c-yellow bold">Débriefing Technique :</span>`);
+    printHtml(`  <span class="c-fg">${esc(m.debrief)}</span>`);
+    printText("");
+    printHtml(`  <span class="c-dim">👉 Appuie sur [ENTRÉE] pour passer à la mission suivante...</span>`);
     return;
   }
 
-  printLine(`Analyse pour '${pattern}' :`);
-  printLine(`  [✓] Cibles capturees (${tp.length}/${m.targets.length}) : ${tp.join(' ') || 'aucune'}`);
-  if (fp.length > 0) printLine(`  [✗] FAUX POSITIFS (${fp.length} piege(s)) : ${fp.join(' ')}`);
-  if (fn.length > 0) printLine(`  [!] Cibles manquees (${fn.length})  : ${fn.join(' ')}`);
+  printText("");
+  printHtml(`  <span class="bold">Résultat de l'analyse pour <span class="c-cyan">${esc(pattern)}</span> :</span>`);
+  if (tp.length > 0) {
+    printHtml(`    <span class="c-green bold">[✓] Cibles capturées (${tp.length}/${m.targets.length}) :</span> ${esc(tp.join('  '))}`);
+  }
+  if (fp.length > 0) {
+    printHtml(`    <span class="c-red bold">[✗] ALERTE FAUX POSITIFS (${fp.length} piège(s) touché(s)) :</span> ${esc(fp.join('  '))}`);
+  }
+  if (fn.length > 0) {
+    printHtml(`    <span class="c-yellow bold">[!] Cibles manquées (${fn.length}) :</span> ${esc(fn.join('  '))}`);
+  }
 }
 
 // =============================================================================
-// 5. LEADERBOARD (SUPABASE REST OU LOCAL FALLBACK)
+// 6. EASTER EGG ASYNCHRONE ANIMÉ (rm -rf /*)
 // =============================================================================
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function runReaperEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  const steps = [
+    { delay: 400,  html: `<span class="c-red bold">CRITICAL ERROR: UNAUTHORIZED ROOT DELETION ATTEMPT DETECTED.</span>` },
+    { delay: 850,  html: `<span class="c-yellow">&gt;&gt; Escalating threat level...</span>` },
+    { delay: 1100, html: `<span class="c-yellow">&gt;&gt; Escalate to sysadmin: <span class="c-red bold">FAILED</span> (sysadmin unresponsive).</span>` },
+    { delay: 950,  html: `<span class="c-red bold">&gt;&gt; Engaging DEFCON 2 Automated Retaliation Protocol.</span>` },
+    { delay: 1200, html: `<span class="c-cyan">[SYSTEM] Uplinking to secure military subnet (USCYBERCOM)...</span>` },
+    { delay: 1100, html: `<span class="c-green bold">[SECURE-LINK] CONNECTION ESTABLISHED.</span>` },
+    { delay: 800,  html: `<span class="c-magenta">root@pentagon.gov:~#</span> request_kinetic_strike --target=origin_ip` },
+    { delay: 1200, html: `<span class="c-dim">[AUTH] Awaiting POTUS biometric signature...</span>` },
+    { delay: 1300, html: `<span class="c-green">[AUTH] Biometric signature VERIFIED.</span>` },
+    { delay: 900,  html: `<span class="c-green bold">[AUTH] Authorization code: DELTA-TANGO-77 ACCEPTED.</span>` },
+    { delay: 1000, html: `<span class="c-yellow bold">&gt;&gt; UCAV MQ-9 Reaper drone deployment: CONFIRMED.</span>` },
+    { delay: 900,  html: `<span class="c-red bold">&gt;&gt; Target locked on origin IP: 44.152.241.194</span>` }
+  ];
+
+  for (const s of steps) {
+    await sleep(s.delay);
+    printHtml(s.html);
+  }
+
+  await sleep(700);
+  const etaLine = printHtml(`<span class="c-red bold">&gt;&gt; ETA to target impact: 00:04:30.</span>`);
+  for (let sec = 269; sec >= 265; sec--) {
+    await sleep(650);
+    const m = String(Math.floor(sec / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    etaLine.innerHTML = `<span class="c-red bold">&gt;&gt; ETA to target impact: 00:${m}:${s}.</span>`;
+  }
+
+  await sleep(600);
+  printHtml(`<span class="c-yellow bold">Please remain seated and do not leave the building.</span>`);
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+// =============================================================================
+// 7. LEADERBOARD & MÉMO TECHNIQUE
+// =============================================================================
+function showMemo() {
+  printText("");
+  printHtml(`  <span class="c-magenta bold">╔══════════════════════════ MÉMO GLOBBING &amp; EXTGLOB ══════════════════════════╗</span>`);
+  printHtml(`  <span class="bold">Globs Standards :</span>`);
+  printHtml(`    <span class="c-cyan bold">*</span>              Matche 0, 1 ou plusieurs caractères (sauf '.' initial)`);
+  printHtml(`    <span class="c-cyan bold">?</span>              Matche exactement 1 caractère quelconque`);
+  printHtml(`    <span class="c-cyan bold">[abc]  [0-9]</span>   Matche 1 caractère dans la liste ou la plage ASCII`);
+  printHtml(`    <span class="c-cyan bold">[!abc]</span>         Matche 1 caractère qui N'EST PAS dans la liste`);
+  printText("");
+  printHtml(`  <span class="bold">Classes POSIX (à placer DANS des crochets : [[:classe:]]) :</span>`);
+  printHtml(`    <span class="c-cyan bold">[[:digit:]]</span>    Chiffres [0-9]        <span class="c-cyan bold">[[:xdigit:]]</span>   Hexadécimal [0-9a-fA-F]`);
+  printHtml(`    <span class="c-cyan bold">[[:lower:]]</span>    Minuscules [a-z]      <span class="c-cyan bold">[[:upper:]]</span>    Majuscules [A-Z]`);
+  printHtml(`    <span class="c-cyan bold">[[:alnum:]]</span>    Alphanumérique        <span class="c-cyan bold">[[:punct:]]</span>    Ponctuation (!@#$%...)`);
+  printText("");
+  printHtml(`  <span class="bold">Opérateurs Étendus (shopt -s extglob) — listes séparées par '|' :</span>`);
+  printHtml(`    <span class="c-yellow bold">?(p1|p2)</span>       Matche <span class="bold">0 ou 1</span> occurrence des motifs listés (Optionnel)`);
+  printHtml(`    <span class="c-yellow bold">*(p1|p2)</span>       Matche <span class="bold">0, 1 ou N</span> occurrences des motifs listés`);
+  printHtml(`    <span class="c-yellow bold">+(p1|p2)</span>       Matche <span class="bold">1 ou N</span> occurrences (Au moins une !)`);
+  printHtml(`    <span class="c-yellow bold">@(p1|p2)</span>       Matche <span class="bold">exactement 1</span> des motifs listés`);
+  printHtml(`    <span class="c-yellow bold">!(p1|p2)</span>       Matche <span class="bold">tout SAUF</span> les motifs listés`);
+  printHtml(`  <span class="c-magenta bold">╚═════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
 async function showLeaderboard() {
-  printLine("Recuperation du Leaderboard TSSR/SOC...");
+  printHtml(`<span class="c-dim">Récupération du Leaderboard TSSR/SOC...</span>`);
   if (SUPABASE_URL && SUPABASE_KEY) {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=pseudo,score,mastered&order=score.desc&limit=15`, {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
       });
       if (res.ok) {
-        const rows = await res.json();
-        renderBoardTable(rows, "LEADERBOARD PUBLIC EN LIGNE");
+        renderBoardTable(await res.json(), "LEADERBOARD PUBLIC EN LIGNE");
         return;
       }
     } catch (e) {}
   }
-  // Classement local + joueur courant
   const list = [...profile.localBoard];
-  const existing = list.find(x => x.pseudo === profile.pseudo);
   const myBest = Math.max(profile.bestScore, profile.totalScore);
-  if (existing) {
-    existing.score = Math.max(existing.score, myBest);
-    existing.mastered = profile.masteredIds.length;
-  } else {
-    list.push({ pseudo: profile.pseudo, score: myBest, mastered: profile.masteredIds.length });
-  }
+  const ex = list.find(x => x.pseudo === profile.pseudo);
+  if (ex) { ex.score = Math.max(ex.score, myBest); ex.mastered = profile.masteredIds.length; }
+  else list.push({ pseudo: profile.pseudo, score: myBest, mastered: profile.masteredIds.length });
   list.sort((a, b) => b.score - a.score);
-  renderBoardTable(list.slice(0, 10), "LEADERBOARD (Mode Local - Configure SUPABASE_URL pour le mode Public)");
+  renderBoardTable(list.slice(0, 10), "LEADERBOARD (Mode Local)");
 }
 
 function renderBoardTable(rows, title) {
-  printLine("");
-  printLine(`=== ${title} ===`, "bold");
-  printLine("RANG  PSEUDO                SCORE       MAITRISE");
-  printLine("----  --------------------  ----------  --------");
+  printText("");
+  printHtml(`  <span class="c-cyan bold">=== ${esc(title)} ===</span>`);
+  printHtml(`  <span class="c-dim">RANG   PSEUDO                 SCORE        MAÎTRISE</span>`);
+  printHtml(`  <span class="c-dim">────   ────────────────────   ──────────   ────────</span>`);
   rows.forEach((r, idx) => {
-    const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(6);
-    const ps = String(r.pseudo).slice(0, 20).padEnd(22);
-    const sc = `${r.score} pts`.padEnd(12);
+    const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(7);
+    const ps = String(r.pseudo).slice(0, 20).padEnd(23);
+    const sc = `${r.score} pts`.padEnd(13);
     const ma = `${r.mastered}/36`;
-    printLine(`${rk}${ps}${sc}${ma}`);
+    printHtml(`  <span class="c-yellow bold">${esc(rk)}</span><span class="c-fg">${esc(ps)}</span><span class="c-green bold">${esc(sc)}</span><span class="c-cyan">${esc(ma)}</span>`);
   });
-  printLine("");
-  printLine("Astuce : tape 'nick <ton_pseudo>' puis 'submit' pour publier ton score.", "dim");
+  printHtml(`  <span class="c-dim">Commandes : 'nick &lt;pseudo&gt;' puis 'submit' pour publier ton score.</span>`);
+  printText("");
 }
 
 async function submitScoreToBoard() {
   const best = Math.max(profile.bestScore, profile.totalScore);
   if (best <= 0) {
-    printLine("Resous au moins une mission avant de publier ton score.");
+    printHtml(`<span class="c-yellow">[!] Résous au moins une mission avant de publier ton score.</span>`);
     return;
   }
   if (SUPABASE_URL && SUPABASE_KEY) {
@@ -872,28 +1178,37 @@ async function submitScoreToBoard() {
           "Authorization": `Bearer ${SUPABASE_KEY}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          pseudo: profile.pseudo,
-          score: best,
-          mastered: profile.masteredIds.length
-        })
+        body: JSON.stringify({ pseudo: profile.pseudo, score: best, mastered: profile.masteredIds.length })
       });
       if (res.ok) {
-        printLine(`[OK] Score de ${best} pts publie sous le pseudo '${profile.pseudo}' !`);
+        printHtml(`<span class="c-green bold">[✓] Score de ${best} pts publié sous '${esc(profile.pseudo)}' !</span>`);
         showLeaderboard();
         return;
       }
     } catch (e) {}
   }
-  printLine(`[OK] Score enregistre pour '${profile.pseudo}' (${best} pts | ${profile.masteredIds.length}/36).`);
+  printHtml(`<span class="c-green bold">[✓] Score enregistré pour '${esc(profile.pseudo)}' (${best} pts).</span>`);
   showLeaderboard();
 }
 
 // =============================================================================
-// 6. INTERPRÉTEUR DE COMMANDES SHELL PRINCIPAL
+// 8. INTERPRÉTEUR DE COMMANDES SHELL PRINCIPAL
 // =============================================================================
+function startCampaign(startAt) {
+  const s = startAt || profile.campaignUnlocked || 1;
+  state.playlist = [];
+  for (let i = s; i <= MISSIONS.length; i++) state.playlist.push(i);
+  state.mode = "CAMPAIGN";
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  printMission();
+}
+
 function onPromptSubmit(e) {
   e.preventDefault();
+  if (state.busy) return;
   const raw = inpEl.value;
   inpEl.value = "";
   handleInput(raw);
@@ -901,7 +1216,7 @@ function onPromptSubmit(e) {
 
 function handleInput(rawInput) {
   const cmd = rawInput.trim();
-  printLine(`${promptLbl.textContent} ${cmd}`);
+  printHtml(`${promptLbl.innerHTML} ${esc(cmd)}`);
 
   if (state.awaitingNext && cmd === "") {
     state.stepIdx++;
@@ -913,7 +1228,6 @@ function handleInput(rawInput) {
   cmdHistory.unshift(cmd);
   histIdx = -1;
 
-  // Assistant interactif du mode Custom
   if (state.wizardStep > 0) {
     handleCustomWizard(cmd);
     return;
@@ -923,141 +1237,84 @@ function handleInput(rawInput) {
   const base = parts[0].toLowerCase();
   const arg = parts.slice(1).join(" ");
 
-  // Commandes globales disponibles partout (comme dans NetWatch)
   if (base === "help" || base === "man") {
-    printBlock([
-      "available commands :",
-      "  start / camp       : lancer la campagne au niveau debloque (" + profile.campaignUnlocked + "/36)",
-      "  goto <1-36>        : sauter directement a une mission specifique",
-      "  custom             : generer une partie aleatoire (difficulte, theme, nombre)",
-      "  stats / tree       : afficher ta progression et l'arborescence des missions",
-      "  board              : afficher le classement (Leaderboard)",
-      "  nick <pseudo>      : definir ton pseudo (actuel: " + profile.pseudo + ")",
-      "  submit             : envoyer ton score sur le Leaderboard",
-      "  memo               : afficher le manuel technique globbing & extglob",
-      "  font <color>       : changer la couleur du texte (orange, green, cyan, red, white...)",
-      "  bg <color>         : changer la couleur de fond (dark, black, white, #hex...)",
-      "  clear              : effacer l'ecran du terminal",
-      "  hint / sol / skip  : (en mission) indice, solution, ou passer la mission"
-    ]);
+    printText("");
+    printHtml(`  <span class="c-cyan bold">COMMANDES DISPONIBLES :</span>`);
+    printHtml(`    <span class="c-green bold">start</span> / <span class="c-green bold">camp</span>       : Lancer la campagne au niveau débloqué (${profile.campaignUnlocked}/36)`);
+    printHtml(`    <span class="c-green bold">goto &lt;1-36&gt;</span>        : Aller directement à une mission précise`);
+    printHtml(`    <span class="c-green bold">custom</span>             : Configurer une session aléatoire (difficulté, thème, nombre)`);
+    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">tree</span>       : Afficher ta progression et l'arborescence des paliers`);
+    printHtml(`    <span class="c-green bold">board</span> / <span class="c-green bold">submit</span>     : Voir le Leaderboard ou publier ton score`);
+    printHtml(`    <span class="c-green bold">nick &lt;pseudo&gt;</span>      : Changer ton pseudo (actuel : <span class="c-cyan">${esc(profile.pseudo)}</span>)`);
+    printHtml(`    <span class="c-green bold">memo</span>               : Afficher l'aide-mémoire Globbing &amp; extglob`);
+    printHtml(`    <span class="c-green bold">theme &lt;nom&gt;</span>        : Changer de thème (${Object.keys(THEMES).join(', ')})`);
+    printHtml(`    <span class="c-green bold">size &lt;12-20&gt;</span>       : Changer la taille de police (ex: size 16)`);
+    printHtml(`    <span class="c-green bold">clear</span>              : Nettoyer le terminal et réafficher la bannière`);
+    printText("");
     return;
   }
 
-  if (base === "clear" || base === "cls") {
+  if (base === "clear" || base === "cls" || base === "banner") {
     outEl.innerHTML = "";
+    drawAsciiHeader();
     if (state.active) printMission();
     return;
   }
 
-  if (base === "font") {
-    if (!arg || arg === "--help") {
-      printLine("Usage: font <color>. Available: orange, green, cyan, red, yellow, magenta, white, matrix, or #hex.");
-      return;
+  if (base === "theme") {
+    if (!arg || !setTheme(arg.toLowerCase())) {
+      printHtml(`  Thèmes disponibles : <span class="c-cyan">${Object.keys(THEMES).join(', ')}</span>`);
     }
-    const c = VALID_COLORS[arg.toLowerCase()] || (arg.startsWith('#') ? arg : null);
-    if (!c) {
-      printLine(`Unknown color: ${arg}`);
-      return;
-    }
-    profile.fontColor = c;
-    applyTheme();
-    saveProfile();
-    printLine(`Font color set to ${arg}.`);
     return;
   }
 
-  if (base === "bg") {
-    if (!arg || arg === "--help") {
-      printLine("Usage: bg <color>. Available: dark, black, white, or #hex.");
+  if (base === "size") {
+    const sz = parseInt(arg, 10);
+    if (!sz || sz < 11 || sz > 24) {
+      printHtml(`  Usage : <span class="c-cyan">size &lt;12-20&gt;</span>`);
       return;
     }
-    const c = VALID_COLORS[arg.toLowerCase()] || (arg.startsWith('#') ? arg : null);
-    if (!c) {
-      printLine(`Unknown color: ${arg}`);
-      return;
-    }
-    profile.bgColor = c;
-    applyTheme();
-    saveProfile();
-    printLine(`Background color set to ${arg}.`);
+    setFontSize(`${sz}px`);
     return;
   }
 
-  // Easter Egg NetWatch conservé !
+  // Easter Egg animé rm -rf
   if (cmd === "rm -rf") {
-    printLine("rm: permission denied");
+    printHtml(`<span class="c-red">rm: permission denied</span>`);
     return;
   }
   if (cmd.startsWith("rm -rf /")) {
-    printBlock([
-      "CRITICAL ERROR: UNAUTHORIZED ROOT DELETION ATTEMPT DETECTED.",
-      ">> Escalating threat level...",
-      ">> Escalate to sysadmin: FAILED (sysadmin unresponsive).",
-      ">> Engaging DEFCON 2 Automated Retaliation Protocol.",
-      "[SYSTEM] Uplinking to secure military subnet (USCYBERCOM)...",
-      "[SECURE-LINK] CONNECTION ESTABLISHED.",
-      "root@pentagon.gov:~$ request_kinetic_strike --target=origin_ip",
-      "[AUTH] Awaiting POTUS biometric signature...",
-      "[AUTH] Biometric signature VERIFIED.",
-      "[AUTH] Authorization code: DELTA-TANGO-77 ACCEPTED.",
-      ">> UCAV MQ-9 Reaper drone deployment: CONFIRMED.",
-      ">> Target locked on origin IP: 44.152.241.194",
-      ">> ETA to target impact: 00:04:30.",
-      "Please remain seated and do not leave the building."
-    ]);
+    runReaperEasterEgg();
     return;
   }
 
-  if (base === "memo") {
-    printBlock([
-      "=== MANUEL TECHNIQUE : GLOBBING POSIX & BASH EXTGLOB ===",
-      "  *              : 0, 1 ou N caracteres (sauf '.' initial d'un fichier cache)",
-      "  ?              : exactement 1 caractere quelconque (sauf '.' initial)",
-      "  [abc] [0-9]    : 1 caractere parmi la liste ou la plage ASCII",
-      "  [!abc]         : 1 caractere qui N'EST PAS dans la liste",
-      "  [[:xdigit:]]   : Hexadecimal [0-9a-fA-F]. Aussi: [:digit:], [:upper:], [:lower:], [:punct:]",
-      "  ?(p1|p2)       : 0 ou 1 occurrence des motifs (Optionnel)",
-      "  *(p1|p2)       : 0, 1 ou N occurrences des motifs",
-      "  +(p1|p2)       : 1 ou N occurrences (Au moins une occurrence !)",
-      "  @(p1|p2)       : exactement 1 des motifs listes",
-      "  !(p1|p2)       : tout SAUF les motifs listes (encadrable par prefixe/suffixe)"
-    ]);
-    return;
-  }
+  if (base === "memo") { showMemo(); return; }
 
   if (base === "tree" || base === "stats" || base === "profil") {
-    printBlock([
-      `Profil Joueur : ${profile.pseudo}`,
-      `|_ progression_campagne : Niveau ${profile.campaignUnlocked}/36`,
-      `|_ missions_maitrisees  : ${profile.masteredIds.length}/36`,
-      `|_ meilleur_score       : ${profile.bestScore} pts`,
-      `|_ score_cumule         : ${profile.totalScore} pts`,
-      `|_ paliers :`,
-      `   |_ [01..09] Tier 1 : Globs Standards (*, ?, [...], [!...] )`,
-      `   |_ [10..18] Tier 2 : Classes POSIX ([:xdigit:]) & Dotfiles`,
-      `   |_ [19..27] Tier 3 : Fondamentaux extglob (@, ?, *, +)`,
-      `   |_ [28..36] Tier 4 : Exclusions !() & Imbrications APT`
-    ]);
+    printText("");
+    printHtml(`  <span class="c-cyan bold">Profil Opérateur : ${esc(profile.pseudo)}</span>`);
+    printHtml(`  ├── <span class="bold">Progression Campagne :</span> Niveau ${profile.campaignUnlocked}/36`);
+    printHtml(`  ├── <span class="bold">Missions Maîtrisées  :</span> <span class="c-green bold">${profile.masteredIds.length}/36</span>`);
+    printHtml(`  ├── <span class="bold">Meilleur Score       :</span> <span class="c-yellow bold">${profile.bestScore} pts</span>`);
+    printHtml(`  └── <span class="bold">Architecture des Paliers :</span>`);
+    printHtml(`      ├── <span class="c-cyan">[01..09]</span> Tier 1 : Globs Standards (*, ?, [...], [!...] )`);
+    printHtml(`      ├── <span class="c-cyan">[10..18]</span> Tier 2 : Classes POSIX ([:xdigit:]) &amp; Dotfiles`);
+    printHtml(`      ├── <span class="c-cyan">[19..27]</span> Tier 3 : Fondamentaux extglob (@, ?, *, +)`);
+    printHtml(`      └── <span class="c-cyan">[28..36]</span> Tier 4 : Exclusions !() &amp; Imbrications APT`);
+    printText("");
     return;
   }
 
   if (base === "nick") {
-    if (!arg) { printLine("Usage: nick <ton_pseudo>"); return; }
-    profile.pseudo = arg.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+    if (!arg) { printHtml(`  Usage : <span class="c-cyan">nick &lt;ton_pseudo&gt;</span>`); return; }
+    profile.pseudo = arg.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "soc";
     saveProfile();
-    printLine(`Pseudo defini sur : ${profile.pseudo}`);
+    printHtml(`  <span class="c-green">[✓]</span> Pseudo défini sur : <span class="c-cyan bold">${esc(profile.pseudo)}</span>`);
     return;
   }
 
-  if (base === "board" || base === "leaderboard") {
-    showLeaderboard();
-    return;
-  }
-
-  if (base === "submit") {
-    submitScoreToBoard();
-    return;
-  }
+  if (base === "board" || base === "leaderboard") { showLeaderboard(); return; }
+  if (base === "submit") { submitScoreToBoard(); return; }
 
   if (base === "start" || base === "camp" || base === "campagne") {
     startCampaign(parseInt(arg, 10) || profile.campaignUnlocked);
@@ -1067,7 +1324,7 @@ function handleInput(rawInput) {
   if (base === "goto" || base === "cd") {
     const n = parseInt(arg, 10);
     if (!n || n < 1 || n > MISSIONS.length) {
-      printLine(`Usage: goto <1-${MISSIONS.length}>`);
+      printHtml(`  Usage : <span class="c-cyan">goto &lt;1-${MISSIONS.length}&gt;</span>`);
       return;
     }
     startCampaign(n);
@@ -1078,35 +1335,30 @@ function handleInput(rawInput) {
     state.active = false;
     state.wizardStep = 1;
     updatePromptLabel();
-    printBlock([
-      "=== CONFIGURATION D'OPERATION SUR-MESURE ===",
-      "Etape 1/3 - Choisis la difficulte [1=N1, 2=N2, 3=N3, 4=N4, ALL=Mixte] (defaut: ALL) :"
-    ]);
+    printText("");
+    printHtml(`  <span class="c-cyan bold">⚙️ CONFIGURATION D'OPÉRATION SUR-MESURE</span>`);
+    printHtml(`  Étape 1/3 — Difficulté [<span class="c-yellow">1</span>=N1, <span class="c-yellow">2</span>=N2, <span class="c-yellow">3</span>=N3, <span class="c-yellow">4</span>=N4, <span class="c-yellow">ALL</span>=Mixte] (défaut: ALL) :`);
     return;
   }
 
-  // Commandes spécifiques lorsqu'une mission est active
   if (state.active) {
     const m = MISSIONS.find(x => x.id === state.playlist[state.stepIdx]);
     if (base === "exit" || base === "quit" || base === "menu") {
       state.active = false;
       state.awaitingNext = false;
       updatePromptLabel();
-      printLine("Retour au shell principal. Tape 'help' pour voir les commandes.");
+      printHtml(`  <span class="c-dim">Session mise en pause. Tape 'start' pour reprendre ou 'help'.</span>`);
       return;
     }
-    if (base === "ls") {
-      printMission();
-      return;
-    }
+    if (base === "ls") { printMission(); return; }
     if (base === "hint" || base === "indice") {
       if (state.usedHint === 0) state.usedHint = 1;
-      printLine(`[INDICE SOC] : ${m.hint}`);
+      printHtml(`  <span class="c-yellow bold">💡 [INDICE SOC] :</span> ${esc(m.hint)}`);
       return;
     }
     if (base === "sol" || base === "solution") {
       state.usedHint = 2;
-      printLine(`[SOLUTION CANONIQUE] : ${m.solution}`);
+      printHtml(`  <span class="c-magenta bold">🔑 [SOLUTION CANONIQUE] :</span> <span class="bold">${esc(m.solution)}</span>`);
       return;
     }
     if (base === "skip" || base === "next") {
@@ -1119,13 +1371,11 @@ function handleInput(rawInput) {
       printMission();
       return;
     }
-
-    // Sinon, l'entrée est évaluée comme un motif glob !
     evaluateGlobAttempt(cmd);
     return;
   }
 
-  printLine(`Unknown command: ${base}. Type 'help' for available commands.`);
+  printHtml(`  <span class="c-red">bash: ${esc(base)}: commande introuvable.</span> Tape <span class="c-cyan bold">help</span> ou <span class="c-cyan bold">start</span>.`);
 }
 
 function handleCustomWizard(input) {
@@ -1133,24 +1383,21 @@ function handleCustomWizard(input) {
   if (val === "EXIT" || val === "QUIT") {
     state.wizardStep = 0;
     updatePromptLabel();
-    printLine("Configuration annulee.");
+    printHtml(`  <span class="c-dim">Configuration annulée.</span>`);
     return;
   }
-
   if (state.wizardStep === 1) {
     state.wizardData.diff = ["1", "2", "3", "4"].includes(val) ? Number(val) : "ALL";
     state.wizardStep = 2;
-    printLine("Etape 2/3 - Choisis le theme [NET, SYS, SEC, ALL] (defaut: ALL) :");
+    printHtml(`  Étape 2/3 — Thème [<span class="c-yellow">NET</span>, <span class="c-yellow">SYS</span>, <span class="c-yellow">SEC</span>, <span class="c-yellow">ALL</span>] (défaut: ALL) :`);
     return;
   }
-
   if (state.wizardStep === 2) {
     state.wizardData.theme = ["NET", "SYS", "SEC"].includes(val) ? val : "ALL";
     state.wizardStep = 3;
-    printLine("Etape 3/3 - Nombre de missions a tirer au sort [1-36] (defaut: 5) :");
+    printHtml(`  Étape 3/3 — Nombre de missions à tirer au sort [<span class="c-yellow">1-36</span>] (défaut: 5) :`);
     return;
   }
-
   if (state.wizardStep === 3) {
     const count = parseInt(val, 10) || 5;
     const pool = MISSIONS.filter(m =>
@@ -1194,13 +1441,14 @@ inpEl.addEventListener('keydown', (e) => {
   }
 });
 
-// Démarrage initial façon NetWatch
+// Initialisation au démarrage
 loadProfile();
-printBlock([
-  "GlobWatch Mainframe OS v3.0 (LC_ALL=C | shopt -s extglob nullglob)",
-  "available commands : start, custom, goto <1-36>, stats, board, nick <name>, memo, bg <color>, font <color>, help.",
-  "Type 'start' (or click [ Campagne ]) to launch mission #" + String(profile.campaignUnlocked).padStart(2, '0') + "."
-]);
+drawAsciiHeader();
+printText("");
+printHtml(`  Bienvenue sur le simulateur <span class="c-cyan bold">GLOB-OPS</span>. Environnement : <span class="c-green">LC_ALL=C | shopt -s extglob nullglob</span>`);
+printHtml(`  • Tape <span class="c-cyan bold">start</span> (ou clique sur <span class="c-cyan">[1:Campagne]</span> en bas) pour lancer la Mission #${String(profile.campaignUnlocked).padStart(2, '0')}.`);
+printHtml(`  • Tape <span class="c-cyan bold">custom</span> pour générer un entraînement sur-mesure, ou <span class="c-cyan bold">help</span> pour voir toutes les commandes.`);
+printText("");
 </script>
 </body>
 </html>
