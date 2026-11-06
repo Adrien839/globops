@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NET-OPS // Routing, Subnetting & Packet Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #120f0a;
+      --c-bar-bg: #090704;
+      --c-bar-fg: #ffb000;
+      --c-bar-dim: #996900;
+      --c-fg: #ffb000;
+      --c-dim: #996900;
+      --c-border: #4d3600;
+      --c-cyan: #ffd875;
+      --c-green: #a6e22e;
+      --c-red: #ff5533;
+      --c-yellow: #ffe066;
+      --c-magenta: #ff8c00;
+      --c-blue: #e69500;
+      --term-font: 'JetBrains Mono', monospace;
+      --term-size: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--c-bg);
+      color: var(--c-fg);
+      font-family: var(--term-font);
+      font-size: var(--term-size);
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .terminal-viewport {
+      flex: 1;
+      width: 100%;
+      overflow-y: auto;
+      padding: 24px 20px 32px 20px;
+      cursor: text;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .terminal-inner {
+      width: 100%;
+      max-width: 940px;
+      margin: 0 auto;
+    }
+
+    #term-output {
+      white-space: pre-wrap;
+      word-break: break-word;
+      width: 100%;
+    }
+
+    .log-line { margin-bottom: 1px; }
+
+    .c-fg { color: var(--c-fg); }
+    .c-dim { color: var(--c-dim); }
+    .c-cyan { color: var(--c-cyan); }
+    .c-green { color: var(--c-green); }
+    .c-red { color: var(--c-red); }
+    .c-yellow { color: var(--c-yellow); }
+    .c-magenta { color: var(--c-magenta); }
+    .c-blue { color: var(--c-blue); }
+    .bold { font-weight: bold; }
+
+    .badge-tier {
+      background-color: var(--c-blue);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-theme {
+      background-color: var(--c-magenta);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-gold {
+      background-color: var(--c-yellow);
+      color: #000000;
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+
+    .box-frame {
+      border: 1px solid var(--c-border);
+      background: rgba(255, 255, 255, 0.02);
+      padding: 10px 14px;
+      margin: 6px 0;
+      border-radius: 3px;
+    }
+
+    .prompt-line {
+      display: flex;
+      align-items: center;
+      margin-top: 4px;
+      width: 100%;
+    }
+
+    .prompt-prefix {
+      white-space: nowrap;
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    #cmd-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--c-fg);
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      caret-color: var(--c-cyan);
+    }
+
+    .status-footer {
+      height: 36px;
+      background-color: var(--c-bar-bg);
+      color: var(--c-bar-fg);
+      border-top: 1px solid var(--c-border);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 16px;
+      font-size: 12px;
+      user-select: none;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .footer-inner {
+      width: 100%;
+      max-width: 1140px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-left, .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .tmux-tag {
+      background: var(--c-cyan);
+      color: #000000;
+      font-weight: bold;
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
+
+    .nav-cmd {
+      color: var(--c-bar-dim);
+      cursor: pointer;
+      padding: 2px 4px;
+      transition: opacity 0.12s;
+    }
+    .nav-cmd:hover {
+      color: var(--c-bar-fg);
+      text-decoration: underline;
+    }
+    .nav-cmd b { color: var(--c-bar-fg); }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--c-bar-dim);
+    }
+
+    .term-select {
+      background: var(--c-bg);
+      color: var(--c-fg);
+      border: 1px solid var(--c-border);
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      outline: none;
+    }
+    .term-select:hover, .term-select:focus {
+      border-color: var(--c-cyan);
+    }
+
+    .terminal-viewport::-webkit-scrollbar { width: 8px; }
+    .terminal-viewport::-webkit-scrollbar-track { background: var(--c-bg); }
+    .terminal-viewport::-webkit-scrollbar-thumb {
+      background: var(--c-border);
+      border-radius: 4px;
+    }
+    .terminal-viewport::-webkit-scrollbar-thumb:hover { background: var(--c-dim); }
+  </style>
+</head>
+<body>
+
+  <!-- ESPACE TERMINAL CENTRÉ -->
+  <main class="terminal-viewport" id="term-box" onclick="focusPrompt()">
+    <div class="terminal-inner">
+      <div id="term-output"></div>
+      <form class="prompt-line" id="prompt-form" onsubmit="onPromptSubmit(event)" autocomplete="off">
+        <span class="prompt-prefix" id="prompt-label"></span>
+        <input type="text" id="cmd-input" autofocus spellcheck="false" />
+      </form>
+    </div>
+  </main>
+
+  <!-- PIED DE PAGE STYLE TMUX -->
+  <footer class="status-footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="tmux-tag">0:net-ops*</span>
+        <span class="nav-cmd" onclick="execFromNav('start')">[<b>1</b>:Campagne]</span>
+        <span class="nav-cmd" onclick="execFromNav('custom')">[<b>2</b>:Custom]</span>
+        <span class="nav-cmd" onclick="execFromNav('topo')">[<b>3</b>:Topo TP]</span>
+        <span class="nav-cmd" onclick="execFromNav('stats')">[<b>4</b>:Profil/Bonus]</span>
+        <span class="nav-cmd" onclick="execFromNav('board')">[<b>5</b>:Board]</span>
+        <span class="nav-cmd" onclick="execFromNav('memo')">[<b>6</b>:Mémo]</span>
+        <span class="nav-cmd" onclick="execFromNav('hint')">[<b>7</b>:Indice]</span>
+        <span class="nav-cmd" onclick="execFromNav('clear')">[<b>8</b>:Clear]</span>
+        <span class="nav-cmd" onclick="window.location.href='../'">[<b>↩</b>:Portail]</span>
+      </div>
+
+      <div class="footer-right">
+        <div class="ctrl-group">
+          <span>Thème:</span>
+          <select id="theme-select" class="term-select" onchange="setTheme(this.value)"></select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Police:</span>
+          <select id="font-select" class="term-select" onchange="setFontFamily(this.value)">
+            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+            <option value="'Fira Code', monospace">Fira Code</option>
+            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
+            <option value="'Source Code Pro', monospace">Source Code Pro</option>
+            <option value="'Share Tech Mono', monospace">Share Tech Mono (CRT)</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Taille:</span>
+          <select id="size-select" class="term-select" onchange="setFontSize(this.value)">
+            <option value="12px">12px</option>
+            <option value="13px">13px</option>
+            <option value="14px">14px</option>
+            <option value="15px">15px</option>
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+            <option value="20px">20px</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+<script>
+// =============================================================================
+// CONFIGURATION OPTIONNELLE DU LEADERBOARD PUBLIC (SUPABASE REST API)
+// =============================================================================
+const SUPABASE_URL = "";
+const SUPABASE_KEY = "";
+
+// =============================================================================
+// 1. PALETTES DE THÈMES (STANDARDS, SCI-FI, RÉTRO & BONUS DÉBLOCABLES)
+// =============================================================================
+const THEMES = {
+  "jensen": {
+    label: "Jensen (Sarif Amber - Défaut)", group: "Univers Sci-Fi & Cyber",
+    bg: "#120f0a", bar: "#090704", fg: "#ffb000", dim: "#996900", border: "#4d3600",
+    cyan: "#ffd875", green: "#a6e22e", red: "#ff5533", yellow: "#ffe066", magenta: "#ff8c00", blue: "#e69500"
+  },
+  "bash-classic": {
+    label: "Bash / Pop!_OS", group: "Standards Modernes",
+    bg: "#0f1419", bar: "#090c10", fg: "#e6edf3", dim: "#7d8590", border: "#30363d",
+    cyan: "#39c5cf", green: "#3fb950", red: "#ff7b72", yellow: "#d29922", magenta: "#bc8cff", blue: "#58a6ff"
+  },
+  "dracula": {
+    label: "Dracula", group: "Standards Modernes",
+    bg: "#282a36", bar: "#191a21", fg: "#f8f8f2", dim: "#6272a4", border: "#44475a",
+    cyan: "#8be9fd", green: "#50fa7b", red: "#ff5555", yellow: "#f1fa8c", magenta: "#ff79c6", blue: "#bd93f9"
+  },
+  "catppuccin": {
+    label: "Catppuccin Mocha", group: "Standards Modernes",
+    bg: "#1e1e2e", bar: "#11111b", fg: "#cdd6f4", dim: "#6c7086", border: "#313244",
+    cyan: "#89dceb", green: "#a6e3a1", red: "#f38ba8", yellow: "#f9e2af", magenta: "#cba6f7", blue: "#89b4fa"
+  },
+  "tokyo-night": {
+    label: "Tokyo Night", group: "Standards Modernes",
+    bg: "#1a1b26", bar: "#13141c", fg: "#c0caf5", dim: "#565f89", border: "#292e42",
+    cyan: "#7dcfff", green: "#9ece6a", red: "#f7768e", yellow: "#e0af68", magenta: "#bb9af7", blue: "#7aa2f7"
+  },
+  "gruvbox": {
+    label: "Gruvbox Dark", group: "Standards Modernes",
+    bg: "#282828", bar: "#1d2021", fg: "#ebdbb2", dim: "#928374", border: "#3c3836",
+    cyan: "#8ec07c", green: "#b8bb26", red: "#fb4934", yellow: "#fabd2f", magenta: "#d3869b", blue: "#83a598"
+  },
+  "nord": {
+    label: "Nord Polar", group: "Standards Modernes",
+    bg: "#2e3440", bar: "#242933", fg: "#eceff4", dim: "#81a1c1", border: "#3b4252",
+    cyan: "#88c0d0", green: "#a3be8c", red: "#bf616a", yellow: "#ebcb8b", magenta: "#b48ead", blue: "#5e81ac"
+  },
+  "solarized": {
+    label: "Solarized Dark", group: "Standards Modernes",
+    bg: "#002b36", bar: "#001f27", fg: "#93a1a1", dim: "#586e75", border: "#073642",
+    cyan: "#2aa198", green: "#859900", red: "#dc322f", yellow: "#b58900", magenta: "#d33682", blue: "#268bd2"
+  },
+  "case": {
+    label: "Case (Neuromancer)", group: "Univers Sci-Fi & Cyber",
+    bg: "#0b001a", bar: "#05000d", fg: "#e0fbfc", dim: "#8a6bbd", border: "#ff0055",
+    cyan: "#00f0ff", green: "#00ff9f", red: "#ff0055", yellow: "#fcee09", magenta: "#ff00a0", blue: "#b86bff"
+  },
+  "smith": {
+    label: "Smith (Matrix CRT)", group: "Univers Sci-Fi & Cyber",
+    bg: "#050d05", bar: "#020602", fg: "#70ff70", dim: "#267326", border: "#144514",
+    cyan: "#a8ffa8", green: "#00ff41", red: "#ff5555", yellow: "#d4ff00", magenta: "#50fa7b", blue: "#00cc33"
+  },
+  "vt100": {
+    label: "DEC VT100 (PDP-11 P1)", group: "Machines Historiques",
+    bg: "#061006", bar: "#030803", fg: "#33ff33", dim: "#1f991f", border: "#145214",
+    cyan: "#80ff80", green: "#33ff33", red: "#ff6644", yellow: "#ccff33", magenta: "#66ff99", blue: "#29cc29"
+  },
+  "ibm3270": {
+    label: "IBM 3270 (Mainframe)", group: "Machines Historiques",
+    bg: "#000000", bar: "#0d0d0d", fg: "#44ff44", dim: "#2b9348", border: "#0077b6",
+    cyan: "#00e5ff", green: "#44ff44", red: "#ff4444", yellow: "#ffff44", magenta: "#ff66ff", blue: "#48cae4"
+  },
+  "c64": {
+    label: "Commodore 64 (PETSCII)", group: "Machines Historiques",
+    bg: "#40318d", bar: "#352879", fg: "#a093e0", dim: "#7869c4", border: "#7869c4",
+    barFg: "#ffffff", barDim: "#bfce72",
+    cyan: "#6abfc6", green: "#9ae29b", red: "#ff8a7a", yellow: "#bfce72", magenta: "#d084bd", blue: "#ffffff"
+  },
+  "amiga": {
+    label: "Amiga Workbench 1.3", group: "Machines Historiques",
+    bg: "#0055aa", bar: "#ffffff", fg: "#ffffff", dim: "#aaccff", border: "#ff8800",
+    barFg: "#0055aa", barDim: "#002244",
+    cyan: "#00ffff", green: "#55ff55", red: "#ffaa88", yellow: "#ff8800", magenta: "#ffcc00", blue: "#ffffff"
+  },
+  "win98": {
+    label: "Windows 98 (MS-DOS)", group: "Machines Historiques",
+    bg: "#000080", bar: "#c0c0c0", fg: "#ffffff", dim: "#b8c4ff", border: "#ffffff",
+    barFg: "#000000", barDim: "#2b2b2b",
+    cyan: "#00ffff", green: "#55ff55", red: "#ff5555", yellow: "#ffff55", magenta: "#ff55ff", blue: "#80bfff"
+  },
+  // --- Thèmes Prestige à Débloquer ---
+  "cisco-ios": {
+    label: "Cisco Catalyst IOS (Console)", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Maîtrise 10 missions (Palier N2)",
+    bg: "#04120e", bar: "#020a07", fg: "#00f59b", dim: "#1b7a58", border: "#00a86b",
+    cyan: "#00e5ff", green: "#70ff00", red: "#ff4d4d", yellow: "#ffcc00", magenta: "#00bbf9", blue: "#00f5d4"
+  },
+  "wireshark": {
+    label: "Wireshark Packet Analyzer", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Maîtrise 20 missions (Palier N3)",
+    bg: "#121824", bar: "#0a0e17", fg: "#e2e8f0", dim: "#64748b", border: "#1e293b",
+    cyan: "#38bdf8", green: "#4ade80", red: "#f87171", yellow: "#facc15", magenta: "#c084fc", blue: "#60a5fa"
+  },
+  "bgp-core": {
+    label: "Tier-1 ISP BGP Looking Glass", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Maîtrise 30 missions (Palier N4)",
+    bg: "#09080d", bar: "#040307", fg: "#f8f9fa", dim: "#8c7a6b", border: "#ffb703",
+    cyan: "#8ecae6", green: "#52b788", red: "#e63946", yellow: "#ffb703", magenta: "#fb8500", blue: "#219ebc"
+  },
+  "pipboy": {
+    label: "RobCo Pip-Boy 3000", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Réussis un FAST-CONVERGENCE (< 7s du 1er coup)",
+    bg: "#07170b", bar: "#040d06", fg: "#2bfe72", dim: "#16853b", border: "#2bfe72",
+    cyan: "#99ffbb", green: "#2bfe72", red: "#ff6b6b", yellow: "#ffe66d", magenta: "#72efdd", blue: "#4ea8de"
+  },
+  "wargames": {
+    label: "WOPR (NORAD 1983)", group: "Bonus Déblocables", locked: true,
+    unlockHint: "Réalise une Série de 5 sans faute (Streak x5)",
+    bg: "#020b18", bar: "#01060d", fg: "#70e0ff", dim: "#2c6e91", border: "#00b4d8",
+    cyan: "#90e0ef", green: "#00f5d4", red: "#ff4d6d", yellow: "#ffd166", magenta: "#48cae4", blue: "#00b4d8"
+  }
+};
+
+// =============================================================================
+// 2. TOPOLOGIE DU TP "3 DOMAINES DE DIFFUSION" (POUR LE SIMULATEUR LIVE `sim`)
+// =============================================================================
+const TP_HOSTS = {
+  A1: { dom: "A", ip: "192.168.10.10", mask: "255.255.255.0", cidr: 24, gw: "192.168.10.254", note: "Config OK" },
+  A2: { dom: "A", ip: "192.168.10.20", mask: "255.255.255.0", cidr: 24, gw: "192.168.10.254", note: "Config OK" },
+  A3: { dom: "A", ip: "192.168.10.30", mask: "255.255.255.0", cidr: 24, gw: "192.168.10.1",   note: "Passerelle .1 inexistante !" },
+  A4: { dom: "A", ip: "192.168.10.40", mask: "255.255.0.0",   cidr: 16, gw: "192.168.10.254", note: "Masque /16 trop large !" },
+  A5: { dom: "A", ip: "192.168.10.50", mask: "255.255.255.0", cidr: 24, gw: "",               note: "Aucune passerelle !" },
+  A6: { dom: "A", ip: "192.168.20.60", mask: "255.255.255.0", cidr: 24, gw: "192.168.20.254", note: "IP du réseau B branchée dans A !" },
+
+  B1: { dom: "B", ip: "192.168.20.10", mask: "255.255.255.0", cidr: 24, gw: "192.168.20.254", note: "Config OK" },
+  B2: { dom: "B", ip: "192.168.20.20", mask: "255.255.255.0", cidr: 24, gw: "192.168.20.254", note: "Config OK" },
+  B3: { dom: "B", ip: "192.168.20.30", mask: "255.255.255.0", cidr: 24, gw: "192.168.10.254", note: "GW 192.168.10.254 hors sous-réseau !" },
+  B4: { dom: "B", ip: "192.168.20.40", mask: "255.255.255.0", cidr: 24, gw: "192.168.20.254", note: "Config OK" },
+  B5: { dom: "B", ip: "192.168.2.15",  mask: "255.255.255.0", cidr: 24, gw: "192.168.20.254", note: "Faute de frappe IP (.2.15 au lieu de .20.x) !" },
+  B6: { dom: "B", ip: "192.168.10.60", mask: "255.255.255.0", cidr: 24, gw: "192.168.20.254", note: "IP du réseau A branchée dans B !" },
+
+  C1: { dom: "C", ip: "172.16.5.10",   mask: "255.255.255.0",   cidr: 24, gw: "172.16.5.254", note: "Config OK" },
+  C2: { dom: "C", ip: "172.16.5.20",   mask: "255.255.255.0",   cidr: 24, gw: "172.16.5.254", note: "Config OK" },
+  C3: { dom: "C", ip: "172.16.5.30",   mask: "255.255.255.0",   cidr: 24, gw: "172.16.5.253", note: "Passerelle .253 inexistante !" },
+  C4: { dom: "C", ip: "172.16.5.40",   mask: "255.255.255.240", cidr: 28, gw: "172.16.5.254", note: "Masque /28 (.32 à .47), GW .254 hors plage !" },
+  C5: { dom: "C", ip: "172.16.5.45",   mask: "255.255.255.0",   cidr: 24, gw: "172.16.5.254", note: "Config OK" },
+  C6: { dom: "C", ip: "172.16.6.60",   mask: "255.255.0.0",     cidr: 16, gw: "172.16.5.254", note: "IP .6.60/16 : joint sa GW mais le routeur (/24) ne sait pas lui répondre !" }
+};
+
+const TP_ROUTER = {
+  A: { iface: "eth0", ip: "192.168.10.254", mask: "255.255.255.0", cidr: 24, net: "192.168.10.0" },
+  B: { iface: "eth1", ip: "192.168.20.254", mask: "255.255.255.0", cidr: 24, net: "192.168.20.0" },
+  C: { iface: "eth2", ip: "172.16.5.254",   mask: "255.255.255.0", cidr: 24, net: "172.16.5.0" }
+};
+
+// =============================================================================
+// 3. BASE DE DONNÉES DES 48 MISSIONS (5 PALIERS | SUB, ARP, CLI, RTE, SEC)
+// =============================================================================
+const MISSIONS = [
+  // ===========================================================================
+  // TIER 1 : ADRESSAGE IPv4, CIDR, TECHNIQUE DU PAS & VLSM (Missions 1 à 10)
+  // ===========================================================================
+  { id: 1, diff: 1, theme: "SUB", title: "Validité d'adresse hôte CIDR : 209.207.177.100/30",
+    scenario: "D'après le TP Sous-réseaux : analyse l'adresse 209.207.177.100/30. Est-elle attribuable à un hôte ? Calcule l'adresse du sous-réseau et son adresse de broadcast.",
+    diagram: [
+      "  Hôte candidat : 209.207.177.100/30   (Masque : 255.255.255.252)",
+      "  Astuce : Trouve le pas sur le 4e octet (2^(32-30)) ou tape 'ipcalc 209.207.177.100/30'."
+    ],
+    promptHint: "Format attendu : <OUI|NON> <IP_Réseau> <IP_Broadcast>",
+    accepted: ["non 209.207.177.100 209.207.177.103"],
+    canonical: "NON 209.207.177.100 209.207.177.103",
+    hint: "Un /30 a un pas de 4 (0, 4, 8... 96, 100, 104). 100 est un multiple exact de 4 : c'est donc l'adresse de réseau !",
+    debrief: "En /30, le pas est de 2^(32-30) = 4. Le sous-réseau commence à .100 (adresse réseau, non attribuable à un hôte) et finit à .103 (broadcast). Seules .101 et .102 sont valides." },
+
+  { id: 2, diff: 1, theme: "SUB", title: "Validité d'adresse hôte CIDR : 192.168.19.87/29",
+    scenario: "Analyse l'adresse 192.168.19.87/29 issue du TP. Est-elle valide pour un hôte ? Indique OUI ou NON, suivi de l'ID réseau et de l'adresse de diffusion.",
+    diagram: [
+      "  Hôte candidat : 192.168.19.87/29     (Masque : 255.255.255.248)",
+      "  4e octet = 87 | Bits restants = 32 - 29 = 3"
+    ],
+    promptHint: "Format attendu : <OUI|NON> <IP_Réseau> <IP_Broadcast>",
+    accepted: ["non 192.168.19.80 192.168.19.87"],
+    canonical: "NON 192.168.19.80 192.168.19.87",
+    hint: "En /29, le pas vaut 2^3 = 8. Multiples de 8 : 0, 8, ..., 72, 80, 88. Le réseau est .80, donc .87 est le broadcast !",
+    debrief: "Avec un pas de 8, le bloc va de 192.168.19.80 (Réseau) à 192.168.19.87 (Broadcast). Tous les bits d'hôte de .87 sont à 1 : interdit pour une machine." },
+
+  { id: 3, diff: 1, theme: "SUB", title: "Technique du Pas sur le 3e octet : 120.146.80.1/20",
+    scenario: "Analyse l'adresse 120.146.80.1/20. Est-elle attribuable à un hôte (OUI/NON) ? Donne son adresse de réseau et son adresse de broadcast.",
+    diagram: [
+      "  Hôte candidat : 120.146.80.1/20      (Masque : 255.255.240.0)",
+      "  /20 est entre 17 et 24 ➔ On travaille sur le 3e octet (80)."
+    ],
+    promptHint: "Format attendu : <OUI|NON> <IP_Réseau> <IP_Broadcast>",
+    accepted: ["oui 120.146.80.0 120.146.95.255"],
+    canonical: "OUI 120.146.80.0 120.146.95.255",
+    hint: "Tranche de 24 : 24 - 20 = 4 bits ➔ Pas = 2^4 = 16. Multiples de 16 : 0, 16, 32, 48, 64, 80, 96.",
+    debrief: "Sur le 3e octet, 80 est un multiple de 16, donc le réseau commence à 120.146.80.0. Comme le 4e octet vaut .1 (et non .0), 120.146.80.1 est la toute première IP hôte valide ! Le broadcast est à 80 + 16 - 1 = 95, soit 120.146.95.255." },
+
+  { id: 4, diff: 1, theme: "SUB", title: "Piège du Broadcast intermédiaire : 172.16.0.127/25",
+    scenario: "Un technicien veut attribuer 172.16.0.127/25 à un serveur. Est-ce une adresse hôte valide (OUI/NON) ? Indique son adresse réseau et son broadcast.",
+    diagram: [
+      "  Hôte candidat : 172.16.0.127/25      (Masque : 255.255.255.128)",
+      "  Attention : ne confonds pas avec un /24 !"
+    ],
+    promptHint: "Format attendu : <OUI|NON> <IP_Réseau> <IP_Broadcast>",
+    accepted: ["non 172.16.0.0 172.16.0.127"],
+    canonical: "NON 172.16.0.0 172.16.0.127",
+    hint: "En /25, le pas sur le 4e octet est 2^(32-25) = 128. Le 1er sous-réseau va de .0 à .127 !",
+    debrief: "En /25, l'octet est coupé en deux blocs de 128 adresses (.0 à .127 et .128 à .255). 172.16.0.127 est donc l'adresse de broadcast du premier sous-réseau !" },
+
+  { id: 5, diff: 1, theme: "SUB", title: "Dimensionnement de liaison Point-à-Point WAN",
+    scenario: "Tu dois relier deux routeurs R1 et R2 par une liaison série point-à-point (2 adresses d'hôtes nécessaires) à partir du réseau 192.168.1.0. Quel est le sous-réseau CIDR optimal (sans gaspiller d'adresses) ?",
+    diagram: [
+      "  [ R1 ] ═══════════════ (2 IP hôtes requises) ═══════════════ [ R2 ]",
+      "  Formule : 2^h - 2 >= 2   où   CIDR = 32 - h"
+    ],
+    promptHint: "Format attendu : <IP_Réseau/CIDR> (ex: 192.168.1.0/XX)",
+    accepted: ["192.168.1.0/30", "/30"],
+    canonical: "192.168.1.0/30",
+    hint: "Avec h = 2 bits d'hôte, 2^2 - 2 = 2 adresses utilisables. 32 - 2 = 30.",
+    debrief: "Le masque /30 (255.255.255.252) offre exactement 4 adresses au total : 1 adresse réseau (.0), 2 adresses hôtes pour les deux routeurs (.1 et .2) et 1 adresse de broadcast (.3)." },
+
+  { id: 6, diff: 1, theme: "SUB", title: "Calcul de Masque pour 120 sous-réseaux (Classe B)",
+    scenario: "À partir du réseau de classe B 172.16.0.0 (/16 par défaut), tu dois créer AU MOINS 120 sous-réseaux. Quelle notation CIDR dois-tu appliquer ?",
+    diagram: [
+      "  Réseau de départ : 172.16.0.0/16   │   Besoin : >= 120 sous-réseaux",
+      "  Formule : 2^n >= 120  (où n = nombre de bits empruntés à la partie hôte)"
+    ],
+    promptHint: "Format attendu : 172.16.0.0/XX",
+    accepted: ["172.16.0.0/23", "/23"],
+    canonical: "172.16.0.0/23",
+    hint: "2^6 = 64 (insuffisant) ; 2^7 = 128 (>= 120). Ajoute 7 bits au masque /16 de départ.",
+    debrief: "En empruntant 7 bits sur le 3e octet (16 + 7 = /23, soit 255.255.254.0), tu obtiens 2^7 = 128 sous-réseaux de 510 hôtes chacun." },
+
+  { id: 7, diff: 1, theme: "SUB", title: "Planification Réseau : 50 segments de 600 hôtes",
+    scenario: "Tu disposes du réseau de classe B 134.119.0.0/16. Le cahier des charges exige 50 segments physiques pouvant accueillir chacun 600 hôtes. Donne le masque décimal, le nombre de sous-réseaux créés et le nombre max d'hôtes par segment.",
+    diagram: [
+      "  Réseau : 134.119.0.0/16  │  Segments requis : 50  │  Hôtes/segment : 600",
+      "  Attention au piège : vérifie si 2^h - 2 permet réellement 600 hôtes !"
+    ],
+    promptHint: "Format attendu : <Masque_Décimal> <Nb_Sous_Réseaux> <Nb_Hôtes_Max>",
+    accepted: ["255.255.254.0 128 510", "/23 128 510"],
+    canonical: "255.255.254.0 128 510",
+    hint: "C'est le Scénario 7 du TP ENI : 50 segments demandent 6 bits + 1 = 7 bits réseau (/23 = 255.255.254.0), soit 2^7 = 128 sous-réseaux et 2^9 - 2 = 510 hôtes.",
+    debrief: "Conformément au corrigé du TP Module 03-04 (Scénario 7) : emprunter 7 bits donne le masque 255.255.254.0 (/23), soit 2^7 = 128 sous-réseaux créés et 2^9 - 2 = 510 adresses par segment." },
+
+  { id: 8, diff: 1, theme: "SUB", title: "Découpage VLSM en cascade (199.210.15.0/24)",
+    scenario: "On découpe 199.210.15.0/24 en gardant successivement : Segment 1 en /25 (.0/25), Segment 2 en /26 (.128/26), Segment 3 en /27 (.192/27), et on divise le bloc restant en 4 sous-réseaux /29 (Segments 4 à 7). Donne le CIDR des Segments 4 et 7.",
+    diagram: [
+      "  [ .0/25 (128) ] [ .128/26 (64) ] [ .192/27 (32) ] [ Reste : .224 à .255 divisé en 4x /29 ]",
+      "  Quel est le CIDR du Segment 4 (le 1er /29) et du Segment 7 (le dernier /29) ?"
+    ],
+    promptHint: "Format attendu : <Seg4_CIDR> <Seg7_CIDR>",
+    accepted: ["199.210.15.224/29 199.210.15.248/29"],
+    canonical: "199.210.15.224/29 199.210.15.248/29",
+    hint: "En /29, le pas est de 8 : à partir de .224, les 4 segments sont .224/29, .232/29, .240/29 et .248/29.",
+    debrief: "Le bloc .192/27 occupe 32 adresses (.192 à .223). Le dernier bloc commence donc à .224 et se découpe par pas de 8 : .224/29, .232/29, .240/29 et .248/29." },
+
+  { id: 9, diff: 1, theme: "SUB", title: "Audit d'adressage : Chasse aux sous-réseaux inutilisés (112.19.0.0/16)",
+    scenario: "Tu audites le bloc 112.19.0.0/16. Les sous-réseaux déjà utilisés sont : 112.19.0.0/18, 112.19.64.0/18, 112.19.128.0/19, 112.19.160.0/20, 112.19.176.0/20, 112.19.224.0/20 et 112.19.240.0/20. Quel est le bloc /19 (ou les deux /20) laissé(s) totalement libre(s) ?",
+    diagram: [
+      "  .0/18 (.0..63) │ .64/18 (.64..127) │ .128/19 (.128..159) │ .160/20 │ .176/20 │ [ ??? ] │ .224/20 │ .240/20"
+    ],
+    promptHint: "Format attendu : <Plage_Libre/CIDR> (en /19 ou les deux /20)",
+    accepted: ["112.19.192.0/19", "112.19.192.0/20 112.19.208.0/20"],
+    canonical: "112.19.192.0/19",
+    hint: "Après 112.19.176.0/20 (qui finit à .191.255) et avant 112.19.224.0/20, le trou va de .192.0 à .223.255.",
+    debrief: "Entre .176.0/20 (fin à .191.255) et .224.0/20, il reste exactement 32 valeurs sur le 3e octet (.192 à .223), soit deux blocs /20 (112.19.192.0/20 et 112.19.208.0/20) qui forment le bloc contigu 112.19.192.0/19." },
+
+  { id: 10, diff: 1, theme: "SUB", title: "Audit d'adressage : Trou dans 192.168.10.0/24",
+    scenario: "Dans le réseau 192.168.10.0/24, les segments occupés sont : .0/25, .128/27, .160/27 et .224/28. Quels sont les deux sous-réseaux (un /27 et un /28) encore disponibles ?",
+    diagram: [
+      "  Occupés : [ .0/25 (.0..127) ] [ .128/27 (.128..159) ] [ .160/27 (.160..191) ] [ ??? ] [ .224/28 (.224..239) ] [ ??? ]"
+    ],
+    promptHint: "Format attendu : <Libre1/CIDR> <Libre2/CIDR>",
+    accepted: [
+      "192.168.10.192/27 192.168.10.240/28",
+      "192.168.10.192/28 192.168.10.208/28 192.168.10.240/28"
+    ],
+    canonical: "192.168.10.192/27 192.168.10.240/28",
+    hint: "Entre .160/27 (qui finit à .191) et .224/28, il manque le bloc de 32 adresses .192/27. Et après .224/28 (qui finit à .239), il reste .240/28 !",
+    debrief: "Les plages libres sont 192.168.10.192/27 (de .192 à .223, soit deux /28 : .192/28 et .208/28) ainsi que le dernier bloc 192.168.10.240/28 (de .240 à .255)." },
+
+  // ===========================================================================
+  // TIER 2 : DOMAINES DE DIFFUSION, ARP & TP A1..C6 (Missions 11 à 20)
+  // ===========================================================================
+  { id: 11, diff: 2, theme: "ARP", title: "TP 3 Domaines (#05) : Émission A3 ➔ B1 (Passerelle fantôme)",
+    scenario: "Dans la topologie du TP (tape 'topo' ou 'sim A3 B1' pour inspecter), A3 (192.168.10.30/24, GW: 192.168.10.1) envoie un paquet à B1 (192.168.20.10/24). Comment A3 voit-elle B1 (LOCALE ou DISTANTE) ? Quel est l'IP du prochain saut ? Le paquet arrive-t-il (OUI/NON) ?",
+    diagram: [
+      "  [ A3 : 192.168.10.30/24 | GW: 192.168.10.1 ] ─── [ Switch A ] ─── [ Routeur eth0: 192.168.10.254/24 ]"
+    ],
+    promptHint: "Format attendu : <LOCALE|DISTANTE> <Prochain_Saut> <OUI|NON>",
+    accepted: ["distante 192.168.10.1 non", "distant 192.168.10.1 non"],
+    canonical: "DISTANTE 192.168.10.1 NON",
+    hint: "Réseau de A3 = 192.168.10.0/24. B1 (.20.10) est hors de ce réseau (DISTANTE). A3 cherche sa passerelle 192.168.10.1 en ARP, mais le routeur est en .254 !",
+    debrief: "A3 calcule que 192.168.20.10 est hors de 192.168.10.0/24 (DISTANTE). Elle émet un ARP 'Who has 192.168.10.1?', mais aucune machine n'a cette IP (le routeur est en .254). Échec ARP : le paquet ne quitte même pas A3." },
+
+  { id: 12, diff: 2, theme: "ARP", title: "TP 3 Domaines (#06) : L'asymétrie B1 ➔ A3 (Aller simple !)",
+    scenario: "Toujours entre B1 (192.168.20.10/24, GW: 192.168.20.254) et A3 (192.168.10.30/24, GW: 192.168.10.1), on étudie uniquement l'ALLER de B1 vers A3. Comment B1 voit-elle A3 ? Quel est son prochain saut ? Le paquet envoyé par B1 arrive-t-il jusqu'à A3 (OUI/NON) ?",
+    diagram: [
+      "  [ B1 : 192.168.20.10/24 | GW: .20.254 ] ➔ [ Routeur (.20.254 / .10.254) ] ➔ [ A3 : 192.168.10.30/24 | GW: .10.1 ]"
+    ],
+    promptHint: "Format attendu : <LOCALE|DISTANTE> <Prochain_Saut> <OUI|NON>",
+    accepted: ["distante 192.168.20.254 oui", "distant 192.168.20.254 oui"],
+    canonical: "DISTANTE 192.168.20.254 OUI",
+    hint: "Pour l'aller uniquement, A3 n'a pas besoin de sa passerelle ! Le routeur remet le paquet directement à A3 sur le Réseau A via ARP.",
+    debrief: "C'est toute la subtilité de l'aller simple : B1 est bien configurée et envoie le paquet à sa passerelle 192.168.20.254. Le routeur connaît le Réseau A et livre directement la trame à A3. Le paquet ARRIVE bien à A3 (même si A3 serait incapable de répondre à B1) !" },
+
+  { id: 13, diff: 2, theme: "ARP", title: "TP 3 Domaines (#07) : Le piège du masque /16 (A4 ➔ B2)",
+    scenario: "A4 (192.168.10.40, masque 255.255.0.0 /16, GW: 192.168.10.254) tente d'envoyer un paquet à B2 (192.168.20.20/24). Comment A4 voit-elle B2 (LOCALE ou DISTANTE) ? Quel prochain saut vise-t-elle ? Le paquet arrive-t-il (OUI/NON) ?",
+    diagram: [
+      "  [ A4 : 192.168.10.40 / 255.255.0.0 ] ─── [ Switch A ] ─── [ Routeur ] ─── [ Switch B ] ─── [ B2 : 192.168.20.20 ]"
+    ],
+    promptHint: "Format attendu : <LOCALE|DISTANTE> <Prochain_Saut> <OUI|NON>",
+    accepted: ["locale 192.168.20.20 non", "local 192.168.20.20 non", "locale directe non"],
+    canonical: "LOCALE 192.168.20.20 NON",
+    hint: "Avec son masque 255.255.0.0 (/16), l'adresse réseau de A4 est 192.168.0.0/16 ! Elle croit donc que 192.168.20.20 est sur son propre switch...",
+    debrief: "À cause de son masque /16 erroné, A4 calcule que son réseau va de 192.168.0.0 à 192.168.255.255. Elle croit B2 LOCALE, n'utilise PAS sa passerelle, et lance un ARP broadcast pour 192.168.20.20 dans le domaine A. Le routeur bloque les broadcasts : échec total." },
+
+  { id: 14, diff: 2, theme: "ARP", title: "TP 3 Domaines (#09) : Pourquoi A4 ➔ C1 réussit alors que A4 ➔ B2 échoue ?",
+    scenario: "La même machine A4 (192.168.10.40/16, GW: 192.168.10.254) envoie maintenant un paquet à C1 (172.16.5.10/24). Comment A4 voit-elle C1 ? Quel est le prochain saut ? Le paquet arrive-t-il (OUI/NON) ?",
+    diagram: [
+      "  [ A4 : 192.168.10.40/16 | Réseau vu : 192.168.0.0/16 ] ───► Destination C1 : 172.16.5.10"
+    ],
+    promptHint: "Format attendu : <LOCALE|DISTANTE> <Prochain_Saut> <OUI|NON>",
+    accepted: ["distante 192.168.10.254 oui", "distant 192.168.10.254 oui"],
+    canonical: "DISTANTE 192.168.10.254 OUI",
+    hint: "172.16.5.10 ne commence pas par 192.168.x.x ! Même avec un masque /16, A4 voit que C1 est DISTANTE.",
+    debrief: "Excellente démonstration : même avec son masque 255.255.0.0 (réseau 192.168.0.0/16), A4 constate que 172.16.5.10 est DISTANTE. Elle sollicite donc sa passerelle 192.168.10.254 (qui est bien dans 192.168.0.0/16 et dans le domaine A), et le routeur achemine le paquet jusqu'à C1 !" },
+
+  { id: 15, diff: 2, theme: "ARP", title: "TP 3 Domaines (#19 & #20) : Le masque /28 de C4 (C4 ➔ C5 vs C4 ➔ C2)",
+    scenario: "Dans le Réseau C, C4 est configurée en 172.16.5.40 avec le masque 255.255.255.240 (/28) et GW 172.16.5.254. Indique si le paquet arrive (OUI/NON) pour C4➔C5 (172.16.5.45), puis pour C4➔C2 (172.16.5.20), suivi de l'adresse réseau calculée par C4.",
+    diagram: [
+      "  C4 : 172.16.5.40 / 255.255.255.240 (/28)  │  C5 : 172.16.5.45  │  C2 : 172.16.5.20  │  GW : 172.16.5.254"
+    ],
+    promptHint: "Format attendu : <C4➔C5:OUI|NON> <C4➔C2:OUI|NON> <IP_Réseau_de_C4/28>",
+    accepted: ["oui non 172.16.5.32/28", "oui non 172.16.5.32"],
+    canonical: "OUI NON 172.16.5.32/28",
+    hint: "En /28 (.240), le pas est de 16 : le sous-réseau de C4 (.40) va de 172.16.5.32 à .47. C5 (.45) est dedans (LOCALE), mais ni C2 (.20) ni la passerelle (.254) n'y sont !",
+    debrief: "Le sous-réseau /28 de C4 est 172.16.5.32/28 (.32 à .47). C5 (.45) est dans cette plage : C4 la joint en direct (OUI). En revanche, C2 (.20) est vue comme DISTANTE, mais la passerelle de C4 (172.16.5.254) est elle-même HORS du sous-réseau .32/28 ! C4 ne peut donc jamais atteindre sa propre passerelle (NON)." },
+
+  { id: 16, diff: 2, theme: "ARP", title: "TP 3 Domaines (#14) : Passerelle hors domaine (B3 ➔ A2)",
+    scenario: "B3 (192.168.20.30/24) a reçu par erreur la passerelle du réseau A (GW: 192.168.10.254). Elle veut envoyer un paquet à A2 (192.168.10.20). Comment B3 voit-elle A2 ? Quel est le prochain saut ? Le paquet arrive-t-il (OUI/NON) ?",
+    diagram: [
+      "  [ B3 : 192.168.20.30/24 | GW: 192.168.10.254 ] ─── [ Switch B ] ─── [ Routeur eth1: 192.168.20.254 ]"
+    ],
+    promptHint: "Format attendu : <LOCALE|DISTANTE> <Prochain_Saut> <OUI|NON>",
+    accepted: ["distante aucun non", "distante 192.168.10.254 non", "distant aucun non"],
+    canonical: "DISTANTE AUCUN NON",
+    hint: "La passerelle configurée sur B3 (192.168.10.254) n'appartient même pas au réseau logique de B3 (192.168.20.0/24) !",
+    debrief: "Règle d'or du routage IP : le prochain saut (Next-Hop / Passerelle) DOIT obligatoirement appartenir au même réseau logique que l'interface de la machine. Ici, la pile TCP/IP de B3 rejette immédiatement le paquet ('Network is unreachable') car 192.168.10.254 est hors de 192.168.20.0/24." },
+
+  { id: 17, diff: 2, theme: "ARP", title: "TP 3 Domaines (#23 à #26) : Machine A6 brassée dans le mauvais VLAN/Switch",
+    scenario: "A6 possède une configuration valide du Réseau B (192.168.20.60/24, GW: 192.168.20.254), mais son câble RJ45 a été branché sur le Switch du Réseau A ! Peut-elle émettre vers A1 (.10.10) ? Vers B1 (.20.10) ? Peut-elle être jointe par A1 ? Par B1 ?",
+    diagram: [
+      "  [ A6 : 192.168.20.60/24 | GW: .20.254 ] ══(Câble branché dans Switch A !)══► [ Switch A (192.168.10.0/24) ]"
+    ],
+    promptHint: "Format attendu : 4 réponses OUI/NON séparées par un espace (<A6➔A1> <A6➔B1> <A1➔A6> <B1➔A6>)",
+    accepted: ["non non non non"],
+    canonical: "NON NON NON NON",
+    hint: "Dans le Switch A, personne ne répond aux ARP pour 192.168.20.254 ni 192.168.20.60, et dans le Switch B, A6 n'est pas physiquement présente !",
+    debrief: "A6 est un fantôme total (NON NON NON NON) : pour joindre A1, elle cherche sa GW 192.168.20.254 par ARP dans le domaine A (échec). Pour joindre B1, elle lance un ARP pour .20.10 dans le domaine A (échec). Et quand A1 ou B1 tentent de joindre .20.60, l'ARP est émis sur le Switch B (via eth1 du routeur), où A6 n'est pas branchée !" },
+
+  { id: 18, diff: 2, theme: "ARP", title: "TP 3 Domaines (#29 à #31) : Le cas très subtil de C6 (172.16.6.60/16 dans C)",
+    scenario: "C6 est branchée dans le Réseau C (où le routeur a l'IP 172.16.5.254/24). Mais C6 a reçu l'IP 172.16.6.60 avec un masque /16 (255.255.0.0) et GW 172.16.5.254 ! Indique (OUI/NON) si l'aller simple fonctionne pour : C6➔C1, C6➔A1 et C1➔C6.",
+    diagram: [
+      "  [ C6 : 172.16.6.60/16 | GW: 172.16.5.254 ] ─── [ Switch C ] ─── [ Routeur eth2 : 172.16.5.254/24 | C1 : 172.16.5.10/24 ]"
+    ],
+    promptHint: "Format attendu : <C6➔C1:OUI|NON> <C6➔A1:OUI|NON> <C1➔C6:OUI|NON>",
+    accepted: ["oui oui non"],
+    canonical: "OUI OUI NON",
+    hint: "Avec son masque /16, C6 voit 172.16.0.0/16 comme local : elle trouve donc C1 (.5.10) et sa GW (.5.254) par ARP sur le Switch C ! Mais le routeur, lui, a un masque /24 sur eth2...",
+    debrief: "Cas brillant du TP : grâce à son masque /16 et au fait qu'elle partage le Switch C, C6 considère C1 (.5.10) et sa passerelle (.5.254) comme LOCALES. Ses requêtes ARP aboutissent sur le Switch C : C6➔C1 (OUI) et C6➔A1 via la passerelle (OUI) arrivent ! Mais dans l'autre sens (C1➔C6), C1 envoie le paquet pour 172.16.6.60 au routeur, qui ne connaît aucune route vers 172.16.6.0/24 (NON) !" },
+
+  { id: 19, diff: 2, theme: "ARP", title: "TP ENI Module 04-01 (Partie A) : Masques /16 et /24 sur un même Switch",
+    scenario: "6 postes sont sur le MÊME switch sans routeur : A(172.16.10.10/16), B(172.16.11.20/16), C(172.16.100.30/16), D(172.16.11.100/24), E(172.16.100.150/24), F(172.16.10.200/24). Quels postes peuvent dialoguer AVEC RÉPONSE (aller-retour) avec le Poste A ?",
+    diagram: [
+      "  Switch unique : A(.10.10/16)  B(.11.20/16)  C(.100.30/16)  │  D(.11.100/24)  E(.100.150/24)  F(.10.200/24)"
+    ],
+    promptHint: "Format attendu : Liste des lettres en majuscules (ex: B C F)",
+    accepted: ["b c f", "b/c/f", "b,c,f", "bcf"],
+    canonical: "B C F",
+    hint: "A (/16) peut parler à tout le monde en 172.16.x.x, mais qui peut lui RÉPONDRE ? Ceux qui sont en /16 (B, C) et celui dont le /24 est 172.16.10.0/24 (F) !",
+    debrief: "A voit les 5 autres postes dans 172.16.0.0/16. B et C ont aussi un masque /16 et lui répondent. F a un masque /24 mais partage le même 3e octet (172.16.10.0/24) que A (.10.10) et lui répond aussi ! En revanche, D (.11.0/24) et E (.100.0/24) voient A comme distant et ne peuvent pas répondre sans routeur." },
+
+  { id: 20, diff: 2, theme: "ARP", title: "TP ENI Module 04-01 (Partie B) : Asymétrie de masque Routeur vs Hôte",
+    scenario: "Dans le schéma B du TP : Réseau 1 (Routeur X: 10.0.0.254/8, Poste A: 10.11.2.1/8 GW 10.0.0.254, Poste C: 10.0.2.4/16 GW 10.0.0.254). Comment A joint-il C (V=Direct, P=Passerelle, F=Faux) ? Et comment C joint-il A (V, P ou F) ?",
+    diagram: [
+      "  Réseau 1 : [ Poste A : 10.11.2.1/8 ] ─── [ Switch 1 ] ─── [ Poste C : 10.0.2.4/16 | GW: 10.0.0.254 ]"
+    ],
+    promptHint: "Format attendu : <A_vers_C : V|P|F> <C_vers_A : V|P|F>",
+    accepted: ["v p"],
+    canonical: "V P",
+    hint: "A a un masque /8 (10.0.0.0/8) donc il voit C (10.0.2.4) en direct (V). Mais C a un masque /16 (10.0.0.0/16) : comment voit-il 10.11.2.1 ?",
+    debrief: "Avec son masque /8, A considère 10.0.2.4 dans son réseau et lui envoie la trame directement sur le switch (V). À l'inverse, C a un masque /16 (10.0.0.0/16) : pour lui, A (10.11.2.1) est sur un réseau distant ! C envoie donc son paquet à sa passerelle 10.0.0.254 (qui est dans 10.0.0.0/16), et le routeur X le renvoie à A sur le Réseau 1 (P) !" },
+
+  // ===========================================================================
+  // TIER 3 : COMMANDES LINUX IPROUTE2, WINDOWS & DÉPANNAGE (Missions 21 à 30)
+  // ===========================================================================
+  { id: 21, diff: 3, theme: "CLI", title: "Dépannage TP : Ajouter la passerelle par défaut sur A5 (iproute2)",
+    scenario: "Sur la machine Linux A5 (192.168.10.50/24 sur eth0), aucune passerelle par défaut n'est configurée, ce qui l'empêche de joindre les réseaux B et C. Quelle commande 'ip route' permets d'ajouter la passerelle 192.168.10.254 ?",
+    diagram: [
+      "  root@A5:~# ip route",
+      "  192.168.10.0/24 dev eth0 proto kernel scope link src 192.168.10.50",
+      "  # Route 'default' manquante vers 192.168.10.254 !"
+    ],
+    promptHint: "Tape la commande Linux iproute2 complète :",
+    accepted: [
+      "ip route add default via 192.168.10.254",
+      "ip route add default via 192.168.10.254 dev eth0",
+      "ip r add default via 192.168.10.254",
+      "sudo ip route add default via 192.168.10.254"
+    ],
+    canonical: "ip route add default via 192.168.10.254",
+    hint: "Syntaxe iproute2 : 'ip route add default via <IP_GW>'.",
+    debrief: "Sous Linux moderne (iproute2), 'ip route add default via 192.168.10.254' (équivalent de '0.0.0.0/0') définit la passerelle par défaut immédiatement." },
+
+  { id: 22, diff: 3, theme: "CLI", title: "Activation d'interface Liaison (Couche 1/2) avec ip link",
+    scenario: "L'interface 'eth0' d'un serveur Linux apparaît avec l'état 'state DOWN' lors d'un 'ip link'. Quelle commande standard iproute2 permet de l'activer ?",
+    diagram: [
+      "  2: eth0: <BROADCAST,MULTICAST> mtu 1500 qdisc fq_codel state DOWN mode DEFAULT"
+    ],
+    promptHint: "Tape la commande ip link d'activation :",
+    accepted: [
+      "ip link set dev eth0 up",
+      "ip link set eth0 up",
+      "sudo ip link set dev eth0 up",
+      "sudo ip link set eth0 up"
+    ],
+    canonical: "ip link set dev eth0 up",
+    hint: "Utilise 'ip link set dev eth0 up' (ou 'ip link set eth0 up').",
+    debrief: "La sous-commande 'ip link' gère la couche Liaison de données (état UP/DOWN, MTU, adresse MAC). Tant que l'interface est DOWN, aucune communication ARP ou IP n'est possible." },
+
+  { id: 23, diff: 3, theme: "CLI", title: "Attribution d'adresse IPv4 en CIDR avec ip addr",
+    scenario: "Pour réparer la machine B5 sur le réseau B, tu dois ajouter l'adresse IPv4 '192.168.20.50/24' sur l'interface 'eth0'. Écris la commande iproute2 correspondante.",
+    diagram: [
+      "  Cible : Ajouter 192.168.20.50/24 sur le périphérique eth0"
+    ],
+    promptHint: "Tape la commande ip addr :",
+    accepted: [
+      "ip addr add 192.168.20.50/24 dev eth0",
+      "ip a add 192.168.20.50/24 dev eth0",
+      "sudo ip addr add 192.168.20.50/24 dev eth0"
+    ],
+    canonical: "ip addr add 192.168.20.50/24 dev eth0",
+    hint: "Syntaxe : 'ip addr add <IP/CIDR> dev <interface>'.",
+    debrief: "'ip addr add 192.168.20.50/24 dev eth0' assigne l'IP et génère automatiquement la route locale directe ('scope link') vers 192.168.20.0/24 dans la table de routage du noyau." },
+
+  { id: 24, diff: 3, theme: "CLI", title: "Purge du cache ARP / Voisinage sous Linux (ip neigh)",
+    scenario: "Suite à un remplacement de routeur, le cache ARP d'un serveur Debian contient des entrées obsolètes. Quelle commande moderne de la suite 'iproute2' (mentionnée dans ton cours M5) permet de vider intégralement la table de voisinage ARP ?",
+    diagram: [
+      "  192.168.10.254 dev eth0 lladdr 00:11:22:33:44:55 STALE"
+    ],
+    promptHint: "Tape la commande ip neigh pour tout vider :",
+    accepted: [
+      "ip neigh flush all",
+      "sudo ip neigh flush all",
+      "ip neighbor flush all",
+      "sudo ip neighbor flush all"
+    ],
+    canonical: "sudo ip neigh flush all",
+    hint: "Sous Linux moderne, 'arp' est remplacé par 'ip neigh' : utilise 'sudo ip neigh flush all'.",
+    debrief: "La commande 'sudo ip neigh flush all' invalide toutes les associations IP <-> MAC en cache et force l'émission de nouvelles requêtes ARP broadcast." },
+
+  { id: 25, diff: 3, theme: "CLI", title: "Protection contre l'ARP Spoofing : Entrée ARP statique",
+    scenario: "Avec la commande 'arp' classique (Windows/Linux), ajoute un enregistrement ARP statique liant l'IP de la passerelle '192.168.1.1' à l'adresse MAC '00-14-22-01-23-45'.",
+    diagram: [
+      "  Objectif : Lier statiquement 192.168.1.1 ➔ 00-14-22-01-23-45 (prioritaire sur l'ARP dynamique)"
+    ],
+    promptHint: "Tape la commande arp correspondante :",
+    accepted: [
+      "arp -s 192.168.1.1 00-14-22-01-23-45",
+      "arp -s 192.168.1.1 00:14:22:01:23:45"
+    ],
+    canonical: "arp -s 192.168.1.1 00-14-22-01-23-45",
+    hint: "Utilise l'option '-s' (static) : 'arp -s <IP> <MAC>'.",
+    debrief: "Un enregistrement ARP statique ('arp -s') est prioritaire sur les réponses ARP dynamiques et protège l'hôte contre l'empoisonnement de cache ARP (ARP Spoofing) visant la passerelle." },
+
+  { id: 26, diff: 3, theme: "CLI", title: "Diagnostic Windows : Adresses APIPA (169.254.x.x) & DHCP",
+    scenario: "Un poste Windows affiche l'adresse IP 169.254.42.18 (masque 255.255.0.0) lors d'un 'ipconfig'. Quel protocole a attribué cette adresse suite à l'échec du serveur DHCP, et quelles sont les 2 commandes 'ipconfig' à enchaîner pour libérer puis redemander un bail DHCP ?",
+    diagram: [
+      "  Adresse IPv4. . . . . . . . . . . . . .: 169.254.42.18",
+      "  Masque de sous-réseau. . . . . . . . . : 255.255.0.0"
+    ],
+    promptHint: "Format attendu : <Nom_Protocole> <Commande_1> <Commande_2>",
+    accepted: [
+      "apipa ipconfig /release ipconfig /renew",
+      "apipa ipconfig /release & ipconfig /renew"
+    ],
+    canonical: "APIPA ipconfig /release ipconfig /renew",
+    hint: "Le mécanisme RFC 3927 s'appelle APIPA, et on utilise 'ipconfig /release' suivi de 'ipconfig /renew'.",
+    debrief: "La plage 169.254.0.0/16 correspond à APIPA (Automatic Private IP Addressing). Lorsque le serveur DHCP redevient disponible, 'ipconfig /release' suivi de 'ipconfig /renew' force le cycle DORA (Discover, Offer, Request, Acknowledge)." },
+
+  { id: 27, diff: 3, theme: "CLI", title: "Résolution DNS corrompue sous Windows (ipconfig)",
+    scenario: "Un poste client Windows résout toujours l'ancienne adresse IP d'un serveur interne malgré la mise à jour du serveur DNS. Quelle commande permet de vider le cache de résolution DNS local ?",
+    diagram: [
+      "  C:\\Users\\tssr> ping intranet.local ➔ renvoie toujours l'ancienne IP en cache"
+    ],
+    promptHint: "Tape la commande Windows exacte :",
+    accepted: ["ipconfig /flushdns"],
+    canonical: "ipconfig /flushdns",
+    hint: "Utilise l'option '/flushdns' de la commande ipconfig.",
+    debrief: "'ipconfig /flushdns' purge les enregistrements DNS mis en cache localement et oblige le système à interroger à nouveau son serveur DNS configuré." },
+
+  { id: 28, diff: 3, theme: "CLI", title: "Audit des ports en écoute et processus associés (ss / netstat)",
+    scenario: "Un serveur Debian présente une activité suspecte. Quelles sont les 5 options classiques (combinées en un seul bloc, ex: -xxxxx) à passer à la commande moderne 'ss' (ou 'netstat') pour lister les sockets TCP (-t), UDP (-u), en écoute (-l), au format numérique (-n) avec le processus associé (-p) ?",
+    diagram: [
+      "  root@debian:~# ss [options]",
+      "  Objectif : TCP + UDP + LISTEN + Numérique (sans DNS) + PID/Processus"
+    ],
+    promptHint: "Format attendu : ss -tulnp (l'ordre des 5 lettres après '-' est libre)",
+    accepted: [
+      "ss -tulnp", "ss -tunlp", "ss -tlunp", "ss -tulpn", "ss -ntulp", "ss -plunt",
+      "netstat -tulnp", "netstat -tunlp", "netstat -tulpn", "netstat -ntulp"
+    ],
+    canonical: "ss -tulnp",
+    hint: "Combine les 5 flags : t (TCP), u (UDP), l (Listening), n (Numeric), p (Process) ➔ 'ss -tulnp'.",
+    debrief: "'ss -tulnp' (qui remplace 'netstat -tulnp' sous Debian/Ubuntu) est le réflexe numéro 1 d'un administrateur TSSR et d'un analyste SOC pour identifier quel démon écoute sur quel port." },
+
+  { id: 29, diff: 3, theme: "CLI", title: "Test ICMP borné sous Linux (ping -c)",
+    scenario: "Contrairement à Windows (qui envoie 4 pings par défaut), la commande 'ping' sous Linux boucle à l'infini. Écris la commande permettant d'envoyer exactement 4 requêtes ICMP Echo Request vers la passerelle '172.16.5.254'.",
+    diagram: [
+      "  Objectif : Envoyer exactement 4 paquets ICMP vers 172.16.5.254 puis afficher les statistiques."
+    ],
+    promptHint: "Tape la commande ping complète :",
+    accepted: ["ping -c 4 172.16.5.254", "ping 172.16.5.254 -c 4"],
+    canonical: "ping -c 4 172.16.5.254",
+    hint: "Utilise l'option '-c 4' (count).",
+    debrief: "Sous Linux, 'ping -c 4 <destination>' s'arrête automatiquement après 4 paquets ICMP Echo Request (Type 8) / Echo Reply (Type 0), indispensable dans les scripts d'automatisation Bash." },
+
+  { id: 30, diff: 3, theme: "CLI", title: "Fonctionnement interne de traceroute / tracert (TTL & ICMP)",
+    scenario: "Lorsqu'un 'traceroute' envoie une sonde avec TTL=1, le premier routeur décrémente le TTL à 0, détruit le paquet et renvoie un message ICMP à l'émetteur. Quel est le nom (ou le Type numérique ICMP) de ce message qui permet à traceroute de découvrir l'IP de chaque routeur ?",
+    diagram: [
+      "  [ Hôte (TTL=1) ] ────► [ Routeur 1 (TTL passe à 0 !) ] ────► Renvoie ICMP [ ??? ] à l'hôte"
+    ],
+    promptHint: "Format attendu : Time Exceeded (ou TTL Exceeded / Type 11)",
+    accepted: ["time exceeded", "ttl exceeded", "type 11", "icmp type 11", "time to live exceeded"],
+    canonical: "Time Exceeded (ICMP Type 11)",
+    hint: "En anglais, le message mentionné dans ton cours est 'TTL exceeded' / 'Time Exceeded' (ICMP Type 11).",
+    debrief: "Chaque routeur traversé décrémente le champ TTL de l'en-tête IPv4. Lorsqu'il tombe à 0, le routeur renvoie un paquet ICMP Type 11 (Time Exceeded / TTL Exceeded) dont l'IP source révèle l'identité du routeur à ce saut !" },
+
+  // ===========================================================================
+  // TIER 4 : ROUTAGE STATIQUE, CISCO IOS & SUPERNETTING CIDR (Missions 31 à 39)
+  // ===========================================================================
+  { id: 31, diff: 4, theme: "RTE", title: "Supernetting (TP Partie E #1) : Agrégation de 4 réseaux /24 contigus",
+    scenario: "Le routeur R2 dessert les 4 sous-réseaux suivants : 212.56.132.0/24, 212.56.133.0/24, 212.56.134.0/24 et 212.56.135.0/24. Calcule le résumé de route (sur-réseau) en notation CIDR à annoncer au routeur R1.",
+    diagram: [
+      "  [ R1 ] ◄══════ (Annonce CIDR unique) ══════ [ R2 ] ───┬── 212.56.132.0/24 (10000100)",
+      "                                                        ├── 212.56.133.0/24 (10000101)",
+      "                                                        ├── 212.56.134.0/24 (10000110)",
+      "                                                        └── 212.56.135.0/24 (10000111)"
+    ],
+    promptHint: "Format attendu : <IP_Sur_Réseau/CIDR>",
+    accepted: ["212.56.132.0/22"],
+    canonical: "212.56.132.0/22",
+    hint: "Regarde les bits du 3e octet (132 à 135) : les 6 premiers bits (128 + 4 = 132) sont identiques. 16 + 6 = /22.",
+    debrief: "132 (10000100) à 135 (10000111) est parfaitement aligné sur un multiple de 4 : les 22 premiers bits sont communs, donnant le résumé exact 212.56.132.0/22." },
+
+  { id: 32, diff: 4, theme: "RTE", title: "Supernetting (TP Partie E #2) : Le piège du non-alignement binaire !",
+    scenario: "On désire agréger en une seule route les 4 réseaux suivants : 212.56.146.0/24, 212.56.147.0/24, 212.56.148.0/24 et 212.56.149.0/24. Attention : 146 n'est pas un multiple de 4 ! Quel est le résumé de route CIDR englobant ces 4 réseaux ?",
+    diagram: [
+      "  146 = 10010010  │  147 = 10010011  │  148 = 10010100  │  149 = 10010101",
+      "  Combien de bits à gauche sont réellement communs entre 146 et 149 ?"
+    ],
+    promptHint: "Format attendu : <IP_Sur_Réseau/CIDR>",
+    accepted: ["212.56.144.0/21"],
+    canonical: "212.56.144.0/21",
+    hint: "Entre 147 (10010011) et 148 (10010100), le 6e bit change ! Seuls les 5 premiers bits du 3e octet (10010xxx = 144) sont communs (16 + 5 = /21).",
+    debrief: "Piège classique du TP ENI : comme 146..149 chevauche la frontière binaire entre 147 et 148, un /22 ne suffit pas ! Les bits communs s'arrêtent au 21e bit (10010000 = 144), ce qui donne 212.56.144.0/21 (couvrant de .144.0 à .151.255)." },
+
+  { id: 33, diff: 4, theme: "RTE", title: "Supernetting (TP Partie E #3) : Franchissement de la frontière 127/128",
+    scenario: "Dans l'exercice E.3 du TP, on veut résumer en une seule route les 64 réseaux allant de 212.1.96.0/24 jusqu'à 212.1.159.0/24 (en passant par 212.1.127.0/24 et 212.1.128.0/24). Quel est le résumé CIDR ?",
+    diagram: [
+      "  De 212.1.96.0/24 (3e octet = 01100000) jusqu'à 212.1.159.0/24 (3e octet = 10011111)",
+      "  Regarde le 1er bit (bit de poids fort) du 3e octet entre 127 (01111111) et 128 (10000000) !"
+    ],
+    promptHint: "Format attendu : <IP_Sur_Réseau/CIDR>",
+    accepted: ["212.1.0.0/16"],
+    canonical: "212.1.0.0/16",
+    hint: "Comme la plage franchit 127 (0xxxxxxx) vers 128 (1xxxxxxx), AUCUN bit du 3e octet n'est commun ! Il ne reste que les 2 premiers octets (/16).",
+    debrief: "Exactement comme dans la correction du TP : puisque la plage traverse la frontière médiane 127 -> 128, même le premier bit du 3e octet bascule de 0 à 1. Le plus grand préfixe commun se réduit aux 16 premiers bits : 212.1.0.0/16 !" },
+
+  { id: 34, diff: 4, theme: "RTE", title: "Supernetting (TP Partie E #4, #5, #6) : Agréger les Classes A, B et C",
+    scenario: "En utilisant les bits de poids fort historiques (RFC 790) : écris les 3 résumés de routes CIDR qui agrègent respectivement (1) toutes les adresses de Classe A, (2) toutes les adresses de Classe B, et (3) toutes les adresses de Classe C.",
+    diagram: [
+      "  Classe A : 0xxxxxxx (0..127)  │  Classe B : 10xxxxxx (128..191)  │  Classe C : 110xxxxx (192..223)"
+    ],
+    promptHint: "Format attendu : <CIDR_Classe_A> <CIDR_Classe_B> <CIDR_Classe_C>",
+    accepted: ["0.0.0.0/1 128.0.0.0/2 192.0.0.0/3"],
+    canonical: "0.0.0.0/1 128.0.0.0/2 192.0.0.0/3",
+    hint: "Classe A fixe 1 bit à 0 (0.0.0.0/1) ; Classe B fixe 2 bits '10' (128.0.0.0/2) ; Classe C fixe 3 bits '110' (192.0.0.0/3).",
+    debrief: "C'est la définition mathématique même des classes IPv4 : 0.0.0.0/1 (1er bit = 0), 128.0.0.0/2 (2 premiers bits = 10) et 192.0.0.0/3 (3 premiers bits = 110)." },
+
+  { id: 35, diff: 4, theme: "RTE", title: "Tables de routage minimales (TP Partie D : Routeur R4)",
+    scenario: "Dans la topologie linéaire R1─R2─R3─R4─R5─R6─R7─R8 du TP découvrant le bloc 13.107.0.0/16 : à gauche de R4 se trouvent les segments 13.107.0.0/20, .16.0/20 et .32.0/19. À droite de R4 (après le lien R4-R5 en .96.0/19) se trouvent tous les segments de .128.0 à .224.0. Quelles sont les 2 routes résumées minimales à configurer sur R4 ?",
+    diagram: [
+      "  [ Gauche : .0.0/20, .16.0/20, .32.0/19 ] ◄──(via R3)── [ R4 ] ──(via R5)──► [ Droite : .128.0 à .255.255 ]"
+    ],
+    promptHint: "Format attendu : <CIDR_Gauche> R3 <CIDR_Droite> R5",
+    accepted: [
+      "13.107.0.0/18 r3 13.107.128.0/17 r5",
+      "13.107.0.0/18 via r3 13.107.128.0/17 via r5",
+      "131.107.0.0/18 r3 131.107.128.0/17 r5"
+    ],
+    canonical: "13.107.0.0/18 R3 13.107.128.0/17 R5",
+    hint: ".0.0/20 + .16.0/20 = .0.0/19 ; et .0.0/19 + .32.0/19 fusionnent en 13.107.0.0/18 (via R3) ! Toute la moitié haute (.128 à .255) fusionne en 13.107.128.0/17 (via R5).",
+    debrief: "R4 est le pivot central de la topologie : toute la moitié gauche (.0 à .63) s'agrège en une seule route 13.107.0.0/18 vers R3 (car R4 est déjà directement connecté à .64.0/19 et .96.0/19), et toute la moitié droite (.128 à .255) s'agrège en 13.107.128.0/17 vers R5 !" },
+
+  { id: 36, diff: 4, theme: "RTE", title: "Commande Cisco IOS : Route statique inter-routeurs (TP Cisco PT)",
+    scenario: "Sur un routeur Cisco R1 (interface WAN 10.0.0.1/8 reliée à R2 en 10.0.0.2/8), écris la commande IOS permettant de joindre le LAN distant '192.168.20.0' (masque '255.255.255.0') via le routeur voisin R2 ('10.0.0.2').",
+    diagram: [
+      "  [ R1 (.10.254 | WAN: 10.0.0.1) ] ════════ [ R2 (WAN: 10.0.0.2 | LAN: 192.168.20.0/24) ]"
+    ],
+    promptHint: "Tape la commande Cisco IOS 'ip route ...' (comme dans tes notes de cours) :",
+    accepted: ["ip route 192.168.20.0 255.255.255.0 10.0.0.2"],
+    canonical: "ip route 192.168.20.0 255.255.255.0 10.0.0.2",
+    hint: "Syntaxe Cisco IOS : 'ip route <Réseau_Cible> <Masque_Décimal> <Next_Hop_IP>'.",
+    debrief: "En Cisco IOS, contrairement à Linux ('ip route add CIDR via GW'), la syntaxe est 'ip route 192.168.20.0 255.255.255.0 10.0.0.2'. Et n'oublie jamais la route retour symétrique sur R2 vers 192.168.10.0 !" },
+
+  { id: 37, diff: 4, theme: "RTE", title: "Règle du Longest Prefix Match (LPM) dans une table de routage",
+    scenario: "Un routeur reçoit un paquet destiné à '10.1.2.50'. Sa table contient 4 routes qui englobent toutes cette IP : (A) 0.0.0.0/0 via 192.168.1.1 (metric 1), (B) 10.0.0.0/8 via 192.168.1.2 (metric 5), (C) 10.1.0.0/16 via 192.168.1.3 (metric 50), (D) 10.1.2.0/24 via 192.168.1.4 (metric 200). Quel prochain saut (IP) le routeur choisit-il ?",
+    diagram: [
+      "  Destination : 10.1.2.50",
+      "  Routes : /0 (via .1.1, m=1) │ /8 (via .1.2, m=5) │ /16 (via .1.3, m=50) │ /24 (via .1.4, m=200)"
+    ],
+    promptHint: "Format attendu : <IP_Prochain_Saut>",
+    accepted: ["192.168.1.4", "d"],
+    canonical: "192.168.1.4",
+    hint: "La longueur du masque (préfixe le plus spécifique : /24 > /16 > /8 > /0) est TOUJOURS prioritaire sur la métrique !",
+    debrief: "Règle fondamentale du routage IP : le routeur applique d'abord le Longest Prefix Match (le masque le plus long/précis, ici /24 via 192.168.1.4). La métrique n'est consultée que pour départager deux routes ayant exactement le MÊME masque !" },
+
+  { id: 38, diff: 4, theme: "RTE", title: "Comparaison des protocoles de routage dynamique : RIP vs OSPF vs BGP",
+    scenario: "Associe dans l'ordre : (1) Le nombre maximum de sauts autorisé par RIP avant qu'une destination soit déclarée injoignable (infini = 16), (2) L'algorithme mathématique utilisé par OSPF pour calculer le plus court chemin selon la bande passante, et (3) Le numéro de port et protocole transport (ex: TCP/179) utilisé par BGP.",
+    diagram: [
+      "  RIP (Vecteur de distance)  │  OSPF (État de liens - Area 0)  │  BGP (Vecteur de chemins inter-AS)"
+    ],
+    promptHint: "Format attendu : <Max_Sauts_RIP> <Algorithme_OSPF> <Port_BGP>",
+    accepted: [
+      "15 dijkstra tcp/179",
+      "15 dijkstra 179",
+      "15 spf 179"
+    ],
+    canonical: "15 Dijkstra TCP/179",
+    hint: "RIP est limité à 15 sauts ; OSPF utilise l'algorithme de Dijkstra ; BGP fonctionne sur TCP/179.",
+    debrief: "Trois classiques d'examen TSSR : RIP plafonne à 15 sauts (16 = injoignable), OSPF construit l'arbre SPF avec l'algorithme de Dijkstra (coût lié à la bande passante), et BGP établit ses sessions entre Systèmes Autonomes (AS) sur le port TCP/179." },
+
+  { id: 39, diff: 4, theme: "RTE", title: "Détection de Boucle de Routage Statique entre 2 Routeurs",
+    scenario: "R1 a pour route par défaut R2 (0.0.0.0/0 via 10.0.0.2) et R2 a pour route par défaut R1 (0.0.0.0/0 via 10.0.0.1). Le sous-réseau 172.16.99.0/24 n'existe sur aucun des deux routeurs. Si un hôte envoie un paquet vers 172.16.99.10 avec TTL=64, quel champ de l'en-tête IPv4 empêche le paquet de tourner à l'infini, et quelle commande sur l'hôte met immédiatement en évidence ce ping-pong R1 <-> R2 ?",
+    diagram: [
+      "  [ R1 : default via R2 ] ═══════ (Paquet 172.16.99.10 rebondit !) ═══════ [ R2 : default via R1 ]"
+    ],
+    promptHint: "Format attendu : <Nom_du_Champ_IP> <Commande_Diagnostic>",
+    accepted: [
+      "ttl traceroute",
+      "ttl tracert"
+    ],
+    canonical: "TTL traceroute",
+    hint: "Le champ est le TTL (Time To Live) et la commande est traceroute (ou tracert).",
+    debrief: "Sans le champ TTL (Time To Live), une boucle de routage saturerait le lien 10 Gbps en quelques millisecondes. Un 'traceroute' révèle immédiatement l'anomalie en affichant une alternance infinie entre 10.0.0.1 et 10.0.0.2 jusqu'à l'expiration du TTL." },
+
+  // ===========================================================================
+  // TIER 5 : ANALYSE DE TRAMES TCPDUMP / WIRESHARK & FORENSICS (Missions 40 à 48)
+  // ===========================================================================
+  { id: 40, diff: 5, theme: "SEC", title: "Analyse tcpdump : Identification d'une attaque ARP Spoofing (MITM)",
+    scenario: "Analyse cette capture 'tcpdump -nn -e arp' prise sur le Réseau A. Quelle adresse IP usurpe l'identité de la passerelle 192.168.10.254, et quelle est l'adresse MAC de l'attaquant ?",
+    diagram: [
+      "  14:02:01.10 ARP, Request who-has 192.168.10.254 tell 192.168.10.10",
+      "  14:02:01.11 ARP, Reply 192.168.10.254 is-at 00:1a:2b:00:00:fe (Interface eth0 légitime)",
+      "  14:02:01.50 ARP, Reply 192.168.10.254 is-at de:ad:be:ef:13:37 (Unsolicited Gratuitous ARP)",
+      "  14:02:02.00 IP 192.168.10.66 (de:ad:be:ef:13:37) > 192.168.10.254: ICMP echo request"
+    ],
+    promptHint: "Format attendu : <IP_Attaquant> <MAC_Attaquant>",
+    accepted: ["192.168.10.66 de:ad:be:ef:13:37"],
+    canonical: "192.168.10.66 de:ad:be:ef:13:37",
+    hint: "Regarde la 3e ligne (Gratuitous ARP annonçant que .10.254 est à de:ad:be:ef:13:37) et la 4e ligne qui révèle quelle IP possède cette MAC !",
+    debrief: "L'hôte 192.168.10.66 (MAC de:ad:be:ef:13:37) envoie des réponses ARP non sollicitées (Gratuitous ARP) affirmant que l'IP de la passerelle 192.168.10.254 correspond à sa propre adresse MAC pour intercepter tout le trafic sortant (Man-In-The-Middle)." },
+
+  { id: 41, diff: 5, theme: "SEC", title: "Analyse tcpdump : Menace Cloud APIPA IMDS (SSRF 169.254.169.254)",
+    scenario: "Comme étudié dans ton cours M3 (section 1.8), un serveur web Cloud compromis par une faille SSRF tente d'extraire les clés IAM temporaires de l'infrastructure. Repère dans la capture tcpdump l'adresse IP cible critique et le numéro de port TCP visé.",
+    diagram: [
+      "  15:10:04.21 IP 10.0.1.15.48912 > 169.254.169.254.80: Flags [P.], seq 1:112, ack 1",
+      "  GET /latest/meta-data/iam/security-credentials/prod-admin-role HTTP/1.1"
+    ],
+    promptHint: "Format attendu : <IP_IMDS> <Port_TCP>",
+    accepted: ["169.254.169.254 80", "169.254.169.254:80"],
+    canonical: "169.254.169.254 80",
+    hint: "L'adresse de métadonnées Cloud (AWS/Azure/GCP) appartient à la plage APIPA : 169.254.169.254 sur le port 80.",
+    debrief: "L'adresse link-local APIPA 169.254.169.254 (port 80) est le service IMDS (Instance Metadata Service) des environnements Cloud. Bloquer ou imposer IMDSv2 (jeton PUT avec TTL=1) est vital pour empêcher le vol de clés IAM par SSRF." },
+
+  { id: 42, diff: 5, theme: "SEC", title: "Analyse tcpdump : TCP 3-Way Handshake vs Attaque SYN Flood",
+    scenario: "Dans tcpdump, les drapeaux TCP sont notés [S] (SYN), [S.] (SYN-ACK), [.] (ACK), [R] (RST), [F] (FIN). Analyse la capture ci-dessous : quel est le type d'attaque en cours, quel port local est ciblé, et quelle option noyau Linux ('sysctl') permet d'encaisser cette attaque sans saturer la file d'attente semi-ouverte ?",
+    diagram: [
+      "  16:00:01.01 IP 45.12.89.1.54111 > 192.168.10.10.443: Flags [S], seq 918273",
+      "  16:00:01.01 IP 91.204.12.8.19823 > 192.168.10.10.443: Flags [S], seq 102938",
+      "  16:00:01.02 IP 185.19.44.2.60129 > 192.168.10.10.443: Flags [S], seq 774821",
+      "  (Des milliers de paquets [S] sans jamais aucun retour [.] ACK après les [S.] du serveur)"
+    ],
+    promptHint: "Format attendu : <Nom_Attaque> <Port_Ciblé> <Mécanisme_Kernel (ex: syn_cookies)>",
+    accepted: [
+      "syn flood 443 syn cookies",
+      "syn flood 443 syncookies",
+      "syn flood 443 tcp_syncookies",
+      "synflood 443 syncookies"
+    ],
+    canonical: "SYN Flood 443 tcp_syncookies",
+    hint: "C'est un 'SYN Flood' sur le port '443', paré sous Linux par les 'syncookies' (net.ipv4.tcp_syncookies=1).",
+    debrief: "Lors d'un SYN Flood sur le port 443, l'attaquant inonde le serveur de segments [S] (SYN) avec des IP usurpées sans jamais compléter le 3-Way Handshake par un [.] (ACK). Activer 'net.ipv4.tcp_syncookies = 1' encode l'état de la connexion dans le numéro de séquence ISN sans allouer de mémoire." },
+
+  { id: 43, diff: 5, theme: "SEC", title: "Filtre de capture Wireshark vs BPF (tcpdump)",
+    scenario: "Tu veux capturer avec 'tcpdump' sur l'interface 'eth0' (sans résolution DNS : '-nn') uniquement les paquets provenant de l'hôte '192.168.10.40' ET destinés au port TCP '22'. Écris l'expression de filtre BPF (Berkeley Packet Filter) correspondante.",
+    diagram: [
+      "  root@routeur:~# tcpdump -nn -i eth0 \"<TON_FILTRE_BPF>\""
+    ],
+    promptHint: "Tape uniquement le filtre BPF (ex: src host ... and tcp dst port ...) ou la commande tcpdump complète :",
+    accepted: [
+      "src host 192.168.10.40 and tcp dst port 22",
+      "src 192.168.10.40 and tcp port 22",
+      "src 192.168.10.40 and dst port 22",
+      "tcpdump -nn -i eth0 src 192.168.10.40 and tcp dst port 22",
+      "tcpdump -nn -i eth0 \"src host 192.168.10.40 and tcp dst port 22\""
+    ],
+    canonical: "src host 192.168.10.40 and tcp dst port 22",
+    hint: "En syntaxe BPF : 'src host 192.168.10.40 and tcp dst port 22' (ou 'src 192.168.10.40 and dst port 22').",
+    debrief: "Ne confonds jamais les filtres d'affichage Wireshark ('ip.src == 192.168.10.40 && tcp.dstport == 22') avec la syntaxe BPF de capture utilisée par tcpdump ('src host 192.168.10.40 and tcp dst port 22')." },
+
+  { id: 44, diff: 5, theme: "SEC", title: "Analyse tcpdump : Détournement de route par ICMP Redirect (Type 5)",
+    scenario: "Un attaquant présent dans le Réseau C envoie ce paquet ICMP forgé à la machine C1. Quel est ce mécanisme ICMP dangereux qui modifie dynamiquement la table de routage de C1, et vers quelle fausse passerelle détourne-t-il le trafic destiné à 192.168.10.10 ?",
+    diagram: [
+      "  17:12:09.44 IP 172.16.5.254 > 172.16.5.10: ICMP redirect 192.168.10.10 to host 172.16.5.99, length 36"
+    ],
+    promptHint: "Format attendu : <Type_Message_ICMP> <IP_Fausse_Passerelle>",
+    accepted: [
+      "icmp redirect 172.16.5.99",
+      "redirect 172.16.5.99"
+    ],
+    canonical: "ICMP Redirect 172.16.5.99",
+    hint: "Le message est un 'ICMP Redirect' qui force C1 à utiliser '172.16.5.99' comme prochain saut.",
+    debrief: "Un message ICMP Redirect (Type 5) indique à un hôte qu'un meilleur routeur existe sur le même LAN. S'il n'est pas désactivé ('net.ipv4.conf.all.accept_redirects = 0'), un attaquant (172.16.5.99) peut injecter une route malveillante dans le cache de routage de la victime !" },
+
+  { id: 45, diff: 5, theme: "SEC", title: "Analyse de Trame 802.1Q : Détection d'attaque VLAN Hopping (Double Tagging)",
+    scenario: "Un switch a son VLAN natif configuré sur le VLAN 10. Tu captures avec 'tcpdump -nn -e vlan' une trame émise par un port en mode Access (VLAN 10) qui comporte DEUX étiquettes 802.1Q imbriquées ! Quel est le VLAN externe (qui sera retiré par le 1er switch) et quel est le VLAN interne cible que l'attaquant parvient à atteindre illégalement ?",
+    diagram: [
+      "  18:04:11.02 00:11:22:33:44:55 > ff:ff:ff:ff:ff:ff, ethertype 802.1Q (0x8100), vlan 10, p 0,",
+      "              ethertype 802.1Q (0x8100), vlan 99, ethertype IPv4, 192.168.99.66 > 192.168.99.254: ICMP echo request"
+    ],
+    promptHint: "Format attendu : <VLAN_Externe> <VLAN_Cible_Interne>",
+    accepted: ["10 99", "vlan 10 vlan 99"],
+    canonical: "10 99",
+    hint: "La première balise 802.1Q porte le numéro '10' (VLAN natif) et la seconde balise cachée porte le numéro '99' (VLAN d'administration).",
+    debrief: "Dans une attaque de Double Tagging 802.1Q (VLAN Hopping), le premier switch retire l'en-tête externe correspondant au VLAN natif (10) et transmet la trame sur le lien Trunk avec le second tag (99) intact, permettant à l'attaquant d'injecter des paquets dans le VLAN 99 !" },
+
+  { id: 46, diff: 5, theme: "SEC", title: "Diagnostic tcpdump : Le piège du Firewall Silencieux vs Port Fermé (RST vs ICMP)",
+    scenario: "Compare ces deux essais de connexion TCP vers 192.168.20.10 : sur le port 8080, le serveur répond immédiatement par 'Flags [R.]' (RST-ACK). Sur le port 22, le routeur intermédiaire répond par 'ICMP host 192.168.20.10 unreachable - admin prohibited filter'. Quel est l'état exact du port 8080 (OUVERT, FERME ou FILTRE) et celui du port 22 (OUVERT, FERME ou FILTRE) ?",
+    diagram: [
+      "  Essai 1 (Port 8080) : 10.10 > 20.10.8080: Flags [S]  ➔  20.10.8080 > 10.10: Flags [R.], ack 1",
+      "  Essai 2 (Port 22)   : 10.10 > 20.10.22:   Flags [S]  ➔  20.254 > 10.10: ICMP admin prohibited"
+    ],
+    promptHint: "Format attendu : <État_8080> <État_22> (ex: FERME FILTRE)",
+    accepted: ["ferme filtre", "fermé filtré", "closed filtered"],
+    canonical: "FERME FILTRE",
+    hint: "Un paquet TCP RST ([R.]) signifie que l'hôte a été atteint mais qu'aucun service n'écoute (FERME). Un rejet ICMP 'admin prohibited' signifie qu'un pare-feu bloque le paquet (FILTRE).",
+    debrief: "Distinction essentielle dans Nmap et tcpdump : recevoir un segment TCP RST ([R.]) prouve que le paquet a atteint la pile IP de la cible mais qu'aucune application n'écoute sur ce port (FERMÉ). Recevoir un ICMP Type 3 Code 13 (Admin Prohibited) ou un timeout prouve qu'un pare-feu bloque l'accès (FILTRÉ)." },
+
+  { id: 47, diff: 5, theme: "SEC", title: "Analyse tcpdump : Attaque Rogue DHCP sur le domaine de diffusion",
+    scenario: "Dans cette capture DHCP sur le Réseau B, un client diffuse un 'DHCP Discover'. Deux serveurs répondent par un 'DHCP Offer' : le serveur légitime (192.168.20.254) et un serveur pirate (Rogue DHCP) qui pousse sa propre IP comme passerelle par défaut ('Router-Option 3') et comme serveur DNS ('DNS-Option 6'). Quelle est l'IP de ce serveur Rogue DHCP ?",
+    diagram: [
+      "  19:20:00.01 IP 0.0.0.0.68 > 255.255.255.255.67: BOOTP/DHCP, Request [DHCP Discover]",
+      "  19:20:00.02 IP 192.168.20.133.67 > 255.255.255.255.68: BOOTP/DHCP, Reply [DHCP Offer: YIP 192.168.20.88, GW 192.168.20.133, DNS 192.168.20.133]",
+      "  19:20:00.08 IP 192.168.20.254.67 > 255.255.255.255.68: BOOTP/DHCP, Reply [DHCP Offer: YIP 192.168.20.51, GW 192.168.20.254, DNS 1.1.1.1]"
+    ],
+    promptHint: "Format attendu : <IP_Rogue_DHCP>",
+    accepted: ["192.168.20.133"],
+    canonical: "192.168.20.133",
+    hint: "Regarde la 2e ligne : quel serveur répond en 1er (à .02s contre .08s) en s'attribuant le rôle de passerelle (GW) et de DNS ?",
+    debrief: "Le serveur pirate 192.168.20.133 répond plus vite que le serveur officiel (.254) et impose sa propre IP comme passerelle et serveur DNS. La parade sur les commutateurs d'entreprise consiste à activer la fonction 'DHCP Snooping' (ports Trusted vs Untrusted)." },
+
+  { id: 48, diff: 5, theme: "SEC", title: "ULTIMATE BOSS — Incident Majeur Multi-Couches (L2 / L3 / L4)",
+    scenario: "Un serveur critique '172.16.5.45/24' (C5) ne répond plus au bastion d'administration '192.168.10.10/24' (A1) en SSH (TCP/22). Tu disposes des 3 relevés ci-dessous pris sur le routeur central. Identifie dans l'ordre : (1) L'adresse IP dont le masque /28 bloque le routage sur C4, (2) Le sous-réseau CIDR résumé réunissant 192.168.10.0/24 et 192.168.11.0/24, et (3) Le drapeau TCP visible dans tcpdump prouvant que le démon 'sshd' est arrêté sur C5.",
+    diagram: [
+      "  [1] C4 tente de relayer vers C5 mais a l'IP 172.16.5.40/28 (GW 172.16.5.254 injoignable)",
+      "  [2] Routeur R1 agrège les réseaux d'admin 192.168.10.0/24 et 192.168.11.0/24 en un seul CIDR",
+      "  [3] tcpdump sur eth2 : 192.168.10.10.51234 > 172.16.5.45.22: Flags [S] ➔ 172.16.5.45.22 > 192.168.10.10.51234: Flags [R.]"
+    ],
+    promptHint: "Format attendu : <IP_de_C4> <CIDR_Résumé_10_et_11> <Drapeau_TCP (RST ou [R.])>",
+    accepted: [
+      "172.16.5.40 192.168.10.0/23 rst",
+      "172.16.5.40 192.168.10.0/23 [r.]",
+      "172.16.5.40 192.168.10.0/23 r."
+    ],
+    canonical: "172.16.5.40 192.168.10.0/23 RST",
+    hint: "1) L'IP de C4 est 172.16.5.40 ; 2) 192.168.10.0/24 + 192.168.11.0/24 = 192.168.10.0/23 ; 3) Le drapeau est RST (ou [R.]).",
+    debrief: "Félicitations ! Tu maîtrises toute la chaîne réseau TSSR : du calcul binaire de sous-réseaux et de l'agrégation CIDR jusqu'au diagnostic des domaines de diffusion, d'ARP et des drapeaux TCP dans tcpdump." }
+];
+
+const TOTAL_MISSIONS = MISSIONS.length;
+
+// =============================================================================
+// 4. MOTEUR CALCULATEUR IP / CIDR ("TECHNIQUE DU PAS") & SIMULATEUR L2/L3
+// =============================================================================
+function ipToInt(ip) {
+  const p = ip.trim().split('.').map(Number);
+  if (p.length !== 4 || p.some(n => isNaN(n) || n < 0 || n > 255)) return null;
+  return ((p[0] << 24) >>> 0) + ((p[1] << 16) >>> 0) + ((p[2] << 8) >>> 0) + (p[3] >>> 0);
+}
+
+function intToIp(intVal) {
+  return [
+    (intVal >>> 24) & 255,
+    (intVal >>> 16) & 255,
+    (intVal >>> 8) & 255,
+    intVal & 255
+  ].join('.');
+}
+
+function intToBinDots(intVal) {
+  return [
+    ((intVal >>> 24) & 255).toString(2).padStart(8, '0'),
+    ((intVal >>> 16) & 255).toString(2).padStart(8, '0'),
+    ((intVal >>> 8) & 255).toString(2).padStart(8, '0'),
+    (intVal & 255).toString(2).padStart(8, '0')
+  ].join('.');
+}
+
+function cidrToMaskInt(cidr) {
+  if (cidr === 0) return 0;
+  return (0xffffffff << (32 - cidr)) >>> 0;
+}
+
+function runIpCalc(arg) {
+  const m = arg.trim().match(/^(\d+\.\d+\.\d+\.\d+)\s*\/\s*(\d{1,2})$/);
+  if (!m) {
+    printHtml(`  Usage : <span class="c-cyan bold">ipcalc &lt;IP/CIDR&gt;</span> (ex: <span class="c-green">ipcalc 120.146.80.1/20</span> ou <span class="c-green">ipcalc 172.16.5.40/28</span>)`);
+    return;
+  }
+  const ipStr = m[1];
+  const cidr = parseInt(m[2], 10);
+  const ipInt = ipToInt(ipStr);
+  if (ipInt === null || cidr < 1 || cidr > 32) {
+    printHtml(`  <span class="c-red">[✗] Adresse IPv4 ou préfixe CIDR (/1 à /32) invalide.</span>`);
+    return;
+  }
+
+  const maskInt = cidrToMaskInt(cidr);
+  const netInt = (ipInt & maskInt) >>> 0;
+  const bcastInt = (netInt | (~maskInt >>> 0)) >>> 0;
+  const firstHost = cidr >= 31 ? netInt : (netInt + 1) >>> 0;
+  const lastHost = cidr >= 31 ? bcastInt : (bcastInt - 1) >>> 0;
+  const nbHosts = cidr >= 31 ? 0 : Math.pow(2, 32 - cidr) - 2;
+
+  const targetOctet = Math.ceil(cidr / 8);
+  const maxTranche = targetOctet * 8;
+  const remBits = maxTranche - cidr;
+  const pas = Math.pow(2, remBits);
+
+  let status = `<span class="c-green bold">OUI (Adresse Hôte Valide)</span>`;
+  if (ipInt === netInt) status = `<span class="c-red bold">NON (Adresse de Réseau — bits hôtes tous à 0)</span>`;
+  else if (ipInt === bcastInt) status = `<span class="c-red bold">NON (Adresse de Broadcast — bits hôtes tous à 1)</span>`;
+
+  printText("");
+  printHtml(`  <span class="c-cyan bold">╔══════════════════ ANALYSEUR BINAIRES &amp; TECHNIQUE DU PAS ══════════════════╗</span>`);
+  printHtml(`    <span class="bold">Entrée analysée :</span> <span class="c-yellow bold">${esc(ipStr)}/${cidr}</span>  (Masque : <span class="c-cyan">${intToIp(maskInt)}</span>)`);
+  printHtml(`    <span class="bold">Technique du Pas:</span> Octet cible = <span class="c-magenta bold">${targetOctet}e octet</span> │ Bits restants = ${maxTranche}-${cidr} = ${remBits} │ <span class="c-green bold">Pas = 2^${remBits} = ${pas}</span>`);
+  printHtml(`    <span class="c-dim">─────────────────────────────────────────────────────────────────────────</span>`);
+  printHtml(`    <span class="bold">IP Binaire      :</span> <span class="c-fg">${intToBinDots(ipInt)}</span>`);
+  printHtml(`    <span class="bold">Masque Binaire  :</span> <span class="c-dim">${intToBinDots(maskInt)}</span>`);
+  printHtml(`    <span class="bold">ID Réseau (AND) :</span> <span class="c-cyan bold">${intToBinDots(netInt)}</span> ➔ <span class="c-cyan bold">${intToIp(netInt)}/${cidr}</span>`);
+  printHtml(`    <span class="bold">Broadcast (OR)  :</span> <span class="c-yellow bold">${intToIp(bcastInt)}</span>`);
+  printHtml(`    <span class="bold">Plage d'Hôtes   :</span> <span class="c-green">${intToIp(firstHost)}</span> à <span class="c-green">${intToIp(lastHost)}</span> (${nbHosts.toLocaleString('fr-FR')} hôtes utilisables)`);
+  printHtml(`    <span class="bold">Valide pour Hôte:</span> ${status}`);
+  printHtml(`  <span class="c-cyan bold">╚═══════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
+function runPacketSimulator(arg) {
+  const parts = arg.trim().toUpperCase().replace("->", " ").replace("➔", " ").split(/\s+/);
+  if (parts.length < 2 || !TP_HOSTS[parts[0]] || !TP_HOSTS[parts[1]]) {
+    printHtml(`  Usage : <span class="c-cyan bold">sim &lt;Source&gt; &lt;Dest&gt;</span> parmi les postes du TP (<span class="c-green">A1..A6, B1..B6, C1..C6</span>). Ex: <span class="c-yellow">sim A4 B2</span>`);
+    return;
+  }
+  const sName = parts[0], dName = parts[1];
+  const s = TP_HOSTS[sName], d = TP_HOSTS[dName];
+  const sIp = ipToInt(s.ip), sMask = ipToInt(s.mask), dIp = ipToInt(d.ip);
+  const sNet = (sIp & sMask) >>> 0;
+  const dSeenByS = (dIp & sMask) >>> 0;
+  const isLocal = (sNet === dSeenByS);
+
+  printText("");
+  printHtml(`  <span class="c-magenta bold">📡 SIMULATION PAQUET L2/L3 (Aller simple) : ${sName} (${s.ip}/${s.cidr}) ➔ ${dName} (${d.ip}/${d.cidr})</span>`);
+  printHtml(`  <span class="c-dim">├──</span> <span class="bold">[1. Calcul AND sur ${sName}]</span> Réseau logique de ${sName} : <span class="c-cyan bold">${intToIp(sNet)}/${s.cidr}</span>`);
+
+  if (isLocal) {
+    printHtml(`  <span class="c-dim">├──</span> <span class="bold">[2. Décision de routage]</span> ${d.ip} &amp; ${s.mask} = ${intToIp(dSeenByS)} ➔ Vue comme <span class="c-yellow bold">LOCALE</span> (Communication directe sans passerelle).`);
+    printHtml(`  <span class="c-dim">├──</span> <span class="bold">[3. Résolution ARP L2]</span> ${sName} diffuse <span class="c-cyan">'Who has ${d.ip}? Tell ${s.ip}'</span> (FF:FF:FF:FF:FF:FF) sur le <span class="bold">Switch ${s.dom}</span>.`);
+    if (s.dom === d.dom) {
+      printHtml(`  <span class="c-dim">└──</span> <span class="c-green bold">[4. Résultat ALLER : OUI ✓]</span> ${dName} est bien branchée sur le Switch ${d.dom} ! Elle répond à l'ARP et reçoit le paquet.`);
+    } else {
+      printHtml(`  <span class="c-dim">└──</span> <span class="c-red bold">[4. Résultat ALLER : NON ✗]</span> ${dName} est branchée sur le Switch ${d.dom} (isolé par le routeur). Personne ne répond à l'ARP sur le Switch ${s.dom} !`);
+    }
+  } else {
+    printHtml(`  <span class="c-dim">├──</span> <span class="bold">[2. Décision de routage]</span> ${d.ip} est hors de ${intToIp(sNet)}/${s.cidr} ➔ Vue comme <span class="c-yellow bold">DISTANTE</span> (Recours à la passerelle).`);
+    if (!s.gw) {
+      printHtml(`  <span class="c-dim">└──</span> <span class="c-red bold">[3. Résultat ALLER : NON ✗]</span> Aucune passerelle configurée sur ${sName} ! Paquet abandonné.`);
+      printText("");
+      return;
+    }
+    const gwInt = ipToInt(s.gw);
+    if (((gwInt & sMask) >>> 0) !== sNet) {
+      printHtml(`  <span class="c-dim">└──</span> <span class="c-red bold">[3. Résultat ALLER : NON ✗]</span> La passerelle configurée (${s.gw}) est HORS du sous-réseau ${intToIp(sNet)}/${s.cidr} de ${sName} !`);
+      printText("");
+      return;
+    }
+    const rtrIface = TP_ROUTER[s.dom];
+    printHtml(`  <span class="c-dim">├──</span> <span class="bold">[3. ARP vers Passerelle]</span> ${sName} cherche sa passerelle <span class="c-cyan">${s.gw}</span> sur le Switch ${s.dom}.`);
+    if (s.gw !== rtrIface.ip) {
+      printHtml(`  <span class="c-dim">└──</span> <span class="c-red bold">[4. Résultat ALLER : NON ✗]</span> Sur le Switch ${s.dom}, le routeur a l'IP ${rtrIface.ip} (et non ${s.gw}). Aucune réponse ARP !`);
+      printText("");
+      return;
+    }
+    printHtml(`  <span class="c-dim">├──</span> <span class="bold">[4. Traversée Routeur]</span> Le routeur (${rtrIface.iface}) reçoit le paquet et consulte sa table de routage pour ${d.ip}.`);
+    // Vérifie si l'IP de destination appartient à l'un des 3 réseaux du routeur ET si la machine est dans ce domaine
+    let matchedDom = null;
+    for (const [domKey, rInfo] of Object.entries(TP_ROUTER)) {
+      if (((dIp & ipToInt(rInfo.mask)) >>> 0) === ipToInt(rInfo.net)) matchedDom = domKey;
+    }
+    if (!matchedDom) {
+      printHtml(`  <span class="c-dim">└──</span> <span class="c-red bold">[5. Résultat ALLER : NON ✗]</span> ${d.ip} n'appartient à aucun des 3 réseaux connus du routeur (.10.0/24, .20.0/24, .5.0/24) !`);
+    } else if (matchedDom !== d.dom) {
+      printHtml(`  <span class="c-dim">└──</span> <span class="c-red bold">[5. Résultat ALLER : NON ✗]</span> Le routeur cherche ${d.ip} en ARP sur le Switch ${matchedDom}, mais ${dName} est physiquement branchée sur le Switch ${d.dom} !`);
+    } else {
+      printHtml(`  <span class="c-dim">└──</span> <span class="c-green bold">[5. Résultat ALLER : OUI ✓]</span> Le routeur émet un ARP sur le Switch ${matchedDom}, trouve ${dName} (${d.ip}) et lui remet le paquet !`);
+    }
+  }
+  printText("");
+}
+
+function showTpTopology() {
+  printText("");
+  printHtml(`  <span class="c-cyan bold">╔══════════════════ TOPOLOGIE DU TP : 3 DOMAINES DE DIFFUSION ══════════════════╗</span>`);
+  printHtml(`                 <span class="c-yellow bold">[ ROUTEUR CENTRAL (3 interfaces actives, 0 pare-feu) ]</span>`);
+  printHtml(`                 ├── <span class="c-green">eth0 (Réseau A)</span> : 192.168.10.254 / 255.255.255.0 (/24)`);
+  printHtml(`                 ├── <span class="c-green">eth1 (Réseau B)</span> : 192.168.20.254 / 255.255.255.0 (/24)`);
+  printHtml(`                 └── <span class="c-green">eth2 (Réseau C)</span> : 172.16.5.254   / 255.255.255.0 (/24)`);
+  printHtml(`  <span class="c-dim">─────────────────────────────────────────────────────────────────────────────────</span>`);
+  printHtml(`  <span class="bold">DOM  MACHINE  ADRESSE IP       MASQUE (/CIDR)        PASSERELLE       DIAGNOSTIC</span>`);
+  for (const [k, h] of Object.entries(TP_HOSTS)) {
+    const ok = h.note === "Config OK";
+    const col = ok ? "c-green" : "c-red";
+    const line = `   ${h.dom}   ${k.padEnd(7)}  ${h.ip.padEnd(15)}  ${(h.mask + " (/" + h.cidr + ")").padEnd(20)}  ${(h.gw || "(aucune)").padEnd(15)}  ${h.note}`;
+    printHtml(`<span class="${col}">${esc(line)}</span>`);
+  }
+  printHtml(`  <span class="c-cyan bold">╚═══════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printHtml(`  <span class="c-dim">Astuce : Tape <span class="c-cyan bold">sim A4 B2</span> ou <span class="c-cyan bold">sim C6 A1</span> pour simuler le trajet d'un paquet en direct !</span>`);
+  printText("");
+}
+
+// =============================================================================
+// 5. GESTION DU PROFIL, GRADES, THÈMES DÉBLOCABLES & ACHIEVEMENTS
+// =============================================================================
+const STORAGE_KEY = "net_ops_v1_profile";
+
+let profile = {
+  pseudo: "netadmin",
+  theme: "jensen",
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: "14px",
+  campaignUnlocked: 1,
+  bestScore: 0,
+  totalScore: 0,
+  streak: 0,
+  bestStreak: 0,
+  masteredIds: [],
+  unlockedThemes: [],
+  badges: [],
+  foundFlag: false,
+  localBoard: [
+    { pseudo: "radia_perlman", score: 5650, mastered: 48 },
+    { pseudo: "vint_cerf", score: 4420, mastered: 39 },
+    { pseudo: "tssr_net", score: 2890, mastered: 25 }
+  ]
+};
+
+let state = {
+  busy: false,
+  active: false,
+  awaitingNext: false,
+  wizardStep: 0,
+  wizardData: {},
+  mode: "CAMPAIGN",
+  playlist: [],
+  stepIdx: 0,
+  sessionScore: 0,
+  attempts: 0,
+  usedHint: 0,
+  startTimeMs: 0
+};
+
+let cmdHistory = [];
+let histIdx = -1;
+
+const outEl = document.getElementById('term-output');
+const inpEl = document.getElementById('cmd-input');
+const boxEl = document.getElementById('term-box');
+const promptLbl = document.getElementById('prompt-label');
+const promptForm = document.getElementById('prompt-form');
+
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+}
+
+function printHtml(html = "", cls = "") {
+  const div = document.createElement('div');
+  div.className = "log-line" + (cls ? " " + cls : "");
+  div.innerHTML = html;
+  outEl.appendChild(div);
+  boxEl.scrollTop = boxEl.scrollHeight;
+  return div;
+}
+
+function printText(text = "", cls = "") {
+  printHtml(esc(text), cls);
+}
+
+function getOperatorRank() {
+  const c = profile.masteredIds.length;
+  if (c >= 48) return { title: "osi-god", sym: "#" };
+  if (c >= 39) return { title: "packet-wizard", sym: "$" };
+  if (c >= 30) return { title: "bgp-architect", sym: "$" };
+  if (c >= 20) return { title: "ccna-ops", sym: "$" };
+  if (c >= 10) return { title: "net-admin", sym: "$" };
+  return { title: "tech-lan", sym: "$" };
+}
+
+function isThemeUnlocked(key) {
+  const t = THEMES[key];
+  if (!t) return false;
+  if (!t.locked) return true;
+  return profile.unlockedThemes.includes(key);
+}
+
+function unlockTheme(key, reasonMsg) {
+  if (!THEMES[key] || profile.unlockedThemes.includes(key)) return;
+  profile.unlockedThemes.push(key);
+  populateThemeSelect();
+  saveProfile();
+  printHtml(`  <span class="badge-gold"> 🔓 BONUS DÉBLOQUÉ </span> <span class="c-yellow bold">Thème Prestige '${esc(THEMES[key].label)}' déverrouillé !</span> <span class="c-dim">(${esc(reasonMsg)} — Tape 'theme ${esc(key)}')</span>`);
+}
+
+function unlockBadge(badgeName, desc) {
+  if (profile.badges.includes(badgeName)) return;
+  profile.badges.push(badgeName);
+  saveProfile();
+  printHtml(`  <span class="badge-gold"> 🏅 HAUT FAIT </span> <span class="c-cyan bold">[${esc(badgeName)}]</span> : <span class="c-fg">${esc(desc)}</span>`);
+}
+
+function checkProgressionUnlocks() {
+  const mCount = profile.masteredIds.length;
+  if (mCount >= 10) unlockTheme("cisco-ios", "Palier N2 atteint : 10+ missions maîtrisées");
+  if (mCount >= 20) unlockTheme("wireshark", "Palier N3 atteint : 20+ missions maîtrisées");
+  if (mCount >= 30) unlockTheme("bgp-core", "Palier N4 atteint : 30+ missions maîtrisées");
+  if (mCount >= 48) unlockBadge("ARCHITECTE CCIE / TSSR", "Les 48 missions Réseau & Routage ont été maîtrisées !");
+}
+
+function populateThemeSelect() {
+  const sel = document.getElementById('theme-select');
+  const groups = {};
+  for (const [k, v] of Object.entries(THEMES)) {
+    if (!groups[v.group]) groups[v.group] = [];
+    groups[v.group].push({ key: k, ...v });
+  }
+  sel.innerHTML = "";
+  for (const [gName, items] of Object.entries(groups)) {
+    const optg = document.createElement('optgroup');
+    optg.label = gName;
+    for (const it of items) {
+      const opt = document.createElement('option');
+      opt.value = it.key;
+      const unlocked = isThemeUnlocked(it.key);
+      opt.disabled = !unlocked;
+      opt.textContent = unlocked ? it.label : `🔒 ${it.label} — [${it.unlockHint}]`;
+      optg.appendChild(opt);
+    }
+    sel.appendChild(optg);
+  }
+  if (THEMES[profile.theme]) sel.value = profile.theme;
+}
+
+function setTheme(themeKey, silent = false) {
+  if (!THEMES[themeKey]) return false;
+  if (!isThemeUnlocked(themeKey)) {
+    if (!silent) {
+      printHtml(`  <span class="c-yellow">[🔒 Thème verrouillé]</span> Condition requise : <span class="c-cyan bold">${esc(THEMES[themeKey].unlockHint)}</span>`);
+    }
+    document.getElementById('theme-select').value = profile.theme;
+    return false;
+  }
+  profile.theme = themeKey;
+  const t = THEMES[themeKey];
+  const r = document.documentElement.style;
+  r.setProperty('--c-bg', t.bg);
+  r.setProperty('--c-bar-bg', t.bar);
+  r.setProperty('--c-bar-fg', t.barFg || t.fg);
+  r.setProperty('--c-bar-dim', t.barDim || t.dim);
+  r.setProperty('--c-fg', t.fg);
+  r.setProperty('--c-dim', t.dim);
+  r.setProperty('--c-border', t.border);
+  r.setProperty('--c-cyan', t.cyan);
+  r.setProperty('--c-green', t.green);
+  r.setProperty('--c-red', t.red);
+  r.setProperty('--c-yellow', t.yellow);
+  r.setProperty('--c-magenta', t.magenta);
+  r.setProperty('--c-blue', t.blue);
+  document.getElementById('theme-select').value = themeKey;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Thème appliqué : <span class="c-cyan bold">${esc(t.label)}</span>`);
+  return true;
+}
+
+function setFontFamily(fontVal, silent = false) {
+  profile.fontFamily = fontVal;
+  document.documentElement.style.setProperty('--term-font', fontVal);
+  document.getElementById('font-select').value = fontVal;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Police modifiée : <span class="c-cyan bold">${esc(fontVal.split(',')[0])}</span>`);
+}
+
+function setFontSize(sizeVal, silent = false) {
+  const normalized = String(sizeVal).endsWith('px') ? sizeVal : `${sizeVal}px`;
+  profile.fontSize = normalized;
+  document.documentElement.style.setProperty('--term-size', normalized);
+  document.getElementById('size-select').value = normalized;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Taille de police : <span class="c-cyan bold">${esc(normalized)}</span>`);
+}
+
+function updatePromptLabel() {
+  const u = esc(profile.pseudo || "netadmin");
+  const rk = getOperatorRank();
+  const streakStr = profile.streak >= 3 ? `<span class="c-yellow bold">[🔥${profile.streak}]</span>` : "";
+  if (state.wizardStep > 0) {
+    promptLbl.innerHTML = `${streakStr}<span class="c-cyan bold">${u}@${rk.title}</span>:<span class="c-blue bold">~/custom</span>${rk.sym}`;
+  } else if (state.active) {
+    const mid = state.playlist[state.stepIdx];
+    promptLbl.innerHTML = `${streakStr}<span class="c-cyan bold">${u}@${rk.title}</span>:<span class="c-blue bold">net-${String(mid).padStart(2, '0')}</span>${rk.sym}`;
+  } else {
+    promptLbl.innerHTML = `${streakStr}<span class="c-cyan bold">${u}@${rk.title}</span>:<span class="c-blue bold">~</span>${rk.sym}`;
+  }
+}
+
+function loadProfile() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) profile = { ...profile, ...JSON.parse(saved) };
+  } catch (e) {}
+  populateThemeSelect();
+  if (!setTheme(profile.theme, true)) setTheme("jensen", true);
+  setFontFamily(profile.fontFamily, true);
+  setFontSize(profile.fontSize, true);
+  updatePromptLabel();
+}
+
+function saveProfile() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch (e) {}
+  updatePromptLabel();
+}
+
+function focusPrompt() {
+  if (!state.busy && window.getSelection().toString() === "") inpEl.focus();
+}
+
+function execFromNav(cmd) {
+  if (state.busy) return;
+  inpEl.value = cmd;
+  handleInput(cmd);
+  inpEl.value = "";
+  inpEl.focus();
+}
+
+// =============================================================================
+// 6. BANNIÈRE ASCII, AFFICHAGE DES MISSIONS & VALIDATION
+// =============================================================================
+function drawAsciiHeader() {
+  const banner = [
+    "    _   __ ______ ______       ____   ____   _____",
+    "   / | / // ____//_  __/      / __ \\ / __ \\ / ___/",
+    "  /  |/ // __/    / /  ______/ / / // /_/ / \\__ \\ ",
+    " / /|  // /___   / /  /_____/ /_/ // ____/ ___/ / ",
+    "/_/ |_//_____/  /_/         \\____//_/     /____/  "
+  ].join("\n");
+
+  const rk = getOperatorRank();
+  printHtml(`<span class="c-cyan bold">${esc(banner)}</span>`);
+  printHtml(`  <span class="c-dim">Simulateur Routage, Subnetting, ARP &amp; Analyse de Trames tcpdump (48 Missions)</span>`);
+  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+  printHtml(`  <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS}</span> │ <span class="bold">Grade :</span> <span class="c-magenta bold">${esc(rk.title)}</span> │ <span class="bold">Streak :</span> <span class="c-yellow bold">🔥${profile.streak}</span> │ <span class="bold">Score :</span> <span class="c-yellow bold">${state.sessionScore} pts</span>`);
+  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+}
+
+function tierName(d) {
+  return {
+    1: "TIER 1 : TECHNICIEN N1 (Adressage IPv4, CIDR, Technique du Pas & VLSM)",
+    2: "TIER 2 : ADMIN LAN N2 (Domaines de Diffusion, ARP & TP A1..C6)",
+    3: "TIER 3 : ADMIN SYSTÈME N3 (Commandes Linux iproute2, Windows & Diagnostic)",
+    4: "TIER 4 : INGÉNIEUR ROUTAGE N4 (Routage Statique R1..R8, Supernetting & OSPF/BGP)",
+    5: "TIER 5 : ANALYSTE SECOPS N5 (Captures tcpdump / Wireshark & Forensics Réseau)"
+  }[d] || "MODE MIXTE";
+}
+
+function printMission() {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+  if (!m) {
+    state.active = false;
+    state.awaitingNext = false;
+    updatePromptLabel();
+    printText("");
+    printHtml(`<span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════╗</span>`);
+    printHtml(`<span class="c-green bold">║  🏆 SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(5)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS} missions     ║</span>`);
+    printHtml(`<span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════╝</span>`);
+    printHtml(`  Tape <span class="c-cyan bold">submit</span> pour publier ton score sur le Leaderboard, ou <span class="c-cyan bold">start</span>.`);
+    return;
+  }
+
+  state.attempts = 0;
+  state.usedHint = 0;
+  state.awaitingNext = false;
+  state.startTimeMs = Date.now();
+  updatePromptLabel();
+
+  const mastTag = profile.masteredIds.includes(m.id)
+    ? ` <span class="c-green bold">[✓ MAÎTRISÉE]</span>` : "";
+
+  printText("");
+  printHtml(`  <span class="badge-tier"> ${esc(tierName(m.diff))} </span>  <span class="badge-theme"> ${esc(m.theme)} </span>${mastTag}`);
+  printHtml(`  <span class="c-cyan bold">Mission #${String(m.id).padStart(2, '0')} — ${esc(m.title)}</span> <span class="c-dim">(${state.stepIdx + 1}/${state.playlist.length})</span>`);
+  printText("");
+  printHtml(`  <span class="c-fg">${esc(m.scenario)}</span>`);
+
+  if (m.diagram && m.diagram.length) {
+    const diagHtml = m.diagram.map(l => `<span class="c-cyan">${esc(l)}</span>`).join("\n");
+    printHtml(`<div class="box-frame">${diagHtml}</div>`);
+  }
+
+  printHtml(`  <span class="c-yellow bold">▸ ${esc(m.promptHint)}</span>`);
+  printHtml(`  <span class="c-dim">Outils live : ipcalc &lt;ip/cidr&gt;, sim &lt;src&gt; &lt;dst&gt;, topo, hint, sol, memo, skip, exit</span>`);
+  printText("");
+}
+
+function normalizeAnswer(str) {
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/[,;]+/g, " ")
+    .replace(/\s*->\s*/g, " ")
+    .replace(/\s*➔\s*/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function evaluateNetAttempt(rawInput) {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+  const norm = normalizeAnswer(rawInput);
+
+  state.attempts++;
+  const isCorrect = m.accepted.some(a => normalizeAnswer(a) === norm);
+
+  if (isCorrect) {
+    const elapsed = Math.max(1, Math.floor((Date.now() - state.startTimeMs) / 1000));
+    let pts = 100 - (state.attempts - 1) * 15 - (state.usedHint === 1 ? 30 : 0);
+    if (pts < 20) pts = 20;
+
+    let speed = elapsed <= 15 ? 30 : (elapsed <= 30 ? 15 : (elapsed <= 60 ? 5 : 0));
+    let bonusTags = [];
+
+    if (state.usedHint === 2) {
+      pts = 10;
+      speed = 0;
+      profile.streak = 0;
+    } else {
+      if (!profile.masteredIds.includes(m.id)) profile.masteredIds.push(m.id);
+
+      if (state.attempts === 1 && state.usedHint === 0) {
+        profile.streak++;
+        if (profile.streak > profile.bestStreak) profile.bestStreak = profile.streak;
+
+        if (elapsed <= 7) {
+          speed += 50;
+          bonusTags.push("⚡ FAST-CONVERGENCE +50");
+          unlockTheme("pipboy", "Mission résolue en moins de 7 secondes du 1er coup !");
+          unlockBadge("ZERO-LATENCY", "Résoudre un diagnostic réseau en moins de 7 secondes.");
+        }
+
+        if (profile.streak === 3) {
+          pts += 25;
+          bonusTags.push("🔥 STREAK x3 (+25)");
+        } else if (profile.streak === 5) {
+          pts += 60;
+          bonusTags.push("🔥 STREAK x5 (+60)");
+          unlockTheme("wargames", "Série de 5 diagnostics réseau sans la moindre erreur !");
+          unlockBadge("FIVE NINE UPTIME (99.999%)", "5 missions consécutives résolues du premier coup.");
+        } else if (profile.streak >= 10 && profile.streak % 5 === 0) {
+          pts += 120;
+          bonusTags.push(`👑 STREAK x${profile.streak} (+120)`);
+          unlockBadge("BGP CORE ROUTER", "10 missions consécutives résolues du premier coup.");
+        }
+      } else {
+        profile.streak = 0;
+      }
+    }
+
+    const totalPts = pts + speed;
+    state.sessionScore += totalPts;
+    profile.totalScore += totalPts;
+    if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
+    if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < TOTAL_MISSIONS) {
+      profile.campaignUnlocked = m.id + 1;
+    }
+
+    state.awaitingNext = true;
+    printText("");
+    printHtml(`  <span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════╗</span>`);
+    printHtml(`  <span class="c-green bold">║  [✓] MISSION #${String(m.id).padStart(2, '0')} VALIDÉE ! (+${totalPts} pts | ⏱ ${elapsed}s | Streak: 🔥${profile.streak})</span>`);
+    printHtml(`  <span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════╝</span>`);
+    if (bonusTags.length > 0) {
+      printHtml(`  <span class="badge-gold"> BONUS PERFORMANCE </span> <span class="c-yellow bold">${esc(bonusTags.join("  •  "))}</span>`);
+    }
+    printHtml(`  <span class="bold">Ta réponse        :</span> <span class="c-green bold">${esc(rawInput)}</span>`);
+    printHtml(`  <span class="bold">Réponse canonique :</span> <span class="c-cyan bold">${esc(m.canonical)}</span>`);
+    printText("");
+    printHtml(`  <span class="c-yellow bold">Explication &amp; Débriefing Réseau :</span>`);
+    printHtml(`  <span class="c-fg">${esc(m.debrief)}</span>`);
+
+    checkProgressionUnlocks();
+    saveProfile();
+
+    printText("");
+    printHtml(`  <span class="c-dim">👉 Appuie sur [ENTRÉE] pour passer à la mission suivante...</span>`);
+    return;
+  }
+
+  profile.streak = 0;
+  saveProfile();
+  printHtml(`  <span class="c-red">[✗] Diagnostic ou syntaxe incorrecte :</span> <span class="bold">${esc(rawInput)}</span>`);
+  printHtml(`  <span class="c-dim">    Vérifie le format demandé (${esc(m.promptHint)}) ou utilise 'ipcalc', 'sim', 'hint'.</span>`);
+}
+
+// =============================================================================
+// 7. EASTER EGGS RÉSEAU ASYNCHRONES (STAR WARS TRACEROUTE, BGP BLACKHOLE, FLAG)
+// =============================================================================
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function runStarWarsTraceroute() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  printHtml(`<span class="c-cyan">traceroute to 216.81.59.173 (216.81.59.173), 30 hops max, 60 byte packets</span>`);
+  const hops = [
+    " 1  Episode.IV.A.NEW.HOPE.obiwan.scrye.net (206.214.251.1)  12.4 ms",
+    " 2  It.is.a.period.of.civil.war.obiwan.scrye.net (206.214.251.6)  18.1 ms",
+    " 3  Rebel.spaceships.striking.from.a.hidden.base (206.214.251.9)  24.7 ms",
+    " 4  have.won.their.first.victory.against.the.evil.Galactic.Empire (206.214.251.14)  31.2 ms",
+    " 5  During.the.battle.Rebel.spies.managed.to.steal.secret.plans (206.214.251.17)  39.8 ms",
+    " 6  to.the.Empires.ultimate.weapon.the.DEATH.STAR (206.214.251.22)  46.0 ms",
+    " 7  an.armored.space.station.with.enough.power.to.destroy.an.entire.planet (206.214.251.25)  52.3 ms",
+    " 8  MAY.THE.PACKETS.BE.WITH.YOU.tssr-ops.local (216.81.59.173)  58.9 ms"
+  ];
+  for (const h of hops) {
+    await sleep(520);
+    printHtml(`<span class="c-yellow">${esc(h)}</span>`);
+  }
+  unlockBadge("OBI-WAN TRACEROUTE", "Découvrir le célèbre Easter Egg DNS Star Wars Traceroute.");
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+async function runBgpBlackholeEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  const steps = [
+    { delay: 400, html: `<span class="c-red bold">[BGP-DAEMON] Injecting 0.0.0.0/0 into global RIB (Origin: AS65000)...</span>` },
+    { delay: 750, html: `<span class="c-yellow">[BGP-PEER] Redistributing prefix 0.0.0.0/0 to upstream Tier-1 peers (AS3356, AS174, AS1299)...</span>` },
+    { delay: 900, html: `<span class="c-red bold">CRITICAL ALERT: GLOBAL INTERNET TRAFFIC CONVERGING ON YOUR INTERFACE eth0 !</span>` },
+    { delay: 850, html: `<span class="c-magenta">[cloudflare-radar] Massive BGP Route Leak detected in Paris, FR. Packet loss: 99.8%</span>` },
+    { delay: 950, html: `<span class="c-cyan">[RPKI-VALIDATOR] Invalid ROA signature detected! Triggering automated BGP Session Flap...</span>` },
+    { delay: 700, html: `<span class="c-green bold">[SYSTEM] Route withdrawn. Tu viens de recréer l'incident BGP Pakistan Telecom / YouTube de 2008 ;)</span>` }
+  ];
+  for (const s of steps) {
+    await sleep(s.delay);
+    printHtml(s.html);
+  }
+  unlockBadge("BGP HIJACKER", "Provoquer une fuite de route BGP globale avec 0.0.0.0/0.");
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+function triggerPcapSecretFlag() {
+  printText("");
+  printHtml(`  <span class="c-cyan">21:13:37.00 IP 10.13.37.1.1337 &gt; 192.168.10.10.1337: Flags [P.], length 32</span>`);
+  printHtml(`  <span class="c-dim">0x0000:  4500 003c 1c46 4000 4006 b1e6 0a0d 2501  E..&lt;.F@.@.....%.</span>`);
+  printHtml(`  <span class="c-magenta bold">0x0010:  464c 4147 7b50 3443 4b33 545f 5731 5a34  FLAG{P4CK3T_W1Z4</span>`);
+  printHtml(`  <span class="c-magenta bold">0x0020:  5244 5f4f 5349 5f4c 377d 0a00 0000 0000  RD_OSI_L7}......</span>`);
+  if (!profile.foundFlag) {
+    profile.foundFlag = true;
+    profile.totalScore += 200;
+    state.sessionScore += 200;
+    if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
+    unlockBadge("DEEP PACKET INSPECTOR", "Extraire le Flag hexadécimal caché sur le port 1337 (+200 pts).");
+    saveProfile();
+    printHtml(`  <span class="c-green bold">[🎉 PAYLOAD DÉCODÉ] +200 pts ajoutés à ton score !</span>`);
+  } else {
+    printHtml(`  <span class="c-dim">(Tu as déjà décodé les +200 pts de cette trame.)</span>`);
+  }
+  printText("");
+}
+
+// =============================================================================
+// 8. MÉMO TECHNIQUE RÉSEAU & LEADERBOARD
+// =============================================================================
+function showMemo() {
+  printText("");
+  printHtml(`  <span class="c-magenta bold">╔══════════════════════ MÉMO TECHNIQUE : RÉSEAU, SUBNETTING &amp; IPROUTE2 ══════════════════════╗</span>`);
+  printHtml(`  <span class="c-cyan bold">1. Technique du Pas &amp; CIDR (M3) :</span>`);
+  printHtml(`    • <span class="bold">Octet cible :</span> /1../8 ➔ 1er octet │ /9../16 ➔ 2e octet │ /17../24 ➔ 3e octet │ /25../32 ➔ 4e octet`);
+  printHtml(`    • <span class="bold">Pas ($2^n$) :</span> <span class="c-yellow">Pas = 2^(Max_Tranche - CIDR)</span>. Ex: /20 ➔ 24 - 20 = 4 ➔ Pas = 16 (Masque .240)`);
+  printHtml(`    • <span class="bold">Formules    :</span> Sous-réseaux créés = <span class="c-green">2^bits_empruntés</span> │ Hôtes utilisables = <span class="c-green">2^(32 - CIDR) - 2</span>`);
+  printHtml(`    • <span class="bold">Plages RFC 1918 :</span> A = 10.0.0.0/8 │ B = 172.16.0.0/12 (.16 à .31) │ C = 192.168.0.0/16 │ APIPA = 169.254.0.0/16`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">2. Domaines de Diffusion, ARP &amp; Routage (M4) :</span>`);
+  printHtml(`    • <span class="bold">Test Local/Distant :</span> La source compare <span class="c-cyan">(IP_Src &amp; Masque_Src)</span> avec <span class="c-cyan">(IP_Dst &amp; Masque_Src)</span>.`);
+  printHtml(`    • <span class="bold">Si LOCALE   :</span> Requête ARP Broadcast (FF:FF:FF:FF:FF:FF) directe pour l'IP de destination sur le Switch.`);
+  printHtml(`    • <span class="bold">Si DISTANTE :</span> Requête ARP pour l'IP de la Passerelle (qui DOIT être dans le sous-réseau de la source !).`);
+  printHtml(`    • <span class="bold">Priorité    :</span> Longest Prefix Match (/24 gagne toujours contre /16 et /8), puis Métrique si égalité.`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">3. Commandes Indispensables Linux (iproute2) &amp; Windows (M5) :</span>`);
+  printHtml(`    • <span class="c-green bold">ip link set dev eth0 up/down</span>     Activer / Désactiver une interface physique`);
+  printHtml(`    • <span class="c-green bold">ip addr add 192.168.1.10/24 dev eth0</span> Ajouter une adresse IPv4 en notation CIDR`);
+  printHtml(`    • <span class="c-green bold">ip route add default via 192.168.1.254</span> Configurer la passerelle par défaut`);
+  printHtml(`    • <span class="c-green bold">sudo ip neigh flush all</span>          Vider le cache ARP/voisinage sous Linux`);
+  printHtml(`    • <span class="c-green bold">ss -tulnp</span>                        Lister les ports TCP/UDP en écoute + PID`);
+  printHtml(`    • <span class="c-green bold">ipconfig /release &amp;&amp; ipconfig /renew &amp;&amp; ipconfig /flushdns</span> (Dépannage DHCP &amp; DNS Windows)`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">4. Outils Live intégrés à ce simulateur :</span>`);
+  printHtml(`    • Tape <span class="c-yellow bold">ipcalc 192.168.19.87/29</span> pour détailler les calculs binaires et le pas d'une IP.`);
+  printHtml(`    • Tape <span class="c-yellow bold">topo</span> puis <span class="c-yellow bold">sim A4 B2</span> pour simuler un paquet dans le TP des 3 domaines de diffusion.`);
+  printHtml(`  <span class="c-magenta bold">╚════════════════════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
+async function showLeaderboard() {
+  printHtml(`<span class="c-dim">Récupération du Leaderboard NET-OPS...</span>`);
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=pseudo,score,mastered&order=score.desc&limit=15`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      });
+      if (res.ok) {
+        renderBoardTable(await res.json(), "LEADERBOARD PUBLIC EN LIGNE");
+        return;
+      }
+    } catch (e) {}
+  }
+  const list = [...profile.localBoard];
+  const myBest = Math.max(profile.bestScore, profile.totalScore);
+  const ex = list.find(x => x.pseudo === profile.pseudo);
+  if (ex) { ex.score = Math.max(ex.score, myBest); ex.mastered = profile.masteredIds.length; }
+  else list.push({ pseudo: profile.pseudo, score: myBest, mastered: profile.masteredIds.length });
+  list.sort((a, b) => b.score - a.score);
+  renderBoardTable(list.slice(0, 10), "LEADERBOARD (Mode Local)");
+}
+
+function renderBoardTable(rows, title) {
+  printText("");
+  printHtml(`  <span class="c-cyan bold">=== ${esc(title)} ===</span>`);
+  printHtml(`  <span class="c-dim">RANG   PSEUDO                 SCORE        MAÎTRISE</span>`);
+  printHtml(`  <span class="c-dim">────   ────────────────────   ──────────   ────────</span>`);
+  rows.forEach((r, idx) => {
+    const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(7);
+    const ps = String(r.pseudo).slice(0, 20).padEnd(23);
+    const sc = `${r.score} pts`.padEnd(13);
+    const ma = `${r.mastered}/${TOTAL_MISSIONS}`;
+    printHtml(`  <span class="c-yellow bold">${esc(rk)}</span><span class="c-fg">${esc(ps)}</span><span class="c-green bold">${esc(sc)}</span><span class="c-cyan">${esc(ma)}</span>`);
+  });
+  printHtml(`  <span class="c-dim">Commandes : 'nick &lt;pseudo&gt;' puis 'submit' pour publier ton score.</span>`);
+  printText("");
+}
+
+async function submitScoreToBoard() {
+  const best = Math.max(profile.bestScore, profile.totalScore);
+  if (best <= 0) {
+    printHtml(`<span class="c-yellow">[!] Résous au moins une mission avant de publier ton score.</span>`);
+    return;
+  }
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ pseudo: profile.pseudo, score: best, mastered: profile.masteredIds.length })
+      });
+      if (res.ok) {
+        printHtml(`<span class="c-green bold">[✓] Score de ${best} pts publié sous '${esc(profile.pseudo)}' !</span>`);
+        showLeaderboard();
+        return;
+      }
+    } catch (e) {}
+  }
+  printHtml(`<span class="c-green bold">[✓] Score enregistré pour '${esc(profile.pseudo)}' (${best} pts).</span>`);
+  showLeaderboard();
+}
+
+// =============================================================================
+// 9. INTERPRÉTEUR DE COMMANDES PRINCIPAL
+// =============================================================================
+function startCampaign(startAt) {
+  const s = startAt || profile.campaignUnlocked || 1;
+  state.playlist = [];
+  for (let i = s; i <= TOTAL_MISSIONS; i++) state.playlist.push(i);
+  state.mode = "CAMPAIGN";
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  printMission();
+}
+
+function onPromptSubmit(e) {
+  e.preventDefault();
+  if (state.busy) return;
+  const raw = inpEl.value;
+  inpEl.value = "";
+  handleInput(raw);
+}
+
+function handleInput(rawInput) {
+  const cmd = rawInput.trim();
+  printHtml(`${promptLbl.innerHTML} ${esc(cmd)}`);
+
+  if (state.awaitingNext && cmd === "") {
+    state.stepIdx++;
+    printMission();
+    return;
+  }
+
+  if (!cmd) return;
+  cmdHistory.unshift(cmd);
+  histIdx = -1;
+
+  if (state.wizardStep > 0) {
+    handleCustomWizard(cmd);
+    return;
+  }
+
+  const parts = cmd.split(/\s+/);
+  const base = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(" ");
+
+  if (base === "help" || base === "man") {
+    printText("");
+    printHtml(`  <span class="c-cyan bold">COMMANDES &amp; OUTILS RÉSEAU DISPONIBLES :</span>`);
+    printHtml(`    <span class="c-green bold">start</span> / <span class="c-green bold">camp</span>           : Lancer la campagne au niveau débloqué (${profile.campaignUnlocked}/${TOTAL_MISSIONS})`);
+    printHtml(`    <span class="c-green bold">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>            : Aller directement à une mission précise`);
+    printHtml(`    <span class="c-green bold">custom</span>                 : Configurer une session sur-mesure (palier, thème, nombre)`);
+    printHtml(`    <span class="c-yellow bold">ipcalc &lt;ip/cidr&gt;</span>       : Calculateur binaire &amp; Technique du Pas (ex: ipcalc 172.16.5.40/28)`);
+    printHtml(`    <span class="c-yellow bold">topo</span>                   : Afficher la topologie complète du TP des 3 domaines (A1..C6)`);
+    printHtml(`    <span class="c-yellow bold">sim &lt;src&gt; &lt;dst&gt;</span>        : Simuler un paquet L2/L3 entre 2 machines du TP (ex: sim A4 B2)`);
+    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">unlocks</span>        : Voir ton grade, tes thèmes Prestige et tes badges`);
+    printHtml(`    <span class="c-green bold">board</span> / <span class="c-green bold">submit</span>         : Voir le Leaderboard ou publier ton score`);
+    printHtml(`    <span class="c-green bold">nick &lt;pseudo&gt;</span>          : Changer ton pseudo (actuel : <span class="c-cyan">${esc(profile.pseudo)}</span>)`);
+    printHtml(`    <span class="c-green bold">memo</span>                   : Afficher le manuel CIDR, Routage &amp; Commandes iproute2`);
+    printHtml(`    <span class="c-green bold">theme &lt;nom&gt;</span>            : Changer de thème (${Object.keys(THEMES).join(', ')})`);
+    printHtml(`    <span class="c-green bold">clear</span>                  : Nettoyer le terminal`);
+    printText("");
+    return;
+  }
+
+  if (base === "clear" || base === "cls" || base === "banner") {
+    outEl.innerHTML = "";
+    drawAsciiHeader();
+    if (state.active) printMission();
+    return;
+  }
+
+  if (base === "ipcalc" || (base === "ip" && parts[1] === "calc")) {
+    const target = base === "ipcalc" ? arg : parts.slice(2).join(" ");
+    runIpCalc(target);
+    return;
+  }
+
+  if (base === "topo" || base === "topologie") {
+    showTpTopology();
+    return;
+  }
+
+  if (base === "sim" || base === "trace") {
+    runPacketSimulator(arg);
+    return;
+  }
+
+  if (base === "theme") {
+    if (!arg || !setTheme(arg.toLowerCase())) {
+      printHtml(`  Thèmes disponibles : <span class="c-cyan">${Object.keys(THEMES).join(', ')}</span>`);
+    }
+    return;
+  }
+
+  if (base === "size") {
+    const sz = parseInt(arg, 10);
+    if (!sz || sz < 11 || sz > 24) {
+      printHtml(`  Usage : <span class="c-cyan">size &lt;12-20&gt;</span>`);
+      return;
+    }
+    setFontSize(`${sz}px`);
+    return;
+  }
+
+  // --- Easter Eggs Réseau ---
+  if (base === "starwars" || (base === "traceroute" && arg.includes("216.81.59.173"))) {
+    runStarWarsTraceroute();
+    return;
+  }
+  if (cmd.toLowerCase().includes("blackhole") || cmd.includes("0.0.0.0/0")) {
+    if (!state.active) { runBgpBlackholeEasterEgg(); return; }
+  }
+  if (cmd === "ping 127.0.0.1" || cmd === "ping ::1") {
+    printHtml(`  <span class="c-green bold">64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.012 ms — "There's no place like 127.0.0.1 !"</span>`);
+    unlockBadge("HOME SWEET HOME", "Pinger la boucle locale 127.0.0.1.");
+    return;
+  }
+  if (cmd.includes("1337") && (base === "tcpdump" || base === "wireshark")) {
+    triggerPcapSecretFlag();
+    return;
+  }
+
+  if (base === "memo") { showMemo(); return; }
+
+  if (base === "tree" || base === "stats" || base === "profil" || base === "unlocks") {
+    const rk = getOperatorRank();
+    printText("");
+    printHtml(`  <span class="c-cyan bold">Profil Opérateur : ${esc(profile.pseudo)}</span> <span class="badge-theme">${esc(rk.title)}</span>`);
+    printHtml(`  ├── <span class="bold">Progression Campagne :</span> Niveau ${profile.campaignUnlocked}/${TOTAL_MISSIONS}`);
+    printHtml(`  ├── <span class="bold">Missions Maîtrisées  :</span> <span class="c-green bold">${profile.masteredIds.length}/${TOTAL_MISSIONS}</span>`);
+    printHtml(`  ├── <span class="bold">Meilleure Série      :</span> <span class="c-yellow bold">🔥 ${profile.bestStreak} sans faute</span> (Actuelle : ${profile.streak})`);
+    printHtml(`  ├── <span class="bold">Score Cumulé         :</span> <span class="c-yellow bold">${profile.totalScore} pts</span> (Record session : ${profile.bestScore} pts)`);
+    printHtml(`  ├── <span class="bold">Hauts Faits (Badges) :</span> ${profile.badges.length ? profile.badges.map(b => `<span class="c-cyan bold">[🏅 ${esc(b)}]</span>`).join(' ') : '<span class="c-dim">Aucun pour le moment</span>'}`);
+    printHtml(`  ├── <span class="bold">Thèmes Prestige      :</span>`);
+    for (const [k, v] of Object.entries(THEMES)) {
+      if (!v.locked) continue;
+      const st = isThemeUnlocked(k) ? `<span class="c-green bold">[🔓 DÉBLOQUÉ : theme ${esc(k)}]</span>` : `<span class="c-dim">[🔒 Verrouillé : ${esc(v.unlockHint)}]</span>`;
+      printHtml(`  │   ├── <span class="bold">${esc(v.label.padEnd(28))}</span> ${st}`);
+    }
+    printHtml(`  └── <span class="bold">Architecture des 5 Paliers NET-OPS :</span>`);
+    printHtml(`      ├── <span class="c-cyan">[01..10]</span> Tier 1 : Adressage IPv4, CIDR, Technique du Pas &amp; VLSM`);
+    printHtml(`      ├── <span class="c-cyan">[11..20]</span> Tier 2 : Domaines de Diffusion, ARP &amp; TP A1..C6`);
+    printHtml(`      ├── <span class="c-cyan">[21..30]</span> Tier 3 : Commandes Linux iproute2, Windows &amp; Dépannage`);
+    printHtml(`      ├── <span class="c-cyan">[31..39]</span> Tier 4 : Routage Statique R1..R8, Supernetting &amp; OSPF/BGP`);
+    printHtml(`      └── <span class="c-cyan">[40..48]</span> Tier 5 : Captures tcpdump / Wireshark &amp; Forensics Réseau`);
+    printText("");
+    return;
+  }
+
+  if (base === "nick") {
+    if (!arg) { printHtml(`  Usage : <span class="c-cyan">nick &lt;ton_pseudo&gt;</span>`); return; }
+    profile.pseudo = arg.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "netadmin";
+    saveProfile();
+    printHtml(`  <span class="c-green">[✓]</span> Pseudo défini sur : <span class="c-cyan bold">${esc(profile.pseudo)}</span>`);
+    return;
+  }
+
+  if (base === "board" || base === "leaderboard") { showLeaderboard(); return; }
+  if (base === "submit") { submitScoreToBoard(); return; }
+
+  if (base === "start" || base === "camp" || base === "campagne") {
+    startCampaign(parseInt(arg, 10) || profile.campaignUnlocked);
+    return;
+  }
+
+  if (base === "goto" || base === "cd") {
+    const n = parseInt(arg, 10);
+    if (!n || n < 1 || n > TOTAL_MISSIONS) {
+      printHtml(`  Usage : <span class="c-cyan">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>`);
+      return;
+    }
+    startCampaign(n);
+    return;
+  }
+
+  if (base === "custom") {
+    state.active = false;
+    state.wizardStep = 1;
+    updatePromptLabel();
+    printText("");
+    printHtml(`  <span class="c-cyan bold">⚙️ CONFIGURATION D'OPÉRATION RÉSEAU SUR-MESURE</span>`);
+    printHtml(`  Étape 1/3 — Difficulté [<span class="c-yellow">1</span>=N1 Subnet, <span class="c-yellow">2</span>=N2 ARP/TP, <span class="c-yellow">3</span>=N3 CLI, <span class="c-yellow">4</span>=N4 Routage, <span class="c-yellow">5</span>=N5 tcpdump, <span class="c-yellow">ALL</span>=Mixte] :`);
+    return;
+  }
+
+  if (state.active) {
+    const m = MISSIONS.find(x => x.id === state.playlist[state.stepIdx]);
+    if (base === "exit" || base === "quit" || base === "menu") {
+      state.active = false;
+      state.awaitingNext = false;
+      updatePromptLabel();
+      printHtml(`  <span class="c-dim">Session mise en pause. Tape 'start' pour reprendre ou 'help'.</span>`);
+      return;
+    }
+    if (base === "ls") { printMission(); return; }
+    if (base === "hint" || base === "indice") {
+      if (state.usedHint === 0) state.usedHint = 1;
+      printHtml(`  <span class="c-yellow bold">💡 [INDICE NOC] :</span> ${esc(m.hint)}`);
+      return;
+    }
+    if (base === "sol" || base === "solution") {
+      state.usedHint = 2;
+      printHtml(`  <span class="c-magenta bold">🔑 [SOLUTION CANONIQUE] :</span> <span class="bold">${esc(m.canonical)}</span>`);
+      return;
+    }
+    if (base === "skip" || base === "next") {
+      profile.streak = 0;
+      saveProfile();
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    if (state.awaitingNext) {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    evaluateNetAttempt(cmd);
+    return;
+  }
+
+  printHtml(`  <span class="c-red">bash: ${esc(base)}: commande introuvable.</span> Tape <span class="c-cyan bold">help</span>, <span class="c-cyan bold">topo</span>, <span class="c-cyan bold">ipcalc</span> ou <span class="c-cyan bold">start</span>.`);
+}
+
+function handleCustomWizard(input) {
+  const val = input.trim().toUpperCase();
+  if (val === "EXIT" || val === "QUIT") {
+    state.wizardStep = 0;
+    updatePromptLabel();
+    printHtml(`  <span class="c-dim">Configuration annulée.</span>`);
+    return;
+  }
+  if (state.wizardStep === 1) {
+    state.wizardData.diff = ["1", "2", "3", "4", "5"].includes(val) ? Number(val) : "ALL";
+    state.wizardStep = 2;
+    printHtml(`  Étape 2/3 — Catégorie [<span class="c-yellow">SUB</span>=Subnetting, <span class="c-yellow">ARP</span>=Diffusion/TP, <span class="c-yellow">CLI</span>=Commandes, <span class="c-yellow">RTE</span>=Routage, <span class="c-yellow">SEC</span>=tcpdump, <span class="c-yellow">ALL</span>] :`);
+    return;
+  }
+  if (state.wizardStep === 2) {
+    state.wizardData.theme = ["SUB", "ARP", "CLI", "RTE", "SEC"].includes(val) ? val : "ALL";
+    state.wizardStep = 3;
+    printHtml(`  Étape 3/3 — Nombre de missions [<span class="c-yellow">1-${TOTAL_MISSIONS}</span>] (défaut: 5) :`);
+    return;
+  }
+  if (state.wizardStep === 3) {
+    const count = parseInt(val, 10) || 5;
+    const pool = MISSIONS.filter(m =>
+      (state.wizardData.diff === "ALL" || m.diff === state.wizardData.diff) &&
+      (state.wizardData.theme === "ALL" || m.theme === state.wizardData.theme)
+    ).map(m => m.id);
+
+    for (let i = pool.length - 1; i > 0; i--) {
+      const r = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[r]] = [pool[r], pool[i]];
+    }
+
+    state.wizardStep = 0;
+    state.playlist = pool.slice(0, Math.min(count, pool.length));
+    state.mode = "CUSTOM";
+    state.stepIdx = 0;
+    state.sessionScore = 0;
+    state.active = true;
+    printMission();
+  }
+}
+
+// Historique flèches Haut / Bas
+inpEl.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp') {
+    if (histIdx + 1 < cmdHistory.length) {
+      histIdx++;
+      inpEl.value = cmdHistory[histIdx];
+      e.preventDefault();
+    }
+  } else if (e.key === 'ArrowDown') {
+    if (histIdx > 0) {
+      histIdx--;
+      inpEl.value = cmdHistory[histIdx];
+      e.preventDefault();
+    } else if (histIdx === 0) {
+      histIdx = -1;
+      inpEl.value = "";
+      e.preventDefault();
+    }
+  }
+});
+
+// Initialisation au démarrage
+loadProfile();
+drawAsciiHeader();
+printText("");
+printHtml(`  Bienvenue sur <span class="c-cyan bold">NET-OPS</span>. Outils embarqués : <span class="c-green">ipcalc (Technique du Pas) │ sim (Simulateur L2/L3 TP) │ tcpdump</span>`);
+printHtml(`  • Tape <span class="c-cyan bold">start</span> (ou clique sur <span class="c-cyan">[1:Campagne]</span>) pour lancer la Mission #${String(profile.campaignUnlocked).padStart(2, '0')}/${TOTAL_MISSIONS}.`);
+printHtml(`  • Tape <span class="c-cyan bold">topo</span> et <span class="c-cyan bold">sim A4 B2</span> pour tester en direct le TP des 3 domaines de diffusion, ou <span class="c-cyan bold">ipcalc 120.146.80.1/20</span>.`);
+printText("");
+</script>
+</body>
+</html>
