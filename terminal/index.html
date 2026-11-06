@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GLOB-OPS // SOC & NetAdmin Terminal Simulator</title>
-  <!-- Polices de terminal populaires -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
@@ -12,6 +11,8 @@
     :root {
       --c-bg: #0f1419;
       --c-bar-bg: #090c10;
+      --c-bar-fg: #e6edf3;
+      --c-bar-dim: #7d8590;
       --c-fg: #e6edf3;
       --c-dim: #7d8590;
       --c-border: #30363d;
@@ -41,24 +42,33 @@
       transition: background-color 0.15s, color 0.15s;
     }
 
-    /* Zone principale du terminal (95%+ de la hauteur verticale) */
+    /* Zone principale avec centrage horizontal du terminal */
     .terminal-viewport {
       flex: 1;
       width: 100%;
       overflow-y: auto;
-      padding: 18px 26px 24px 26px;
+      padding: 24px 20px 32px 20px;
       cursor: text;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .terminal-inner {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
     }
 
     #term-output {
       white-space: pre-wrap;
       word-break: break-word;
-      max-width: 1150px;
+      width: 100%;
     }
 
     .log-line { margin-bottom: 1px; }
 
-    /* Classes de coloration sémantique ANSI (comme le script .sh) */
+    /* Classes de coloration sémantique ANSI */
     .c-fg { color: var(--c-fg); }
     .c-dim { color: var(--c-dim); }
     .c-cyan { color: var(--c-cyan); }
@@ -89,7 +99,7 @@
       display: flex;
       align-items: center;
       margin-top: 4px;
-      max-width: 1150px;
+      width: 100%;
     }
 
     .prompt-prefix {
@@ -110,20 +120,29 @@
       caret-color: var(--c-cyan);
     }
 
-    /* Pied de page minimaliste style barre de statut tmux */
+    /* Pied de page minimaliste style barre de statut tmux (centré et lisible sur tous les thèmes) */
     .status-footer {
-      height: 34px;
+      height: 36px;
       background-color: var(--c-bar-bg);
+      color: var(--c-bar-fg);
       border-top: 1px solid var(--c-border);
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      padding: 0 12px;
+      padding: 0 16px;
       font-size: 12px;
       user-select: none;
       flex-shrink: 0;
-      gap: 8px;
       overflow-x: auto;
+    }
+
+    .footer-inner {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
     }
 
     .footer-left, .footer-right {
@@ -135,29 +154,29 @@
 
     .tmux-tag {
       background: var(--c-green);
-      color: var(--c-bg);
+      color: #000000;
       font-weight: bold;
       padding: 2px 7px;
       border-radius: 2px;
     }
 
     .nav-cmd {
-      color: var(--c-dim);
+      color: var(--c-bar-dim);
       cursor: pointer;
       padding: 2px 4px;
-      transition: color 0.12s;
+      transition: opacity 0.12s;
     }
     .nav-cmd:hover {
-      color: var(--c-cyan);
+      color: var(--c-bar-fg);
       text-decoration: underline;
     }
-    .nav-cmd b { color: var(--c-fg); }
+    .nav-cmd b { color: var(--c-bar-fg); }
 
     .ctrl-group {
       display: flex;
       align-items: center;
       gap: 4px;
-      color: var(--c-dim);
+      color: var(--c-bar-dim);
     }
 
     .term-select {
@@ -187,74 +206,85 @@
 </head>
 <body>
 
-  <!-- ESPACE TERMINAL PLEIN ÉCRAN -->
+  <!-- ESPACE TERMINAL CENTRÉ -->
   <main class="terminal-viewport" id="term-box" onclick="focusPrompt()">
-    <div id="term-output"></div>
-    <form class="prompt-line" id="prompt-form" onsubmit="onPromptSubmit(event)" autocomplete="off">
-      <span class="prompt-prefix" id="prompt-label"></span>
-      <input type="text" id="cmd-input" autofocus spellcheck="false" />
-    </form>
+    <div class="terminal-inner">
+      <div id="term-output"></div>
+      <form class="prompt-line" id="prompt-form" onsubmit="onPromptSubmit(event)" autocomplete="off">
+        <span class="prompt-prefix" id="prompt-label"></span>
+        <input type="text" id="cmd-input" autofocus spellcheck="false" />
+      </form>
+    </div>
   </main>
 
-  <!-- PIED DE PAGE STYLE TMUX (Navigation + Sélecteurs Thème / Police / Taille) -->
+  <!-- PIED DE PAGE STYLE TMUX -->
   <footer class="status-footer">
-    <div class="footer-left">
-      <span class="tmux-tag">0:glob-ops*</span>
-      <span class="nav-cmd" onclick="execFromNav('start')">[<b>1</b>:Campagne]</span>
-      <span class="nav-cmd" onclick="execFromNav('custom')">[<b>2</b>:Custom]</span>
-      <span class="nav-cmd" onclick="execFromNav('stats')">[<b>3</b>:Profil]</span>
-      <span class="nav-cmd" onclick="execFromNav('board')">[<b>4</b>:Board]</span>
-      <span class="nav-cmd" onclick="execFromNav('memo')">[<b>5</b>:Mémo]</span>
-      <span class="nav-cmd" onclick="execFromNav('hint')">[<b>6</b>:Indice]</span>
-      <span class="nav-cmd" onclick="execFromNav('clear')">[<b>7</b>:Clear]</span>
-      <span class="nav-cmd" onclick="window.location.href='../'">[<b>↩</b>:Portail]</span>
-    </div>
-
-    <div class="footer-right">
-      <div class="ctrl-group">
-        <span>Thème:</span>
-        <select id="theme-select" class="term-select" onchange="setTheme(this.value)">
-          <optgroup label="Standards & Populaires">
-            <option value="bash-classic">Bash / Pop!_OS (Original .sh)</option>
-            <option value="dracula">Dracula</option>
-            <option value="catppuccin">Catppuccin Mocha</option>
-            <option value="tokyo-night">Tokyo Night</option>
-            <option value="gruvbox">Gruvbox Dark</option>
-            <option value="nord">Nord Polar</option>
-            <option value="solarized">Solarized Dark</option>
-          </optgroup>
-          <optgroup label="Thématiques & Rétro">
-            <option value="cyberpunk">Cyberpunk 2077</option>
-            <option value="matrix">Matrix CRT</option>
-            <option value="netwatch">NetWatch Amber</option>
-            <option value="win98">Windows 98 (MS-DOS)</option>
-          </optgroup>
-        </select>
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="tmux-tag">0:glob-ops*</span>
+        <span class="nav-cmd" onclick="execFromNav('start')">[<b>1</b>:Campagne]</span>
+        <span class="nav-cmd" onclick="execFromNav('custom')">[<b>2</b>:Custom]</span>
+        <span class="nav-cmd" onclick="execFromNav('stats')">[<b>3</b>:Profil]</span>
+        <span class="nav-cmd" onclick="execFromNav('board')">[<b>4</b>:Board]</span>
+        <span class="nav-cmd" onclick="execFromNav('memo')">[<b>5</b>:Mémo]</span>
+        <span class="nav-cmd" onclick="execFromNav('hint')">[<b>6</b>:Indice]</span>
+        <span class="nav-cmd" onclick="execFromNav('clear')">[<b>7</b>:Clear]</span>
+        <span class="nav-cmd" onclick="window.location.href='../'">[<b>↩</b>:Portail]</span>
       </div>
 
-      <div class="ctrl-group">
-        <span>Police:</span>
-        <select id="font-select" class="term-select" onchange="setFontFamily(this.value)">
-          <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
-          <option value="'Fira Code', monospace">Fira Code</option>
-          <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
-          <option value="'Source Code Pro', monospace">Source Code Pro</option>
-          <option value="'Share Tech Mono', monospace">Share Tech Mono (Rétro)</option>
-          <option value="'Courier New', Courier, monospace">Courier New</option>
-        </select>
-      </div>
+      <div class="footer-right">
+        <div class="ctrl-group">
+          <span>Thème:</span>
+          <select id="theme-select" class="term-select" onchange="setTheme(this.value)">
+            <optgroup label="Standards Modernes">
+              <option value="bash-classic">Bash / Pop!_OS (Défaut)</option>
+              <option value="dracula">Dracula</option>
+              <option value="catppuccin">Catppuccin Mocha</option>
+              <option value="tokyo-night">Tokyo Night</option>
+              <option value="gruvbox">Gruvbox Dark</option>
+              <option value="nord">Nord Polar</option>
+              <option value="solarized">Solarized Dark</option>
+            </optgroup>
+            <optgroup label="Univers Sci-Fi & Cyber">
+              <option value="case">Case (Neuromancer)</option>
+              <option value="smith">Smith (Matrix CRT)</option>
+              <option value="jensen">Jensen (Sarif Amber)</option>
+            </optgroup>
+            <optgroup label="Machines Historiques">
+              <option value="vt100">DEC VT100 (PDP-11 P1)</option>
+              <option value="ibm3270">IBM 3270 (Mainframe)</option>
+              <option value="c64">Commodore 64 (PETSCII)</option>
+              <option value="amiga">Amiga Workbench 1.3</option>
+              <option value="apple2">Apple IIe (Monitor II)</option>
+              <option value="win98">Windows 98 (MS-DOS)</option>
+            </optgroup>
+          </select>
+        </div>
 
-      <div class="ctrl-group">
-        <span>Taille:</span>
-        <select id="size-select" class="term-select" onchange="setFontSize(this.value)">
-          <option value="12px">12px</option>
-          <option value="13px">13px</option>
-          <option value="14px">14px</option>
-          <option value="15px">15px</option>
-          <option value="16px">16px</option>
-          <option value="18px">18px</option>
-          <option value="20px">20px</option>
-        </select>
+        <div class="ctrl-group">
+          <span>Police:</span>
+          <select id="font-select" class="term-select" onchange="setFontFamily(this.value)">
+            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+            <option value="'Fira Code', monospace">Fira Code</option>
+            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
+            <option value="'Source Code Pro', monospace">Source Code Pro</option>
+            <option value="'Share Tech Mono', monospace">Share Tech Mono (CRT)</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Taille:</span>
+          <select id="size-select" class="term-select" onchange="setFontSize(this.value)">
+            <option value="12px">12px</option>
+            <option value="13px">13px</option>
+            <option value="14px">14px</option>
+            <option value="15px">15px</option>
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+            <option value="20px">20px</option>
+          </select>
+        </div>
       </div>
     </div>
   </footer>
@@ -267,7 +297,7 @@ const SUPABASE_URL = "";
 const SUPABASE_KEY = "";
 
 // =============================================================================
-// 1. PALETTES DE THÈMES SÉMANTIQUES (CONFORT VISUEL & CONTRASTE GARANTI)
+// 1. PALETTES DE THÈMES (STANDARDS, SCI-FI & MACHINES HISTORIQUES)
 // =============================================================================
 const THEMES = {
   "bash-classic": {
@@ -298,28 +328,61 @@ const THEMES = {
     bg: "#002b36", bar: "#001f27", fg: "#93a1a1", dim: "#586e75", border: "#073642",
     cyan: "#2aa198", green: "#859900", red: "#dc322f", yellow: "#b58900", magenta: "#d33682", blue: "#268bd2"
   },
-  "cyberpunk": {
-    bg: "#0b001a", bar: "#05000d", fg: "#00f0ff", dim: "#7a5c99", border: "#ff0055",
-    cyan: "#00f0ff", green: "#00ff9f", red: "#ff0055", yellow: "#fcee09", magenta: "#ff00a0", blue: "#7000ff"
+  // --- Sci-Fi & Cyber ---
+  "case": {
+    bg: "#0b001a", bar: "#05000d", fg: "#e0fbfc", dim: "#8a6bbd", border: "#ff0055",
+    cyan: "#00f0ff", green: "#00ff9f", red: "#ff0055", yellow: "#fcee09", magenta: "#ff00a0", blue: "#b86bff"
   },
-  "matrix": {
-    bg: "#050d05", bar: "#020602", fg: "#70ff70", dim: "#1f661f", border: "#144514",
+  "smith": {
+    bg: "#050d05", bar: "#020602", fg: "#70ff70", dim: "#267326", border: "#144514",
     cyan: "#a8ffa8", green: "#00ff41", red: "#ff5555", yellow: "#d4ff00", magenta: "#50fa7b", blue: "#00cc33"
   },
-  "netwatch": {
-    bg: "#14120e", bar: "#0a0907", fg: "#ffb000", dim: "#8c6200", border: "#4d3600",
-    cyan: "#ffd066", green: "#a6e22e", red: "#ff5533", yellow: "#ffe066", magenta: "#ff8c00", blue: "#e69500"
+  "jensen": {
+    bg: "#120f0a", bar: "#090704", fg: "#ffb000", dim: "#996900", border: "#4d3600",
+    cyan: "#ffd875", green: "#a6e22e", red: "#ff5533", yellow: "#ffe066", magenta: "#ff8c00", blue: "#e69500"
+  },
+  // --- Machines Historiques ---
+  "vt100": {
+    bg: "#061006", bar: "#030803", fg: "#33ff33", dim: "#1f991f", border: "#145214",
+    cyan: "#80ff80", green: "#33ff33", red: "#ff6644", yellow: "#ccff33", magenta: "#66ff99", blue: "#29cc29"
+  },
+  "ibm3270": {
+    bg: "#000000", bar: "#0d0d0d", fg: "#44ff44", dim: "#2b9348", border: "#0077b6",
+    cyan: "#00e5ff", green: "#44ff44", red: "#ff4444", yellow: "#ffff44", magenta: "#ff66ff", blue: "#48cae4"
+  },
+  "c64": {
+    bg: "#40318d", bar: "#352879", fg: "#7869c4", dim: "#a093e0", border: "#7869c4",
+    barFg: "#ffffff", barDim: "#bfce72",
+    cyan: "#6abfc6", green: "#9ae29b", red: "#ff8a7a", yellow: "#bfce72", magenta: "#d084bd", blue: "#ffffff"
+  },
+  "amiga": {
+    bg: "#0055aa", bar: "#ffffff", fg: "#ffffff", dim: "#aaccff", border: "#ff8800",
+    barFg: "#0055aa", barDim: "#002244",
+    cyan: "#00ffff", green: "#55ff55", red: "#ffaa88", yellow: "#ff8800", magenta: "#ffcc00", blue: "#ffffff"
+  },
+  "apple2": {
+    bg: "#0a0f0a", bar: "#141c14", fg: "#48ff48", dim: "#2e8b2e", border: "#225522",
+    cyan: "#00bfff", green: "#48ff48", red: "#ff6b35", yellow: "#ffd166", magenta: "#d040ff", blue: "#48cae4"
   },
   "win98": {
-    bg: "#000080", bar: "#c0c0c0", fg: "#ffffff", dim: "#aaaaaa", border: "#ffffff",
-    cyan: "#00ffff", green: "#55ff55", red: "#ff5555", yellow: "#ffff55", magenta: "#ff55ff", blue: "#5555ff"
+    bg: "#000080", bar: "#c0c0c0", fg: "#ffffff", dim: "#b8c4ff", border: "#ffffff",
+    barFg: "#000000", barDim: "#2b2b2b",
+    cyan: "#00ffff", green: "#55ff55", red: "#ff5555", yellow: "#ffff55", magenta: "#ff55ff", blue: "#80bfff"
   }
 };
 
+// Rétrocompatibilité si l'utilisateur avait sauvegardé les anciens noms
+const THEME_ALIASES = {
+  "cyberpunk": "case",
+  "matrix": "smith",
+  "netwatch": "jensen"
+};
+
 // =============================================================================
-// 2. BASE DE DONNÉES DES 36 MISSIONS (N1..N4 | NET, SYS, SEC)
+// 2. BASE DE DONNÉES DES 48 MISSIONS (5 Paliers | 16 NET, 16 SYS, 16 SEC)
 // =============================================================================
 const MISSIONS = [
+  // --- TIER 1 : TECHNICIEN RÉSEAU N1 (Globs Standards) ---
   { id: 1, diff: 1, theme: "NET", title: "Isolation de captures PCAP (?)",
     scenario: "Une tempête de broadcast affecte l'interface 'eth0'. Isole uniquement les captures 2026 de 'eth0' ayant un numéro de séquence d'EXACTEMENT 2 caractères avant '.pcap'.",
     targets: ["eth0_2026_01.pcap", "eth0_2026_02.pcap", "eth0_2026_99.pcap", "eth0_2026_ab.pcap"],
@@ -383,6 +446,8 @@ const MISSIONS = [
     hint: "Utilise deux classes consécutives : '[a-f][0-9]'.",
     solution: "mal_[a-f][0-9].bin",
     debrief: "Avec LC_ALL=C, '[a-f]' est strictement sensible à la casse et rejette 'mal_A0.bin' ainsi que 'mal_g0.bin'." },
+
+  // --- TIER 2 : ADMIN SYSTÈME N2 (Classes POSIX & Dotfiles) ---
   { id: 10, diff: 2, theme: "NET", title: "Sanitisation de table ARP ([:xdigit:])",
     scenario: "Isole les fichiers 'arp_XX.cache' dont l'identifiant 'XX' est un octet hexadécimal valide (2 caractères 0-9, a-f ou A-F).",
     targets: ["arp_0a.cache", "arp_ff.cache", "arp_B4.cache", "arp_19.cache", "arp_c0.cache"],
@@ -446,6 +511,8 @@ const MISSIONS = [
     hint: "Combine '[[:upper:]]' en première position et '[[:xdigit:]]' en seconde.",
     solution: "ioc_[[:upper:]][[:xdigit:]].ioc",
     debrief: "'G', 'Z' et 'M' sont dans '[[:upper:]]' mais pas dans '[[:xdigit:]]', tandis que le 2e caractère est limité à 0-9a-fA-F." },
+
+  // --- TIER 3 : ANALYSTE SOC N3 (Fondamentaux extglob) ---
   { id: 19, diff: 3, theme: "NET", title: "Protocoles de routage dynamique (@)",
     scenario: "Cible en un seul motif exactement les 3 configurations 'bgp.conf', 'ospf.conf' et 'rip.conf'.",
     targets: ["bgp.conf", "ospf.conf", "rip.conf"],
@@ -509,6 +576,8 @@ const MISSIONS = [
     hint: "Structure : 'invoice?(_final|_v2).pdf.@(exe|scr|vbs)'.",
     solution: "invoice?(_final|_v2).pdf.@(exe|scr|vbs)",
     debrief: "La combinaison de '?()' et '@()' permet de modéliser précisément des règles de détection proches des signatures YARA/Sigma." },
+
+  // --- TIER 4 : EXPERT FORENSICS N4 (Négations !() & Portée Partielle) ---
   { id: 28, diff: 4, theme: "NET", title: "Exclusion des routeurs Core (! + suffixe)",
     scenario: "Cible tous les fichiers '.cfg' du dossier SAUF 'core-01.cfg' et 'core-02.cfg' (attention à ne pas capturer les '.bak' ou '.log').",
     targets: ["edge-01.cfg", "edge-02.cfg", "dist-01.cfg", "wifi-ap.cfg"],
@@ -565,14 +634,102 @@ const MISSIONS = [
     hint: "Combine '!(index|login|admin)', '.@(php|phtml)' et '?(.bak)'.",
     solution: "!(index|login|admin).@(php|phtml)?(.bak)",
     debrief: "Ce motif triple bloque 'admin.php.bak' tout en capturant à la fois les scripts actifs et leurs sauvegardes '.bak'." },
-  { id: 36, diff: 4, theme: "SEC", title: "BOSS FINAL — Chasse APT Multi-Critères",
+  { id: 36, diff: 4, theme: "SEC", title: "Chasse APT Multi-Critères",
     scenario: "Isole les binaires APT : (1) préfixe 'apt_' ou 'c2_', (2) suivi de '-' et d'au moins un chiffre, (3) suivi de '_' et d'un module quelconque SAUF 'clean' et 'patched', (4) extension '.bin' ou '.elf'.",
     targets: ["apt_-1_dropper.bin", "c2_-42_beacon.elf", "apt_-108_keylogger.bin", "c2_-7_exfil.elf"],
     decoys: ["apt_-1_clean.bin", "c2_-42_patched.elf", "apt_-_dropper.bin", "apt_-12a_dropper.bin", "ssh_-1_dropper.bin", "apt_-1_dropper.log"],
     hint: "Combine '@(apt|c2)' + '_-' + '+([0-9])' + '_' + '!(clean|patched)' + '.@(bin|elf)'.",
     solution: "@(apt|c2)_-+([0-9])_!(clean|patched).@(bin|elf)",
-    debrief: "Maîtrise totale d'extglob : tu as combiné '@()', '+()', '!()' et les classes numériques en un seul filtre déterministe." }
+    debrief: "Tu as combiné '@()', '+()', '!()' et les classes numériques en un seul filtre déterministe." },
+
+  // --- TIER 5 : ARCHITECTE SECOPS N5 (Cas Limites POSIX & Imbrications Profondes) ---
+  { id: 37, diff: 5, theme: "NET", title: "Le crochet fermant littéral dans une classe ([]...])",
+    scenario: "Un équipement réseau legacy a généré des fichiers 'telemetry_X.log' où X est soit un crochet fermant ']', soit un tiret '-', soit un chiffre (0-9). Isole-les sans capturer '[' ni les lettres.",
+    targets: ["telemetry_].log", "telemetry_-.log", "telemetry_0.log", "telemetry_7.log"],
+    decoys: ["telemetry_[.log", "telemetry_a.log", "telemetry_10.log", "telemetry_].bak"],
+    hint: "En POSIX, place ']' en TOUTE PREMIÈRE position après '[' et '-' en toute dernière : '[]0-9-]'.",
+    solution: "telemetry_[]0-9-].log",
+    debrief: "Subtilité POSIX : placé juste après '[' (ou '[!'), le caractère ']' ne ferme pas la classe mais est traité comme un caractère littéral à matcher !" },
+  { id: 38, diff: 5, theme: "SYS", title: "Le point d'exclamation littéral ([0-9!])",
+    scenario: "Des scripts d'init BusyBox sont nommés 'init_X.rc' où X est soit un chiffre (0-9), soit un point d'exclamation littéral '!' (mode rescue).",
+    targets: ["init_!.rc", "init_0.rc", "init_4.rc", "init_9.rc"],
+    decoys: ["init_a.rc", "init_?.rc", "init_10.rc", "init_!.bak"],
+    hint: "Si '!' n'est PAS en première position dans '[...]', il devient un caractère littéral : '[0-9!]'.",
+    solution: "init_[0-9!].rc",
+    debrief: "Dans une classe '[...]', '!' n'agit comme opérateur de négation que s'il occupe la toute première place. Placé à la fin ('[0-9!]'), il matche littéralement '!'." },
+  { id: 39, diff: 5, theme: "SEC", title: "Audit de paires de clés SSH modernes",
+    scenario: "Récupère les clés SSH 'id_ed25519' et 'id_ecdsa' (aussi bien la clé privée sans extension que la clé publique '.pub'), en excluant les anciennes clés 'id_rsa', 'id_dsa' et les '.ppk' ou '.bak'.",
+    targets: ["id_ed25519", "id_ed25519.pub", "id_ecdsa", "id_ecdsa.pub"],
+    decoys: ["id_rsa", "id_rsa.pub", "id_dsa.pub", "id_ed25519.ppk", "id_ed25519.pub.bak"],
+    hint: "Combine 'id_@(ed25519|ecdsa)' avec l'extension optionnelle '?(.pub)'.",
+    solution: "id_@(ed25519|ecdsa)?(.pub)",
+    debrief: "Indispensable lors d'un audit SSH : '@(ed25519|ecdsa)' filtre les algorithmes courbes elliptiques et '?(.pub)' capture la paire privée/publique d'un seul coup." },
+  { id: 40, diff: 5, theme: "NET", title: "Filtrage d'hôtes IPv4 RFC1918 (Hors Réseau/Broadcast)",
+    scenario: "Isole les rapports 'scan_<ip>.csv' des sous-réseaux '10.0.0.X' et '192.168.1.X' en excluant l'adresse de réseau ('.0') et de broadcast ('.255').",
+    targets: ["scan_10.0.0.1.csv", "scan_10.0.0.254.csv", "scan_192.168.1.10.csv", "scan_192.168.1.99.csv"],
+    decoys: ["scan_10.0.0.0.csv", "scan_10.0.0.255.csv", "scan_192.168.1.255.csv", "scan_172.16.0.1.csv", "scan_10.0.0.1.txt"],
+    hint: "Combine 'scan_@(10.0.0|192.168.1).' avec '!(0|255).csv'.",
+    solution: "scan_@(10.0.0|192.168.1).!(0|255).csv",
+    debrief: "En découpant les octets IPv4 avec '@()' pour le préfixe réseau et '!(0|255)' pour l'octet d'hôte, tu filtres proprement les adresses utilisables." },
+  { id: 41, diff: 5, theme: "SYS", title: "Drop-ins Systemd & Surcharge de priorité",
+    scenario: "Cible les fichiers d'override 'NN-module.conf' commençant par les priorités '10', '20' ou '50', suivies de '-' et d'un module quelconque SAUF 'debug' et 'legacy'.",
+    targets: ["10-listen.conf", "20-hardening.conf", "50-crypto.conf", "10-banner.conf"],
+    decoys: ["10-debug.conf", "20-legacy.conf", "99-custom.conf", "10-listen.conf.disabled", "override.conf"],
+    hint: "Structure : '@(10|20|50)-!(debug|legacy).conf'.",
+    solution: "@(10|20|50)-!(debug|legacy).conf",
+    debrief: "Ce patron est idéal pour administrer les dossiers '/etc/*.d/' (systemd, sysctl.d, sudoers.d) régis par des préfixes numériques." },
+  { id: 42, diff: 5, theme: "SEC", title: "Validation de mois ISO-8601 (01 à 12)",
+    scenario: "Isole les journaux 'audit_2026-MM.log' ayant un mois valide entre '01' et '12' uniquement (exclure les mois invalides '00', '13', '19', '99').",
+    targets: ["audit_2026-01.log", "audit_2026-09.log", "audit_2026-10.log", "audit_2026-12.log"],
+    decoys: ["audit_2026-00.log", "audit_2026-13.log", "audit_2026-19.log", "audit_2026-99.log", "audit_2026-1.log"],
+    hint: "Découpe les mois en deux plages dans un '@()' : '0[1-9]' (01 à 09) ou '1[0-2]' (10 à 12).",
+    solution: "audit_2026-@(0[1-9]|1[0-2]).log",
+    debrief: "Une simple plage '[01][0-9]' laisserait passer '00' et '13..19'. L'alternative '@(0[1-9]|1[0-2])' valide mathématiquement l'intervalle 01..12." },
+  { id: 43, diff: 5, theme: "NET", title: "Noms d'interfaces Linux prévisibles (enpXsY / wlpXsY)",
+    scenario: "Cible les états 'ifstate_<iface>.status' des cartes PCI Ethernet ('enp<N>s<M>') et Wi-Fi ('wlp<N>s<M>') où <N> et <M> sont composés d'au moins un chiffre.",
+    targets: ["ifstate_enp0s3.status", "ifstate_enp3s0.status", "ifstate_wlp2s0.status", "ifstate_enp12s0.status"],
+    decoys: ["ifstate_eth0.status", "ifstate_veth1s0.status", "ifstate_enps0.status", "ifstate_enp0s.status", "ifstate_enp0s3.bak"],
+    hint: "Utilise 'ifstate_@(en|wl)p+([0-9])s+([0-9]).status'.",
+    solution: "ifstate_@(en|wl)p+([0-9])s+([0-9]).status",
+    debrief: "La nomenclature Predictable Network Interface Names de systemd ('en'=Ethernet, 'wl'=WLAN, 'p'=bus PCI, 's'=slot) se filtre naturellement avec '@(en|wl)p+([0-9])s+([0-9])'." },
+  { id: 44, diff: 5, theme: "SYS", title: "Core Dumps & Hash Hexadécimal de longueur variable",
+    scenario: "Isole les dumps 'core.<svc>.<hash>.dmp' des services 'nginx' et 'redis' dont le <hash> contient AU MOINS un caractère hexadécimal valide.",
+    targets: ["core.nginx.deadbeef.dmp", "core.redis.0f4a.dmp", "core.nginx.99c0ffee.dmp", "core.redis.a.dmp"],
+    decoys: ["core.postgres.deadbeef.dmp", "core.nginx.xyz123.dmp", "core.redis..dmp", "core.nginx.deadbeef.dmp.gz"],
+    hint: "Imbrique la classe POSIX dans '+()' : 'core.@(nginx|redis).+([[:xdigit:]]).dmp'.",
+    solution: "core.@(nginx|redis).+([[:xdigit:]]).dmp",
+    debrief: "L'expression '+([[:xdigit:]])' est l'équivalent exact en Bash extglob de '[0-9a-fA-F]+' dans les moteurs d'expressions régulières." },
+  { id: 45, diff: 5, theme: "SEC", title: "Détection d'exfiltration DNS (Imbrication +())",
+    scenario: "Isole les captures 'dns_<subs>.evil.net.cap' comportant 1 ou plusieurs sous-domaines composés uniquement de lettres minuscules suivies d'un point (ex: 'a.', 'part1.c2.'). Exclure 'dns_evil.net.cap' et les sous-domaines chiffrés.",
+    targets: ["dns_a.evil.net.cap", "dns_exfil.evil.net.cap", "dns_part1.c2.evil.net.cap", "dns_a.b.c.evil.net.cap"],
+    decoys: ["dns_evil.net.cap", "dns_123.evil.net.cap", "dns_a..evil.net.cap", "dns_a.evil.org.cap"],
+    hint: "Imbrique deux '+()' : un label minuscule '+([a-z]).' répété une ou plusieurs fois : 'dns_+(+([a-z]).)evil.net.cap'.",
+    solution: "dns_+(+([a-z]).)evil.net.cap",
+    debrief: "L'imbrication '+(+([a-z]).)' exige qu'il y ait au moins un sous-domaine, et que chaque sous-domaine soit constitué d'au moins une lettre minuscule avant son point." },
+  { id: 46, diff: 5, theme: "NET", title: "Sessions BGP & Exclusion d'AS privés",
+    scenario: "Sélectionne les tables BGP 'bgp_AS<num>_<state>.rib' pour tous les AS SAUF '64512' et '65000', uniquement lorsque l'état est 'up' ou 'estab'.",
+    targets: ["bgp_AS15169_up.rib", "bgp_AS3356_estab.rib", "bgp_AS65001_up.rib", "bgp_AS13335_estab.rib"],
+    decoys: ["bgp_AS64512_up.rib", "bgp_AS65000_estab.rib", "bgp_AS15169_down.rib", "bgp_AS15169_idle.rib", "bgp_AS15169_up.log"],
+    hint: "Combine 'bgp_AS!(64512|65000)_' avec '@(up|estab).rib'.",
+    solution: "bgp_AS!(64512|65000)_@(up|estab).rib",
+    debrief: "Tu filtres simultanément les numéros d'Autonomous System réservés et l'état de la machine à états BGP." },
+  { id: 47, diff: 5, theme: "SYS", title: "Snapshots ZFS cachés multi-critères",
+    scenario: "Cible les snapshots cachés '.snap_<vol>_<env>.zfs' où <vol> est 'root', 'var' ou 'home' (suivi optionnellement de '_1' ou '_2') et où <env> est tout SAUF 'tmp' et 'swap'.",
+    targets: [".snap_root_prod.zfs", ".snap_var_1_prod.zfs", ".snap_home_2_bkp.zfs", ".snap_root_dr.zfs"],
+    decoys: ["snap_root_prod.zfs", ".snap_root_tmp.zfs", ".snap_var_1_swap.zfs", ".snap_opt_prod.zfs", ".snap_root_3_prod.zfs"],
+    hint: "Assemble '.snap_@(root|var|home)', '?(_[12])', '_!(tmp|swap)' et '.zfs'.",
+    solution: ".snap_@(root|var|home)?(_[12])_!(tmp|swap).zfs",
+    debrief: "Un condensé complet d'administration système combinant dotfile, '@()', '?()' avec classe numérique et exclusion '!()'." },
+  { id: 48, diff: 5, theme: "SEC", title: "ULTIMATE BOSS — Compromission Supply-Chain Kernel/Libs",
+    scenario: "Isole les implants cachés respectant cette signature : (1) préfixe caché '.pkg_' ou '.lib_', (2) suivi de 'v' et d'au moins un chiffre avec patch optionnel '.1' ou '.2', (3) suivi de '_' et d'une archi quelconque SAUF 'wasm' et 'arm', (4) extension '.so' ou '.ko' suivie optionnellement de '.enc'.",
+    targets: [".pkg_v1_x86.so", ".lib_v24.1_amd64.ko.enc", ".pkg_v3.2_riscv.so.enc", ".lib_v10_x86.ko"],
+    decoys: ["pkg_v1_x86.so", ".pkg_v1_wasm.so", ".lib_v24.1_arm.ko.enc", ".pkg_v_x86.so", ".pkg_v1.9_x86.so", ".pkg_v1_x86.dll"],
+    hint: "Combine '.@(pkg|lib)_v' + '+([0-9])?(.[12])' + '_!(wasm|arm)' + '.@(so|ko)?(.enc)'.",
+    solution: ".@(pkg|lib)_v+([0-9])?(.[12])_!(wasm|arm).@(so|ko)?(.enc)",
+    debrief: "Félicitations ! Tu maîtrises l'intégralité du moteur d'expansion de chemins de Bash et d'extglob au niveau expert." }
 ];
+
+const TOTAL_MISSIONS = MISSIONS.length;
 
 // =============================================================================
 // 3. MOTEUR AST BASH GLOB & EXTGLOB (FIDÈLE À BASH LC_ALL=C)
@@ -762,16 +919,16 @@ let profile = {
   totalScore: 0,
   masteredIds: [],
   localBoard: [
-    { pseudo: "root_soc", score: 3420, mastered: 32 },
-    { pseudo: "net_admin", score: 2150, mastered: 21 },
-    { pseudo: "tssr_guest", score: 980, mastered: 10 }
+    { pseudo: "root_soc", score: 4680, mastered: 42 },
+    { pseudo: "net_admin", score: 2950, mastered: 28 },
+    { pseudo: "tssr_guest", score: 1240, mastered: 12 }
   ]
 };
 
 let state = {
-  busy: false,         // true pendant une animation asynchrone (ex: rm -rf /*)
-  active: false,       // true pendant une mission
-  awaitingNext: false, // true après réussite d'une mission
+  busy: false,
+  active: false,
+  awaitingNext: false,
   wizardStep: 0,
   wizardData: {},
   mode: "CAMPAIGN",
@@ -809,13 +966,16 @@ function printText(text = "", cls = "") {
   printHtml(esc(text), cls);
 }
 
-function setTheme(themeKey, silent = false) {
+function setTheme(rawKey, silent = false) {
+  const themeKey = THEME_ALIASES[rawKey] || rawKey;
   if (!THEMES[themeKey]) return false;
   profile.theme = themeKey;
   const t = THEMES[themeKey];
   const r = document.documentElement.style;
   r.setProperty('--c-bg', t.bg);
   r.setProperty('--c-bar-bg', t.bar);
+  r.setProperty('--c-bar-fg', t.barFg || t.fg);
+  r.setProperty('--c-bar-dim', t.barDim || t.dim);
   r.setProperty('--c-fg', t.fg);
   r.setProperty('--c-dim', t.dim);
   r.setProperty('--c-border', t.border);
@@ -865,7 +1025,7 @@ function loadProfile() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) profile = { ...profile, ...JSON.parse(saved) };
   } catch (e) {}
-  setTheme(profile.theme, true);
+  if (!setTheme(profile.theme, true)) setTheme("bash-classic", true);
   setFontFamily(profile.fontFamily, true);
   setFontSize(profile.fontSize, true);
   updatePromptLabel();
@@ -889,7 +1049,7 @@ function execFromNav(cmd) {
 }
 
 // =============================================================================
-// 5. BANNIÈRE ASCII & AFFICHAGE DES MISSIONS (STYLE .SH ORIGINAL)
+// 5. BANNIÈRE ASCII & AFFICHAGE DES MISSIONS (CENTRÉ STYLE .SH)
 // =============================================================================
 function drawAsciiHeader() {
   const banner = [
@@ -901,9 +1061,9 @@ function drawAsciiHeader() {
   ].join("\n");
 
   printHtml(`<span class="c-cyan bold">${esc(banner)}</span>`);
-  printHtml(`  <span class="c-dim">Simulateur TSSR &amp; SOC — Maîtrise du Globbing POSIX &amp; Bash extglob (v4.0)</span>`);
+  printHtml(`  <span class="c-dim">Simulateur TSSR &amp; SOC — Maîtrise du Globbing POSIX &amp; Bash extglob (48 Missions)</span>`);
   printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
-  printHtml(`  <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(2, '0')}/36</span>   │   <span class="bold">Campagne :</span> <span class="c-cyan bold">Niv. ${String(profile.campaignUnlocked).padStart(2, '0')}/36</span>   │   <span class="bold">Score Session :</span> <span class="c-yellow bold">${state.sessionScore} pts</span>`);
+  printHtml(`  <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS}</span>   │   <span class="bold">Campagne :</span> <span class="c-cyan bold">Niv. ${String(profile.campaignUnlocked).padStart(2, '0')}/${TOTAL_MISSIONS}</span>   │   <span class="bold">Score Session :</span> <span class="c-yellow bold">${state.sessionScore} pts</span>`);
   printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
 }
 
@@ -911,8 +1071,9 @@ function tierName(d) {
   return {
     1: "TIER 1 : TECHNICIEN RÉSEAU N1 (Globs Standards)",
     2: "TIER 2 : ADMIN SYSTÈME N2 (Classes POSIX & Dotfiles)",
-    3: "TIER 3 : ANALYSTE SOC (Fondamentaux extglob)",
-    4: "TIER 4 : EXPERT FORENSICS / APT (Exclusions & Imbrications)"
+    3: "TIER 3 : ANALYSTE SOC N3 (Fondamentaux extglob)",
+    4: "TIER 4 : EXPERT FORENSICS N4 (Exclusions & Portée)",
+    5: "TIER 5 : ARCHITECTE SECOPS N5 (Cas Limites & Imbrications)"
   }[d] || "MODE MIXTE";
 }
 
@@ -925,7 +1086,7 @@ function printMission() {
     updatePromptLabel();
     printText("");
     printHtml(`<span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════╗</span>`);
-    printHtml(`<span class="c-green bold">║  🏆 SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(5)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(2, '0')}/36 missions     ║</span>`);
+    printHtml(`<span class="c-green bold">║  🏆 SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(5)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS} missions     ║</span>`);
     printHtml(`<span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════╝</span>`);
     printHtml(`  Tape <span class="c-cyan bold">submit</span> pour publier ton score sur le Leaderboard, ou <span class="c-cyan bold">start</span>.`);
     return;
@@ -947,7 +1108,6 @@ function printMission() {
   printHtml(`  <span class="c-fg">${esc(m.scenario)}</span>`);
   printText("");
 
-  // Tableau ASCII fidèle au script .sh avec couleurs sémantiques
   printHtml(`  <span class="bold">Contenu du répertoire d'investigation (/tmp/glob_ops_sandbox) :</span>`);
   printHtml(`  <span class="c-dim">┌──────────────────────────────────────┬──────────────────────────────────────┐</span>`);
   printHtml(`  <span class="c-dim">│</span> <span class="c-green bold">[✓] CIBLES À CAPTURER (Targets)</span>      <span class="c-dim">│</span> <span class="c-red bold">[✗] PIÈGES À EXCLURE (Decoys)</span>        <span class="c-dim">│</span>`);
@@ -960,7 +1120,7 @@ function printMission() {
     printHtml(`  <span class="c-dim">│</span> <span class="c-green">${esc(tStr)}</span> <span class="c-dim">│</span> <span class="c-red">${esc(dStr)}</span> <span class="c-dim">│</span>`);
   }
   printHtml(`  <span class="c-dim">└──────────────────────────────────────┴──────────────────────────────────────┘</span>`);
-  printHtml(`  <span class="c-dim">Commandes : motif glob, hint, sol, memo, skip, goto &lt;1-36&gt;, clear, exit</span>`);
+  printHtml(`  <span class="c-dim">Commandes : motif glob, hint, sol, memo, skip, goto &lt;1-${TOTAL_MISSIONS}&gt;, clear, exit</span>`);
   printText("");
 }
 
@@ -1018,7 +1178,7 @@ function evaluateGlobAttempt(pattern) {
     state.sessionScore += totalPts;
     profile.totalScore += totalPts;
     if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
-    if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < MISSIONS.length) {
+    if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < TOTAL_MISSIONS) {
       profile.campaignUnlocked = m.id + 1;
     }
     saveProfile();
@@ -1099,28 +1259,39 @@ async function runReaperEasterEgg() {
 }
 
 // =============================================================================
-// 7. LEADERBOARD & MÉMO TECHNIQUE
+// 7. LEADERBOARD & MÉMO TECHNIQUE ÉTOFFÉ
 // =============================================================================
 function showMemo() {
   printText("");
   printHtml(`  <span class="c-magenta bold">╔══════════════════════════ MÉMO GLOBBING &amp; EXTGLOB ══════════════════════════╗</span>`);
-  printHtml(`  <span class="bold">Globs Standards :</span>`);
-  printHtml(`    <span class="c-cyan bold">*</span>              Matche 0, 1 ou plusieurs caractères (sauf '.' initial)`);
-  printHtml(`    <span class="c-cyan bold">?</span>              Matche exactement 1 caractère quelconque`);
-  printHtml(`    <span class="c-cyan bold">[abc]  [0-9]</span>   Matche 1 caractère dans la liste ou la plage ASCII`);
-  printHtml(`    <span class="c-cyan bold">[!abc]</span>         Matche 1 caractère qui N'EST PAS dans la liste`);
+  printHtml(`  <span class="c-cyan bold">1. Globs Standards (POSIX) :</span>`);
+  printHtml(`    <span class="c-cyan bold">*</span>              Matche 0, 1 ou N caractères (sauf le '.' initial d'un fichier caché)`);
+  printHtml(`    <span class="c-cyan bold">?</span>              Matche exactement 1 caractère quelconque (sauf '.' initial)`);
+  printHtml(`    <span class="c-cyan bold">[abc]  [0-9]</span>   Matche 1 caractère présent dans la liste ou la plage ASCII`);
+  printHtml(`    <span class="c-cyan bold">[!abc]</span>         Matche 1 caractère qui N'EST PAS dans la liste (ou [^abc] en Bash)`);
   printText("");
-  printHtml(`  <span class="bold">Classes POSIX (à placer DANS des crochets : [[:classe:]]) :</span>`);
+  printHtml(`  <span class="c-cyan bold">2. Subtilités des crochets [...] :</span>`);
+  printHtml(`    <span class="c-yellow bold">[0-9-]</span>         Pour matcher un tiret '-' littéral, place-le au tout début ou à la fin`);
+  printHtml(`    <span class="c-yellow bold">[]a-z]</span>         Pour matcher un crochet ']' littéral, place-le en 1re position après '['`);
+  printHtml(`    <span class="c-yellow bold">[0-9!]</span>         Pour matcher un '!' littéral, ne le place PAS en 1re position`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">3. Classes POSIX (toujours dans des crochets : [[:classe:]]) :</span>`);
   printHtml(`    <span class="c-cyan bold">[[:digit:]]</span>    Chiffres [0-9]        <span class="c-cyan bold">[[:xdigit:]]</span>   Hexadécimal [0-9a-fA-F]`);
   printHtml(`    <span class="c-cyan bold">[[:lower:]]</span>    Minuscules [a-z]      <span class="c-cyan bold">[[:upper:]]</span>    Majuscules [A-Z]`);
   printHtml(`    <span class="c-cyan bold">[[:alnum:]]</span>    Alphanumérique        <span class="c-cyan bold">[[:punct:]]</span>    Ponctuation (!@#$%...)`);
+  printHtml(`    <span class="c-dim">Note : En locale UTF-8, [A-Z] peut inclure les minuscules. [[:upper:]] ou LC_ALL=C l'évite.</span>`);
   printText("");
-  printHtml(`  <span class="bold">Opérateurs Étendus (shopt -s extglob) — listes séparées par '|' :</span>`);
+  printHtml(`  <span class="c-cyan bold">4. Opérateurs Étendus (shopt -s extglob) — motifs séparés par '|' :</span>`);
   printHtml(`    <span class="c-yellow bold">?(p1|p2)</span>       Matche <span class="bold">0 ou 1</span> occurrence des motifs listés (Optionnel)`);
-  printHtml(`    <span class="c-yellow bold">*(p1|p2)</span>       Matche <span class="bold">0, 1 ou N</span> occurrences des motifs listés`);
-  printHtml(`    <span class="c-yellow bold">+(p1|p2)</span>       Matche <span class="bold">1 ou N</span> occurrences (Au moins une !)`);
-  printHtml(`    <span class="c-yellow bold">@(p1|p2)</span>       Matche <span class="bold">exactement 1</span> des motifs listés`);
+  printHtml(`    <span class="c-yellow bold">*(p1|p2)</span>       Matche <span class="bold">0, 1 ou N</span> occurrences concaténées des motifs listés`);
+  printHtml(`    <span class="c-yellow bold">+(p1|p2)</span>       Matche <span class="bold">1 ou N</span> occurrences (Exige au moins une occurrence !)`);
+  printHtml(`    <span class="c-yellow bold">@(p1|p2)</span>       Matche <span class="bold">exactement 1</span> des motifs listés (Alternative stricte)`);
   printHtml(`    <span class="c-yellow bold">!(p1|p2)</span>       Matche <span class="bold">tout SAUF</span> les motifs listés`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">5. Les 3 Règles d'Or en Administration Système :</span>`);
+  printHtml(`    • <span class="bold">Dotfiles :</span> Le '.' initial doit être écrit explicitement (ex: <span class="c-green">.[!.]*.conf</span>).`);
+  printHtml(`    • <span class="bold">Brace vs Glob :</span> <span class="c-red">{a,b}</span> génère des chaînes sans vérifier le disque ; <span class="c-green">@(a|b)</span> filtre les fichiers.`);
+  printHtml(`    • <span class="bold">Portée de !() :</span> Encadre <span class="c-green">!()</span> par un préfixe/suffixe (ex: <span class="c-green">fw_!(dev|test).log</span>) pour ne pas tout capturer.`);
   printHtml(`  <span class="c-magenta bold">╚═════════════════════════════════════════════════════════════════════════════╝</span>`);
   printText("");
 }
@@ -1156,7 +1327,7 @@ function renderBoardTable(rows, title) {
     const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(7);
     const ps = String(r.pseudo).slice(0, 20).padEnd(23);
     const sc = `${r.score} pts`.padEnd(13);
-    const ma = `${r.mastered}/36`;
+    const ma = `${r.mastered}/${TOTAL_MISSIONS}`;
     printHtml(`  <span class="c-yellow bold">${esc(rk)}</span><span class="c-fg">${esc(ps)}</span><span class="c-green bold">${esc(sc)}</span><span class="c-cyan">${esc(ma)}</span>`);
   });
   printHtml(`  <span class="c-dim">Commandes : 'nick &lt;pseudo&gt;' puis 'submit' pour publier ton score.</span>`);
@@ -1197,7 +1368,7 @@ async function submitScoreToBoard() {
 function startCampaign(startAt) {
   const s = startAt || profile.campaignUnlocked || 1;
   state.playlist = [];
-  for (let i = s; i <= MISSIONS.length; i++) state.playlist.push(i);
+  for (let i = s; i <= TOTAL_MISSIONS; i++) state.playlist.push(i);
   state.mode = "CAMPAIGN";
   state.stepIdx = 0;
   state.sessionScore = 0;
@@ -1240,13 +1411,13 @@ function handleInput(rawInput) {
   if (base === "help" || base === "man") {
     printText("");
     printHtml(`  <span class="c-cyan bold">COMMANDES DISPONIBLES :</span>`);
-    printHtml(`    <span class="c-green bold">start</span> / <span class="c-green bold">camp</span>       : Lancer la campagne au niveau débloqué (${profile.campaignUnlocked}/36)`);
-    printHtml(`    <span class="c-green bold">goto &lt;1-36&gt;</span>        : Aller directement à une mission précise`);
-    printHtml(`    <span class="c-green bold">custom</span>             : Configurer une session aléatoire (difficulté, thème, nombre)`);
-    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">tree</span>       : Afficher ta progression et l'arborescence des paliers`);
+    printHtml(`    <span class="c-green bold">start</span> / <span class="c-green bold">camp</span>       : Lancer la campagne au niveau débloqué (${profile.campaignUnlocked}/${TOTAL_MISSIONS})`);
+    printHtml(`    <span class="c-green bold">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>        : Aller directement à une mission précise`);
+    printHtml(`    <span class="c-green bold">custom</span>             : Configurer une session aléatoire (difficulté N1..N5, thème, nombre)`);
+    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">tree</span>       : Afficher ta progression et l'arborescence des 5 paliers`);
     printHtml(`    <span class="c-green bold">board</span> / <span class="c-green bold">submit</span>     : Voir le Leaderboard ou publier ton score`);
     printHtml(`    <span class="c-green bold">nick &lt;pseudo&gt;</span>      : Changer ton pseudo (actuel : <span class="c-cyan">${esc(profile.pseudo)}</span>)`);
-    printHtml(`    <span class="c-green bold">memo</span>               : Afficher l'aide-mémoire Globbing &amp; extglob`);
+    printHtml(`    <span class="c-green bold">memo</span>               : Afficher le manuel complet Globbing POSIX &amp; extglob`);
     printHtml(`    <span class="c-green bold">theme &lt;nom&gt;</span>        : Changer de thème (${Object.keys(THEMES).join(', ')})`);
     printHtml(`    <span class="c-green bold">size &lt;12-20&gt;</span>       : Changer la taille de police (ex: size 16)`);
     printHtml(`    <span class="c-green bold">clear</span>              : Nettoyer le terminal et réafficher la bannière`);
@@ -1293,14 +1464,15 @@ function handleInput(rawInput) {
   if (base === "tree" || base === "stats" || base === "profil") {
     printText("");
     printHtml(`  <span class="c-cyan bold">Profil Opérateur : ${esc(profile.pseudo)}</span>`);
-    printHtml(`  ├── <span class="bold">Progression Campagne :</span> Niveau ${profile.campaignUnlocked}/36`);
-    printHtml(`  ├── <span class="bold">Missions Maîtrisées  :</span> <span class="c-green bold">${profile.masteredIds.length}/36</span>`);
+    printHtml(`  ├── <span class="bold">Progression Campagne :</span> Niveau ${profile.campaignUnlocked}/${TOTAL_MISSIONS}`);
+    printHtml(`  ├── <span class="bold">Missions Maîtrisées  :</span> <span class="c-green bold">${profile.masteredIds.length}/${TOTAL_MISSIONS}</span>`);
     printHtml(`  ├── <span class="bold">Meilleur Score       :</span> <span class="c-yellow bold">${profile.bestScore} pts</span>`);
-    printHtml(`  └── <span class="bold">Architecture des Paliers :</span>`);
-    printHtml(`      ├── <span class="c-cyan">[01..09]</span> Tier 1 : Globs Standards (*, ?, [...], [!...] )`);
-    printHtml(`      ├── <span class="c-cyan">[10..18]</span> Tier 2 : Classes POSIX ([:xdigit:]) &amp; Dotfiles`);
-    printHtml(`      ├── <span class="c-cyan">[19..27]</span> Tier 3 : Fondamentaux extglob (@, ?, *, +)`);
-    printHtml(`      └── <span class="c-cyan">[28..36]</span> Tier 4 : Exclusions !() &amp; Imbrications APT`);
+    printHtml(`  └── <span class="bold">Architecture des 5 Paliers :</span>`);
+    printHtml(`      ├── <span class="c-cyan">[01..09]</span> Tier 1 : Technicien N1 — Globs Standards (*, ?, [...], [!...] )`);
+    printHtml(`      ├── <span class="c-cyan">[10..18]</span> Tier 2 : Admin Système N2 — Classes POSIX ([:xdigit:]) &amp; Dotfiles`);
+    printHtml(`      ├── <span class="c-cyan">[19..27]</span> Tier 3 : Analyste SOC N3 — Fondamentaux extglob (@, ?, *, +)`);
+    printHtml(`      ├── <span class="c-cyan">[28..36]</span> Tier 4 : Expert Forensics N4 — Négations !() &amp; Portée Partielle`);
+    printHtml(`      └── <span class="c-cyan">[37..48]</span> Tier 5 : Architecte SecOps N5 — Cas Limites POSIX &amp; Imbrications`);
     printText("");
     return;
   }
@@ -1323,8 +1495,8 @@ function handleInput(rawInput) {
 
   if (base === "goto" || base === "cd") {
     const n = parseInt(arg, 10);
-    if (!n || n < 1 || n > MISSIONS.length) {
-      printHtml(`  Usage : <span class="c-cyan">goto &lt;1-${MISSIONS.length}&gt;</span>`);
+    if (!n || n < 1 || n > TOTAL_MISSIONS) {
+      printHtml(`  Usage : <span class="c-cyan">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>`);
       return;
     }
     startCampaign(n);
@@ -1337,7 +1509,7 @@ function handleInput(rawInput) {
     updatePromptLabel();
     printText("");
     printHtml(`  <span class="c-cyan bold">⚙️ CONFIGURATION D'OPÉRATION SUR-MESURE</span>`);
-    printHtml(`  Étape 1/3 — Difficulté [<span class="c-yellow">1</span>=N1, <span class="c-yellow">2</span>=N2, <span class="c-yellow">3</span>=N3, <span class="c-yellow">4</span>=N4, <span class="c-yellow">ALL</span>=Mixte] (défaut: ALL) :`);
+    printHtml(`  Étape 1/3 — Difficulté [<span class="c-yellow">1</span>=N1, <span class="c-yellow">2</span>=N2, <span class="c-yellow">3</span>=N3, <span class="c-yellow">4</span>=N4, <span class="c-yellow">5</span>=N5, <span class="c-yellow">ALL</span>=Mixte] (défaut: ALL) :`);
     return;
   }
 
@@ -1387,7 +1559,7 @@ function handleCustomWizard(input) {
     return;
   }
   if (state.wizardStep === 1) {
-    state.wizardData.diff = ["1", "2", "3", "4"].includes(val) ? Number(val) : "ALL";
+    state.wizardData.diff = ["1", "2", "3", "4", "5"].includes(val) ? Number(val) : "ALL";
     state.wizardStep = 2;
     printHtml(`  Étape 2/3 — Thème [<span class="c-yellow">NET</span>, <span class="c-yellow">SYS</span>, <span class="c-yellow">SEC</span>, <span class="c-yellow">ALL</span>] (défaut: ALL) :`);
     return;
@@ -1395,7 +1567,7 @@ function handleCustomWizard(input) {
   if (state.wizardStep === 2) {
     state.wizardData.theme = ["NET", "SYS", "SEC"].includes(val) ? val : "ALL";
     state.wizardStep = 3;
-    printHtml(`  Étape 3/3 — Nombre de missions à tirer au sort [<span class="c-yellow">1-36</span>] (défaut: 5) :`);
+    printHtml(`  Étape 3/3 — Nombre de missions à tirer au sort [<span class="c-yellow">1-${TOTAL_MISSIONS}</span>] (défaut: 5) :`);
     return;
   }
   if (state.wizardStep === 3) {
@@ -1446,8 +1618,8 @@ loadProfile();
 drawAsciiHeader();
 printText("");
 printHtml(`  Bienvenue sur le simulateur <span class="c-cyan bold">GLOB-OPS</span>. Environnement : <span class="c-green">LC_ALL=C | shopt -s extglob nullglob</span>`);
-printHtml(`  • Tape <span class="c-cyan bold">start</span> (ou clique sur <span class="c-cyan">[1:Campagne]</span> en bas) pour lancer la Mission #${String(profile.campaignUnlocked).padStart(2, '0')}.`);
-printHtml(`  • Tape <span class="c-cyan bold">custom</span> pour générer un entraînement sur-mesure, ou <span class="c-cyan bold">help</span> pour voir toutes les commandes.`);
+printHtml(`  • Tape <span class="c-cyan bold">start</span> (ou clique sur <span class="c-cyan">[1:Campagne]</span> en bas) pour lancer la Mission #${String(profile.campaignUnlocked).padStart(2, '0')}/${TOTAL_MISSIONS}.`);
+printHtml(`  • Tape <span class="c-cyan bold">custom</span> pour un entraînement sur-mesure (N1 à N5), <span class="c-cyan bold">memo</span> pour le cours, ou <span class="c-cyan bold">help</span>.`);
 printText("");
 </script>
 </body>
