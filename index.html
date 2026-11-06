@@ -3,530 +3,149 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GLOB-OPS v2.0 // Simulateur TSSR & SOC (Globbing & Bash extglob)</title>
+  <title>GLOB-OPS // Terminal Training Mainframe</title>
   <style>
     :root {
-      --bg-main: #0a0e17;
-      --bg-panel: #111827;
-      --bg-panel-alt: #1a2333;
-      --border: #1e293b;
-      --border-hl: #3b82f6;
-      --text-main: #e2e8f0;
-      --text-dim: #94a3b8;
-      --cyan: #22d3ee;
-      --green: #4ade80;
-      --red: #f87171;
-      --yellow: #facc15;
-      --magenta: #c084fc;
-      --blue: #60a5fa;
-      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      --bg-color: #141414;
+      --font-color: #ff9d00;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background-color: var(--bg-main);
-      color: var(--text-main);
-      font-family: var(--font-mono);
-      font-size: 14px;
-      line-height: 1.5;
+      background-color: var(--bg-color);
+      color: var(--font-color);
+      font-family: "Courier New", Courier, monospace;
+      font-size: 15px;
+      line-height: 1.55;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 16px;
+      padding: 28px 20px;
+      transition: background-color 0.15s, color 0.15s;
     }
 
-    .app-container {
-      width: 100%;
-      max-width: 980px;
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Barre de titre façon fenêtre terminal */
-    .term-topbar {
-      background: #060911;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .term-dots { display: flex; gap: 8px; align-items: center; }
-    .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-    .dot.red { background: #ef4444; }
-    .dot.yellow { background: #f59e0b; }
-    .dot.green { background: #10b981; }
-    .term-title { color: var(--text-dim); font-size: 12px; margin-left: 8px; }
-
-    .nav-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-    .btn {
-      background: var(--bg-panel-alt);
-      color: var(--text-main);
-      border: 1px solid var(--border);
-      padding: 5px 11px;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .btn:hover { border-color: var(--cyan); color: var(--cyan); }
-    .btn.active { background: #1e3a8a; border-color: var(--blue); color: #fff; }
-    .btn-warn:hover { border-color: var(--yellow); color: var(--yellow); }
-    .btn-magenta:hover { border-color: var(--magenta); color: var(--magenta); }
-
-    /* En-tête de télémétrie SOC */
-    .telemetry-bar {
-      background: #0d1320;
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      font-size: 13px;
-    }
-    .stat-item { display: flex; align-items: center; gap: 6px; }
-    .stat-val { font-weight: bold; }
-    .c-cyan { color: var(--cyan); }
-    .c-green { color: var(--green); }
-    .c-red { color: var(--red); }
-    .c-yellow { color: var(--yellow); }
-    .c-magenta { color: var(--magenta); }
-    .c-blue { color: var(--blue); }
-    .c-dim { color: var(--text-dim); }
-
-    /* Contenu principal */
-    .screen { padding: 20px; display: none; }
-    .screen.active { display: block; }
-
-    .ascii-banner {
-      color: var(--cyan);
+    h1.main-title {
+      font-size: 36px;
       font-weight: bold;
-      font-size: 11px;
-      line-height: 1.15;
-      white-space: pre;
-      overflow-x: auto;
-      margin-bottom: 8px;
-    }
-
-    /* Cartes du Menu Principal */
-    .menu-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 14px;
-      margin-top: 18px;
-    }
-    .menu-card {
-      background: var(--bg-panel-alt);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 16px;
-      cursor: pointer;
-      transition: transform 0.15s, border-color 0.15s;
-    }
-    .menu-card:hover {
-      border-color: var(--cyan);
-      transform: translateY(-2px);
-    }
-    .menu-card h3 { color: var(--cyan); font-size: 15px; margin-bottom: 6px; }
-    .menu-card p { color: var(--text-dim); font-size: 13px; }
-
-    /* Badges Mission */
-    .badges-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-    .badge {
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-    .badge-diff { background: #1e3a8a; color: #93c5fd; border: 1px solid #2563eb; }
-    .badge-theme { background: #4c1d95; color: #ddd6fe; border: 1px solid #7c3aed; }
-    .badge-mastered { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
-
-    .mission-title {
-      font-size: 17px;
-      font-weight: bold;
-      color: var(--cyan);
-      margin-bottom: 8px;
-    }
-    .mission-scenario {
-      background: #0b111e;
-      border-left: 3px solid var(--blue);
-      padding: 12px 14px;
-      color: var(--text-main);
-      margin-bottom: 16px;
-      border-radius: 0 4px 4px 0;
-    }
-
-    /* Tableau Targets / Decoys */
-    .sandbox-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-    @media (max-width: 680px) {
-      .sandbox-grid { grid-template-columns: 1fr; }
-    }
-    .file-box {
-      background: #090d16;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .file-box-header {
-      padding: 8px 12px;
-      font-weight: bold;
-      font-size: 12px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-    }
-    .file-box-header.targets { background: rgba(16, 185, 129, 0.1); color: var(--green); }
-    .file-box-header.decoys { background: rgba(239, 68, 68, 0.1); color: var(--red); }
-
-    .file-list {
-      list-style: none;
-      padding: 8px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .file-item {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 13px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid transparent;
-    }
-    .file-item.target-default { color: #a7f3d0; }
-    .file-item.decoy-default { color: #fecaca; }
-
-    /* États après test d'un motif */
-    .file-item.matched-ok {
-      background: rgba(16, 185, 129, 0.2);
-      border-color: var(--green);
-      color: #fff;
-    }
-    .file-item.missed-target {
-      background: rgba(250, 204, 21, 0.12);
-      border-color: rgba(250, 204, 21, 0.5);
-      color: var(--yellow);
-    }
-    .file-item.false-positive {
-      background: rgba(239, 68, 68, 0.28);
-      border-color: var(--red);
-      color: #fff;
-      font-weight: bold;
-    }
-    .status-tag { font-size: 11px; padding: 1px 6px; border-radius: 3px; }
-
-    /* Barre de saisie Prompt Bash */
-    .prompt-wrapper {
-      background: #05080f;
-      border: 1px solid var(--border-hl);
-      border-radius: 6px;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-    }
-    .prompt-label {
-      white-space: nowrap;
+      letter-spacing: 1px;
+      margin-bottom: 22px;
+      text-align: center;
       user-select: none;
-      font-weight: bold;
     }
-    .prompt-input {
+
+    .top-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 22px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .top-nav span {
+      cursor: pointer;
+      opacity: 0.85;
+    }
+
+    .top-nav span:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+
+    /* Cadre unique minimaliste type NetWatch */
+    .terminal-frame {
+      width: 100%;
+      max-width: 1050px;
+      height: 76vh;
+      min-height: 480px;
+      border: 1px solid var(--font-color);
+      padding: 28px 34px;
+      overflow-y: auto;
+      cursor: text;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #term-output {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-line {
+      margin-bottom: 2px;
+    }
+
+    .dim { opacity: 0.65; }
+    .bold { font-weight: bold; }
+
+    /* Ligne de prompt intégrée au flux */
+    .prompt-line {
+      display: flex;
+      align-items: center;
+      margin-top: 2px;
+      flex-wrap: nowrap;
+    }
+
+    .prompt-prefix {
+      white-space: nowrap;
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    #cmd-input {
       flex: 1;
       background: transparent;
       border: none;
       outline: none;
-      color: #fff;
-      font-family: var(--font-mono);
-      font-size: 15px;
+      color: var(--font-color);
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      caret-color: var(--font-color);
     }
 
-    .action-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-    .action-group { display: flex; gap: 6px; flex-wrap: wrap; }
-
-    /* Zone de retour / Console d'analyse */
-    .feedback-box {
-      background: #080b12;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 14px;
-      min-height: 64px;
-      white-space: pre-wrap;
-    }
-    .feedback-box.success {
-      border-color: var(--green);
-      background: rgba(16, 185, 129, 0.08);
-    }
-    .feedback-box.error {
-      border-color: var(--red);
-    }
-    .feedback-box.hint {
-      border-color: var(--yellow);
-    }
-
-    /* Configurateur Custom & Tableaux */
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-weight: bold; margin-bottom: 6px; color: var(--cyan); }
-    .select-input {
-      background: var(--bg-panel-alt);
-      color: var(--text-main);
-      border: 1px solid var(--border);
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      width: 100%;
-      max-width: 420px;
-    }
-
-    .memo-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 13px;
-    }
-    .memo-table th, .memo-table td {
-      border: 1px solid var(--border);
-      padding: 8px 10px;
-      text-align: left;
-    }
-    .memo-table th { background: var(--bg-panel-alt); color: var(--cyan); }
-
-    .modal-memo {
-      margin-top: 14px;
-      background: #0c121e;
-      border: 1px solid var(--magenta);
-      border-radius: 6px;
-      padding: 14px;
-      display: none;
-    }
-    .modal-memo.open { display: block; }
+    /* Scrollbar minimaliste */
+    .terminal-frame::-webkit-scrollbar { width: 6px; }
+    .terminal-frame::-webkit-scrollbar-track { background: transparent; }
+    .terminal-frame::-webkit-scrollbar-thumb { background: var(--font-color); opacity: 0.4; }
   </style>
 </head>
 <body>
 
-<div class="app-container">
-  <!-- Barre supérieure -->
-  <div class="term-topbar">
-    <div class="term-dots">
-      <span class="dot red"></span>
-      <span class="dot yellow"></span>
-      <span class="dot green"></span>
-      <span class="term-title">bash — soc@glob-ops:~ (LC_ALL=C | shopt -s extglob nullglob)</span>
-    </div>
-    <div class="nav-pills">
-      <button class="btn" onclick="showMenu()">🏠 Menu</button>
-      <button class="btn" onclick="startCampaignPrompt()">▶ Campagne</button>
-      <button class="btn" onclick="showScreen('screen-custom')">⚙️ Sur-Mesure</button>
-      <button class="btn" onclick="showStats()">📊 Profil & Logs</button>
-      <button class="btn btn-magenta" onclick="toggleInlineMemo()">📖 Mémo extglob</button>
-    </div>
-  </div>
+  <h1 class="main-title">GlobWatch</h1>
 
-  <!-- Barre de télémétrie -->
-  <div class="telemetry-bar">
-    <div class="stat-item">
-      <span class="c-dim">Maîtrise :</span>
-      <span class="stat-val c-green" id="top-mastery">00/36</span>
-    </div>
-    <div class="stat-item">
-      <span class="c-dim">Campagne :</span>
-      <span class="stat-val c-cyan" id="top-campaign">Niv. 01/36</span>
-    </div>
-    <div class="stat-item">
-      <span class="c-dim">Score Session :</span>
-      <span class="stat-val c-yellow" id="top-score">0 pts</span>
-    </div>
-    <div class="stat-item">
-      <span class="c-dim">Chrono :</span>
-      <span class="stat-val c-blue" id="top-timer">⏱ 00s</span>
-    </div>
-  </div>
+  <nav class="top-nav">
+    <span onclick="execFromNav('start')">[ Campagne ]</span>
+    <span onclick="execFromNav('custom')">[ Custom ]</span>
+    <span onclick="execFromNav('stats')">[ Profil ]</span>
+    <span onclick="execFromNav('board')">[ Leaderboard ]</span>
+    <span onclick="execFromNav('memo')">[ Memo ]</span>
+    <span onclick="execFromNav('help')">[ Help ]</span>
+  </nav>
 
-  <!-- ÉCRAN 1 : MENU PRINCIPAL -->
-  <div id="screen-menu" class="screen active">
-<div class="ascii-banner">   ______ __     ____   ____         ____   ____   _____         ___ 
-  / ____// /    / __ \ / __ )       / __ \ / __ \ / ___/  _   __|__ \
- / / __ / /    / / / // __  |______/ / / // /_/ / \__ \  | | / /__/ /
-/ /_/ // /___ / /_/ // /_/ //_____/ /_/ // ____/ ___/ /  | |/ // __/ 
-\____//_____/ \____//_____/       \____//_/     /____/   |___//____/ </div>
-    <p class="c-dim">Simulateur TSSR & SOC — Entraînement intensif au Globbing POSIX et aux subtilités Bash <code class="c-cyan">extglob</code>.</p>
-
-    <div class="menu-grid">
-      <div class="menu-card" onclick="startCampaignPrompt()">
-        <h3>[1] Mode Campagne Linéaire (1 → 36)</h3>
-        <p>Progression pédagogique structurée du niveau Technicien N1 jusqu'à l'analyse Forensics APT. Reprend automatiquement au dernier niveau débloqué.</p>
-      </div>
-      <div class="menu-card" onclick="showScreen('screen-custom')">
-        <h3>[2] Opération Sur-Mesure (Aléatoire)</h3>
-        <p>Configure ta propre session d'entraînement : filtre par niveau de difficulté (N1 à N4), par thème (Réseau, Système, Cyber/SOC) et choisis le nombre de missions.</p>
-      </div>
-      <div class="menu-card" onclick="showStats()">
-        <h3>[3] Tableau de Bord & Historique</h3>
-        <p>Consulte ta progression sauvegardée dans le navigateur, ton temps de résolution moyen, ton record et le journal de tes 10 dernières sessions.</p>
-      </div>
-      <div class="menu-card" onclick="showScreen('screen-memo')">
-        <h3>[4] Manuel Technique Globbing & extglob</h3>
-        <p>Référence complète des jokers POSIX, des classes de caractères <code class="c-cyan">[[:xdigit:]]</code> et des 5 opérateurs étendus <code class="c-yellow">?() *() +() @() !()</code>.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- ÉCRAN 2 : CONFIGURATEUR SUR-MESURE -->
-  <div id="screen-custom" class="screen">
-    <h2 class="c-cyan" style="margin-bottom: 14px;">⚙️ Configuration d'Opération Sur-Mesure</h2>
-    <div class="form-group">
-      <label for="cust-diff">1. Niveau de difficulté :</label>
-      <select id="cust-diff" class="select-input" onchange="updateCustomPoolCount()">
-        <option value="ALL">Mixte — Tous les niveaux (N1 à N4)</option>
-        <option value="1">N1 Débutant — Globs standards (*, ?, [...], [!...] )</option>
-        <option value="2">N2 Intermédiaire — Classes POSIX [:xdigit:] & Dotfiles</option>
-        <option value="3">N3 Avancé — Fondamentaux extglob (@, ?, *, +)</option>
-        <option value="4">N4 Expert — Exclusions !(), portée partielle & imbrications</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="cust-theme">2. Thème opérationnel :</label>
-      <select id="cust-theme" class="select-input" onchange="updateCustomPoolCount()">
-        <option value="ALL">Tous les thèmes (NET + SYS + SEC)</option>
-        <option value="NET">Réseau & Infrastructure (NET : VLAN, PCAP, BGP, Firewall)</option>
-        <option value="SYS">Administration Système Linux (SYS : Logs, Systemd, Kernel)</option>
-        <option value="SEC">Cybersécurité & SOC (SEC : Forensics, Malware, SIEM, APT)</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="cust-count">3. Nombre de missions à tirer au sort (<span id="pool-avail">36</span> disponibles) :</label>
-      <select id="cust-count" class="select-input">
-        <option value="5">Sprint rapide (5 missions)</option>
-        <option value="9">Session standard (9 missions)</option>
-        <option value="12">Examen thématique (12 missions)</option>
-        <option value="36">Intégrale (Toutes les missions filtrées)</option>
-      </select>
-    </div>
-    <div style="display:flex; gap:10px; margin-top:20px;">
-      <button class="btn active" onclick="launchCustomSession()">🚀 Lancer l'opération</button>
-      <button class="btn" onclick="showMenu()">Annuler</button>
-    </div>
-  </div>
-
-  <!-- ÉCRAN 3 : ARÈNE DE JEU -->
-  <div id="screen-game" class="screen">
-    <div class="badges-row">
-      <span class="badge badge-diff" id="game-diff-badge">N1</span>
-      <span class="badge badge-theme" id="game-theme-badge">NET</span>
-      <span class="badge" style="background:#1e293b; color:#cbd5e1;" id="game-step-badge">Mission 1/36</span>
-      <span class="badge badge-mastered" id="game-mastered-badge" style="display:none;">✓ Maîtrisée</span>
-    </div>
-
-    <div class="mission-title" id="game-title">Mission #01</div>
-    <div class="mission-scenario" id="game-scenario"></div>
-
-    <div class="sandbox-grid">
-      <div class="file-box">
-        <div class="file-box-header targets">
-          <span>[✓] CIBLES À CAPTURER (Targets)</span>
-          <span id="target-counter">0/0</span>
-        </div>
-        <ul class="file-list" id="targets-list"></ul>
-      </div>
-      <div class="file-box">
-        <div class="file-box-header decoys">
-          <span>[✗] PIÈGES À EXCLURE (Decoys)</span>
-          <span id="decoy-counter">0 touché</span>
-        </div>
-        <ul class="file-list" id="decoys-list"></ul>
-      </div>
-    </div>
-
-    <!-- Barre de saisie CLI -->
-    <form onsubmit="handleCommandSubmit(event)" autocomplete="off">
-      <div class="prompt-wrapper">
-        <span class="prompt-label"><span class="c-cyan">soc@glob-ops</span>:<span class="c-blue" id="prompt-id">#01</span>$</span>
-        <input type="text" id="glob-input" class="prompt-input" placeholder="Tape ton motif glob (ou 'hint', 'memo', 'sol', 'goto 12') puis [Entrée]..." autofocus />
-        <button type="submit" class="btn active">Exécuter ↵</button>
-      </div>
+  <main class="terminal-frame" id="term-box" onclick="focusPrompt()">
+    <div id="term-output"></div>
+    <form class="prompt-line" onsubmit="onPromptSubmit(event)" autocomplete="off">
+      <span class="prompt-prefix" id="prompt-label">user@mainframe:~$</span>
+      <input type="text" id="cmd-input" autofocus spellcheck="false" />
     </form>
-
-    <!-- Boutons d'actions rapides -->
-    <div class="action-bar">
-      <div class="action-group">
-        <button type="button" class="btn btn-warn" onclick="triggerHint()">💡 Indice (-30 pts)</button>
-        <button type="button" class="btn btn-magenta" onclick="triggerSolution()">🔑 Solution</button>
-        <button type="button" class="btn" onclick="toggleInlineMemo()">📖 Mémo</button>
-        <button type="button" class="btn" onclick="skipMission()">⏭ Passer</button>
-      </div>
-      <div class="action-group" id="campaign-jump-box">
-        <select id="jump-select" class="btn" onchange="jumpToMission(this.value)">
-          <option value="">Aller à la mission...</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Zone de retour d'analyse -->
-    <div id="feedback-area" class="feedback-box c-dim">En attente d'un motif glob... Astuce : utilise les flèches ↑ / ↓ pour naviguer dans ton historique de commandes.</div>
-
-    <!-- Mémo dépliable en pleine partie -->
-    <div id="inline-memo" class="modal-memo"></div>
-  </div>
-
-  <!-- ÉCRAN 4 : STATISTIQUES & HISTORIQUE -->
-  <div id="screen-stats" class="screen">
-    <h2 class="c-cyan" style="margin-bottom: 12px;">📊 Profil du Joueur & Historique Local</h2>
-    <div id="stats-content" style="margin-bottom: 18px;"></div>
-    <div style="display:flex; gap:10px;">
-      <button class="btn active" onclick="showMenu()">← Retour au menu</button>
-      <button class="btn btn-warn" onclick="resetProfile()">🗑️ Réinitialiser ma progression</button>
-    </div>
-  </div>
-
-  <!-- ÉCRAN 5 : MÉMO COMPLET -->
-  <div id="screen-memo" class="screen">
-    <h2 class="c-cyan" style="margin-bottom: 12px;">📖 Référence Technique : Globbing POSIX & Bash extglob</h2>
-    <div id="full-memo-content"></div>
-    <button class="btn active" style="margin-top: 16px;" onclick="showMenu()">← Retour au menu</button>
-  </div>
-</div>
+  </main>
 
 <script>
 // =============================================================================
-// 1. BASE DE DONNÉES DES 36 MISSIONS (4 Niveaux x 3 Thèmes : NET, SYS, SEC)
+// CONFIGURATION OPTIONNELLE DU LEADERBOARD PUBLIC (SUPABASE REST API)
+// Laisse vide pour utiliser le classement local de démonstration.
+// =============================================================================
+const SUPABASE_URL = ""; // ex: "https://xyzcompany.supabase.co"
+const SUPABASE_KEY = ""; // ex: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+// =============================================================================
+// 1. BASE DE DONNÉES DES 36 MISSIONS (N1..N4 | NET, SYS, SEC)
 // =============================================================================
 const MISSIONS = [
-  // --- TIER 1 : DÉBUTANT ---
   { id: 1, diff: 1, theme: "NET", title: "Isolation de captures PCAP (?)",
     scenario: "Une tempête de broadcast affecte l'interface 'eth0'. Isole uniquement les captures 2026 de 'eth0' ayant un numéro de séquence d'EXACTEMENT 2 caractères avant '.pcap'.",
     targets: ["eth0_2026_01.pcap", "eth0_2026_02.pcap", "eth0_2026_99.pcap", "eth0_2026_ab.pcap"],
@@ -590,8 +209,6 @@ const MISSIONS = [
     hint: "Utilise deux classes consécutives : '[a-f][0-9]'.",
     solution: "mal_[a-f][0-9].bin",
     debrief: "Avec LC_ALL=C, '[a-f]' est strictement sensible à la casse et rejette 'mal_A0.bin' ainsi que 'mal_g0.bin'." },
-
-  // --- TIER 2 : INTERMÉDIAIRE ---
   { id: 10, diff: 2, theme: "NET", title: "Sanitisation de table ARP ([:xdigit:])",
     scenario: "Isole les fichiers 'arp_XX.cache' dont l'identifiant 'XX' est un octet hexadécimal valide (2 caractères 0-9, a-f ou A-F).",
     targets: ["arp_0a.cache", "arp_ff.cache", "arp_B4.cache", "arp_19.cache", "arp_c0.cache"],
@@ -655,8 +272,6 @@ const MISSIONS = [
     hint: "Combine '[[:upper:]]' en première position et '[[:xdigit:]]' en seconde.",
     solution: "ioc_[[:upper:]][[:xdigit:]].ioc",
     debrief: "'G', 'Z' et 'M' sont dans '[[:upper:]]' mais pas dans '[[:xdigit:]]', tandis que le 2e caractère est limité à 0-9a-fA-F." },
-
-  // --- TIER 3 : AVANCÉ (EXTGLOB) ---
   { id: 19, diff: 3, theme: "NET", title: "Protocoles de routage dynamique (@)",
     scenario: "Cible en un seul motif exactement les 3 configurations 'bgp.conf', 'ospf.conf' et 'rip.conf'.",
     targets: ["bgp.conf", "ospf.conf", "rip.conf"],
@@ -720,8 +335,6 @@ const MISSIONS = [
     hint: "Structure : 'invoice?(_final|_v2).pdf.@(exe|scr|vbs)'.",
     solution: "invoice?(_final|_v2).pdf.@(exe|scr|vbs)",
     debrief: "La combinaison de '?()' et '@()' permet de modéliser précisément des règles de détection proches des signatures YARA/Sigma." },
-
-  // --- TIER 4 : EXPERT (! ET IMBRICATIONS) ---
   { id: 28, diff: 4, theme: "NET", title: "Exclusion des routeurs Core (! + suffixe)",
     scenario: "Cible tous les fichiers '.cfg' du dossier SAUF 'core-01.cfg' et 'core-02.cfg' (attention à ne pas capturer les '.bak' ou '.log').",
     targets: ["edge-01.cfg", "edge-02.cfg", "dist-01.cfg", "wifi-ap.cfg"],
@@ -788,82 +401,62 @@ const MISSIONS = [
 ];
 
 // =============================================================================
-// 2. MOTEUR BASH GLOB & EXTGLOB FIDÈLE (PARSEUR AST + BACKTRACKING EXACT)
+// 2. MOTEUR AST BASH GLOB & EXTGLOB (IDENTIQUE À BASH LC_ALL=C)
 // =============================================================================
 const POSIX_CLASSES = {
-  digit:  "0123456789",
+  digit: "0123456789",
   xdigit: "0123456789abcdefABCDEF",
-  lower:  "abcdefghijklmnopqrstuvwxyz",
-  upper:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  alpha:  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  alnum:  "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  punct:  "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",
-  space:  " \t\n\r\f\v"
+  lower: "abcdefghijklmnopqrstuvwxyz",
+  upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  alpha: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  alnum: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  punct: "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 };
 
 function parseBracketExpression(pattern, startBracketIdx) {
   let i = startBracketIdx + 1;
-  const len = pattern.length;
-  if (i >= len) return null;
-
+  if (i >= pattern.length) return null;
   let negated = false;
-  if (pattern[i] === '!' || pattern[i] === '^') {
-    negated = true;
-    i++;
-  }
-
+  if (pattern[i] === '!' || pattern[i] === '^') { negated = true; i++; }
   const charSet = new Set();
-  let firstInBracket = true;
-
-  while (i < len) {
-    if (pattern[i] === ']' && !firstInBracket) {
+  let first = true;
+  while (i < pattern.length) {
+    if (pattern[i] === ']' && !first) {
       return { token: { type: 'BRACKET', negated, charSet }, nextIdx: i + 1 };
     }
-    firstInBracket = false;
-
-    // Classe POSIX [:name:]
+    first = false;
     if (pattern[i] === '[' && pattern[i + 1] === ':') {
       const closePosix = pattern.indexOf(':]', i + 2);
       if (closePosix !== -1) {
-        const clsName = pattern.slice(i + 2, closePosix);
-        if (POSIX_CLASSES[clsName]) {
-          for (const ch of POSIX_CLASSES[clsName]) charSet.add(ch);
+        const cls = pattern.slice(i + 2, closePosix);
+        if (POSIX_CLASSES[cls]) {
+          for (const ch of POSIX_CLASSES[cls]) charSet.add(ch);
           i = closePosix + 2;
           continue;
         }
       }
     }
-
-    // Plage de caractères a-z (sauf si '-' est en dernière position avant ']')
-    if (i + 2 < len && pattern[i + 1] === '-' && pattern[i + 2] !== ']') {
-      const startCode = pattern.charCodeAt(i);
-      const endCode = pattern.charCodeAt(i + 2);
-      for (let c = startCode; c <= endCode; c++) {
+    if (i + 2 < pattern.length && pattern[i + 1] === '-' && pattern[i + 2] !== ']') {
+      for (let c = pattern.charCodeAt(i); c <= pattern.charCodeAt(i + 2); c++) {
         charSet.add(String.fromCharCode(c));
       }
       i += 3;
       continue;
     }
-
-    charSet.add(pattern[i]);
-    i++;
+    charSet.add(pattern[i++]);
   }
-  return null; // Crochet non fermé -> traité comme caractère littéral
+  return null;
 }
 
-function findClosingParen(pattern, openParenIdx) {
-  let depth = 1;
-  let i = openParenIdx + 1;
+function findClosingParen(pattern, openIdx) {
+  let depth = 1, i = openIdx + 1;
   while (i < pattern.length) {
     if (pattern[i] === '[') {
       const br = parseBracketExpression(pattern, i);
       if (br) { i = br.nextIdx; continue; }
     }
     if (pattern[i] === '(') depth++;
-    else if (pattern[i] === ')') {
-      depth--;
-      if (depth === 0) return i;
-    }
+    else if (pattern[i] === ')' && --depth === 0) return i;
     i++;
   }
   return -1;
@@ -871,9 +464,7 @@ function findClosingParen(pattern, openParenIdx) {
 
 function splitTopLevelPipes(innerStr) {
   const branches = [];
-  let depth = 0;
-  let lastStart = 0;
-  let i = 0;
+  let depth = 0, last = 0, i = 0;
   while (i < innerStr.length) {
     if (innerStr[i] === '[') {
       const br = parseBracketExpression(innerStr, i);
@@ -882,12 +473,12 @@ function splitTopLevelPipes(innerStr) {
     if (innerStr[i] === '(') depth++;
     else if (innerStr[i] === ')') depth--;
     else if (innerStr[i] === '|' && depth === 0) {
-      branches.push(innerStr.slice(lastStart, i));
-      lastStart = i + 1;
+      branches.push(innerStr.slice(last, i));
+      last = i + 1;
     }
     i++;
   }
-  branches.push(innerStr.slice(lastStart));
+  branches.push(innerStr.slice(last));
   return branches;
 }
 
@@ -896,36 +487,20 @@ function parseGlobAST(pattern) {
   let i = 0;
   while (i < pattern.length) {
     const ch = pattern[i];
-
-    // Opérateur extglob ?(...) *(...) +(...) @(...) !(...)
     if ("?*+@!".includes(ch) && pattern[i + 1] === '(') {
       const closeIdx = findClosingParen(pattern, i + 1);
-      if (closeIdx === -1) {
-        throw new Error(`Parenthèse fermante ')' manquante pour l'opérateur '${ch}('`);
-      }
-      const inner = pattern.slice(i + 2, closeIdx);
-      const rawBranches = splitTopLevelPipes(inner);
-      const parsedBranches = rawBranches.map(b => parseGlobAST(b));
-      tokens.push({ type: 'EXTGLOB', op: ch, branches: parsedBranches });
+      if (closeIdx === -1) throw new Error(`Parenthèse ')' manquante pour '${ch}('`);
+      const branches = splitTopLevelPipes(pattern.slice(i + 2, closeIdx)).map(parseGlobAST);
+      tokens.push({ type: 'EXTGLOB', op: ch, branches });
       i = closeIdx + 1;
       continue;
     }
-
-    if (ch === '*') {
-      tokens.push({ type: 'STAR' });
-      i++;
-    } else if (ch === '?') {
-      tokens.push({ type: 'ANY_CHAR' });
-      i++;
-    } else if (ch === '[') {
+    if (ch === '*') { tokens.push({ type: 'STAR' }); i++; }
+    else if (ch === '?') { tokens.push({ type: 'ANY_CHAR' }); i++; }
+    else if (ch === '[') {
       const br = parseBracketExpression(pattern, i);
-      if (br) {
-        tokens.push(br.token);
-        i = br.nextIdx;
-      } else {
-        tokens.push({ type: 'LITERAL', char: '[' });
-        i++;
-      }
+      if (br) { tokens.push(br.token); i = br.nextIdx; }
+      else { tokens.push({ type: 'LITERAL', char: '[' }); i++; }
     } else {
       tokens.push({ type: 'LITERAL', char: ch });
       i++;
@@ -934,105 +509,62 @@ function parseGlobAST(pattern) {
   return tokens;
 }
 
-// Vérifie si un sous-motif matche exactement str[sIdx ... endIdx]
 function matchTokensExact(tokens, tIdx, str, sIdx, endIdx) {
-  if (tIdx === tokens.length) {
-    return sIdx === endIdx;
-  }
-
+  if (tIdx === tokens.length) return sIdx === endIdx;
   const tk = tokens[tIdx];
   const isLeadingDot = (sIdx === 0 && str.length > 0 && str[0] === '.');
 
   if (tk.type === 'LITERAL') {
-    if (sIdx < endIdx && str[sIdx] === tk.char) {
-      return matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx);
-    }
-    return false;
+    return (sIdx < endIdx && str[sIdx] === tk.char)
+      ? matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx) : false;
   }
-
   if (tk.type === 'ANY_CHAR') {
-    if (isLeadingDot) return false;
-    if (sIdx < endIdx) {
-      return matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx);
-    }
-    return false;
+    if (isLeadingDot || sIdx >= endIdx) return false;
+    return matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx);
   }
-
   if (tk.type === 'BRACKET') {
-    if (isLeadingDot) return false;
-    if (sIdx < endIdx) {
-      const inSet = tk.charSet.has(str[sIdx]);
-      if (tk.negated ? !inSet : inSet) {
-        return matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx);
-      }
-    }
-    return false;
+    if (isLeadingDot || sIdx >= endIdx) return false;
+    const inSet = tk.charSet.has(str[sIdx]);
+    return (tk.negated ? !inSet : inSet)
+      ? matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx) : false;
   }
-
   if (tk.type === 'STAR') {
-    // Sans dotglob, '*' en position 0 ne peut pas consommer un '.' initial
-    if (isLeadingDot) {
-      return matchTokensExact(tokens, tIdx + 1, str, sIdx, endIdx);
-    }
+    if (isLeadingDot) return matchTokensExact(tokens, tIdx + 1, str, sIdx, endIdx);
     for (let k = sIdx; k <= endIdx; k++) {
       if (matchTokensExact(tokens, tIdx + 1, str, k, endIdx)) return true;
     }
     return false;
   }
-
   if (tk.type === 'EXTGLOB') {
     for (let k = sIdx; k <= endIdx; k++) {
-      if (matchExtglobSegment(tk.op, tk.branches, str, sIdx, k)) {
-        if (matchTokensExact(tokens, tIdx + 1, str, k, endIdx)) return true;
-      }
+      if (matchExtglobSegment(tk.op, tk.branches, str, sIdx, k) &&
+          matchTokensExact(tokens, tIdx + 1, str, k, endIdx)) return true;
     }
     return false;
   }
-
   return false;
 }
 
 function matchesAnyBranch(branches, str, sIdx, endIdx) {
-  for (const bTokens of branches) {
-    if (matchTokensExact(bTokens, 0, str, sIdx, endIdx)) return true;
-  }
-  return false;
+  return branches.some(b => matchTokensExact(b, 0, str, sIdx, endIdx));
 }
 
-function matchBranchRepetition(branches, str, sIdx, endIdx, count) {
-  if (sIdx === endIdx) {
-    if (count >= 1) return true;
-    return matchesAnyBranch(branches, str, sIdx, endIdx);
-  }
+function matchBranchRep(branches, str, sIdx, endIdx, count) {
+  if (sIdx === endIdx) return count >= 1 ? true : matchesAnyBranch(branches, str, sIdx, endIdx);
   for (let m = sIdx + 1; m <= endIdx; m++) {
-    if (matchesAnyBranch(branches, str, sIdx, m)) {
-      if (matchBranchRepetition(branches, str, m, endIdx, count + 1)) return true;
-    }
+    if (matchesAnyBranch(branches, str, sIdx, m) &&
+        matchBranchRep(branches, str, m, endIdx, count + 1)) return true;
   }
   return false;
 }
 
 function matchExtglobSegment(op, branches, str, sIdx, endIdx) {
   const consumesLeadingDot = (sIdx === 0 && endIdx > 0 && str[0] === '.');
-
-  if (op === '@') {
-    return matchesAnyBranch(branches, str, sIdx, endIdx);
-  }
-  if (op === '?') {
-    if (sIdx === endIdx) return true;
-    return matchesAnyBranch(branches, str, sIdx, endIdx);
-  }
-  if (op === '!') {
-    if (consumesLeadingDot) return false;
-    return !matchesAnyBranch(branches, str, sIdx, endIdx);
-  }
-  if (op === '+') {
-    return matchBranchRepetition(branches, str, sIdx, endIdx, 0);
-  }
-  if (op === '*') {
-    if (sIdx === endIdx) return true;
-    return matchBranchRepetition(branches, str, sIdx, endIdx, 0);
-  }
+  if (op === '@') return matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '?') return (sIdx === endIdx) || matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '!') return consumesLeadingDot ? false : !matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '+') return matchBranchRep(branches, str, sIdx, endIdx, 0);
+  if (op === '*') return (sIdx === endIdx) || matchBranchRep(branches, str, sIdx, endIdx, 0);
   return false;
 }
 
@@ -1042,364 +574,187 @@ function bashGlobMatch(pattern, filename) {
 }
 
 // =============================================================================
-// 3. ÉTAT DU JOUEUR, LOCALSTORAGE & CHRONOMÈTRE
+// 3. ÉTAT DU TERMINAL, PROFIL LOCAL & COMMANDES SHELL
 // =============================================================================
-const STORAGE_KEY_PROFILE = "glob_ops_v2_profile";
-const STORAGE_KEY_HISTORY = "glob_ops_v2_history";
+const STORAGE_KEY = "globwatch_v3_profile";
+const VALID_COLORS = {
+  orange: "#ff9d00", amber: "#ff9d00", green: "#33ff33", red: "#ff4444",
+  cyan: "#00e5ff", blue: "#4da6ff", white: "#f0f0f0", black: "#0a0a0a",
+  dark: "#141414", yellow: "#ffe600", magenta: "#ff66ff", matrix: "#00ff66"
+};
 
 let profile = {
+  pseudo: "user",
+  bgColor: "#141414",
+  fontColor: "#ff9d00",
   campaignUnlocked: 1,
   bestScore: 0,
-  totalGames: 0,
-  totalSolved: 0,
-  totalTimeSec: 0,
-  masteredIds: []
+  totalScore: 0,
+  masteredIds: [],
+  localBoard: [
+    { pseudo: "root_soc", score: 3420, mastered: 32 },
+    { pseudo: "net_admin", score: 2150, mastered: 21 },
+    { pseudo: "tssr_guest", score: 980, mastered: 10 }
+  ]
 };
 
-let sessionHistory = [];
-let cmdHistory = [];
-let cmdHistoryIdx = -1;
-
-let currentSession = {
-  modeType: "CAMPAIGN",
-  modeLabel: "Campagne SOC",
+let state = {
+  active: false,       // true quand une mission est en cours
+  awaitingNext: false, // true quand une mission vient d'être résolue
+  wizardStep: 0,       // > 0 pendant la config 'custom'
+  wizardData: {},
+  mode: "CAMPAIGN",
   playlist: [],
   stepIdx: 0,
-  score: 0,
-  solvedCount: 0,
-  totalTimeSec: 0,
+  sessionScore: 0,
   attempts: 0,
   usedHint: 0,
-  missionStartMs: 0,
-  timerInterval: null,
-  awaitingNext: false
+  startTimeMs: 0
 };
+
+let cmdHistory = [];
+let histIdx = -1;
+
+const outEl = document.getElementById('term-output');
+const inpEl = document.getElementById('cmd-input');
+const boxEl = document.getElementById('term-box');
+const promptLbl = document.getElementById('prompt-label');
+
+function printLine(text = "", cls = "") {
+  const div = document.createElement('div');
+  div.className = "log-line" + (cls ? " " + cls : "");
+  div.textContent = text;
+  outEl.appendChild(div);
+  boxEl.scrollTop = boxEl.scrollHeight;
+}
+
+function printBlock(lines, cls = "") {
+  lines.forEach(l => printLine(l, cls));
+}
+
+function updatePromptLabel() {
+  const u = profile.pseudo || "user";
+  if (state.wizardStep > 0) {
+    promptLbl.textContent = `${u}@mainframe:~/custom$`;
+  } else if (state.active) {
+    const mid = state.playlist[state.stepIdx];
+    promptLbl.textContent = `${u}@glob-ops:mission-${String(mid).padStart(2, '0')}$`;
+  } else {
+    promptLbl.textContent = `${u}@mainframe:~$`;
+  }
+}
+
+function applyTheme() {
+  document.documentElement.style.setProperty('--bg-color', profile.bgColor);
+  document.documentElement.style.setProperty('--font-color', profile.fontColor);
+}
 
 function loadProfile() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_PROFILE);
-    if (raw) profile = { ...profile, ...JSON.parse(raw) };
-    const histRaw = localStorage.getItem(STORAGE_KEY_HISTORY);
-    if (histRaw) sessionHistory = JSON.parse(histRaw);
-  } catch (e) { console.warn(e); }
-  updateTelemetryBar();
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) profile = { ...profile, ...JSON.parse(saved) };
+  } catch (e) {}
+  applyTheme();
+  updatePromptLabel();
 }
 
 function saveProfile() {
-  try {
-    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
-    localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(sessionHistory.slice(0, 15)));
-  } catch (e) { console.warn(e); }
-  updateTelemetryBar();
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch (e) {}
+  updatePromptLabel();
 }
 
-function logHistoryEntry(label, solved, total, score, sec) {
-  const now = new Date();
-  const ts = now.toISOString().slice(0, 16).replace('T', ' ');
-  sessionHistory.unshift({ ts, label, solved, total, score, sec });
-  if (sessionHistory.length > 15) sessionHistory.pop();
-  saveProfile();
+function focusPrompt() {
+  if (window.getSelection().toString() === "") inpEl.focus();
 }
 
-function updateTelemetryBar() {
-  document.getElementById('top-mastery').textContent =
-    `${String(profile.masteredIds.length).padStart(2, '0')}/${MISSIONS.length}`;
-  document.getElementById('top-campaign').textContent =
-    `Niv. ${String(profile.campaignUnlocked).padStart(2, '0')}/${MISSIONS.length}`;
-  document.getElementById('top-score').textContent = `${currentSession.score} pts`;
+function execFromNav(cmd) {
+  inpEl.value = cmd;
+  handleInput(cmd);
+  inpEl.value = "";
+  inpEl.focus();
 }
 
 // =============================================================================
-// 4. GESTION DES ÉCRANS & SESSIONS
+// 4. GESTION DES MISSIONS DANS LE FLUX DU TERMINAL
 // =============================================================================
-function showScreen(screenId) {
-  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-  document.getElementById(screenId).classList.add('active');
+function startCampaign(startAt) {
+  const s = startAt || profile.campaignUnlocked || 1;
+  state.playlist = [];
+  for (let i = s; i <= MISSIONS.length; i++) state.playlist.push(i);
+  state.mode = "CAMPAIGN";
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  printMission();
 }
 
-function showMenu() {
-  stopMissionTimer();
-  updateTelemetryBar();
-  showScreen('screen-menu');
-}
-
-function startCampaignPrompt() {
-  const startId = profile.campaignUnlocked || 1;
-  const playlist = [];
-  for (let i = startId; i <= MISSIONS.length; i++) playlist.push(i);
-  startSession("CAMPAIGN", "Campagne SOC", playlist);
-}
-
-function updateCustomPoolCount() {
-  const d = document.getElementById('cust-diff').value;
-  const t = document.getElementById('cust-theme').value;
-  const pool = MISSIONS.filter(m =>
-    (d === "ALL" || m.diff === Number(d)) &&
-    (t === "ALL" || m.theme === t)
-  );
-  document.getElementById('pool-avail').textContent = pool.length;
-}
-
-function launchCustomSession() {
-  const d = document.getElementById('cust-diff').value;
-  const t = document.getElementById('cust-theme').value;
-  const reqCount = Number(document.getElementById('cust-count').value);
-
-  const pool = MISSIONS.filter(m =>
-    (d === "ALL" || m.diff === Number(d)) &&
-    (t === "ALL" || m.theme === t)
-  ).map(m => m.id);
-
-  // Mélange Fisher-Yates
-  for (let i = pool.length - 1; i > 0; i--) {
-    const r = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[r]] = [pool[r], pool[i]];
-  }
-
-  const count = Math.min(reqCount, pool.length);
-  const label = `Custom (${t}/${d === 'ALL' ? 'Mix' : 'N' + d})`;
-  startSession("CUSTOM", label, pool.slice(0, count));
-}
-
-function startSession(modeType, modeLabel, playlist) {
-  currentSession = {
-    modeType,
-    modeLabel,
-    playlist,
-    stepIdx: 0,
-    score: 0,
-    solvedCount: 0,
-    totalTimeSec: 0,
-    attempts: 0,
-    usedHint: 0,
-    missionStartMs: Date.now(),
-    timerInterval: null,
-    awaitingNext: false
-  };
-
-  // Remplir le sélecteur de saut rapide en mode Campagne
-  const jumpBox = document.getElementById('campaign-jump-box');
-  const jumpSelect = document.getElementById('jump-select');
-  if (modeType === "CAMPAIGN") {
-    jumpBox.style.display = "flex";
-    jumpSelect.innerHTML = `<option value="">Aller à la mission...</option>` +
-      MISSIONS.map(m => `<option value="${m.id}">#${String(m.id).padStart(2, '0')} — ${m.title}</option>`).join('');
-  } else {
-    jumpBox.style.display = "none";
-  }
-
-  showScreen('screen-game');
-  loadCurrentMission();
-}
-
-function getCurrentMissionObj() {
-  const mid = currentSession.playlist[currentSession.stepIdx];
-  return MISSIONS.find(m => m.id === mid);
-}
-
-function startMissionTimer() {
-  stopMissionTimer();
-  currentSession.missionStartMs = Date.now();
-  document.getElementById('top-timer').textContent = "⏱ 00s";
-  currentSession.timerInterval = setInterval(() => {
-    if (currentSession.awaitingNext) return;
-    const sec = Math.floor((Date.now() - currentSession.missionStartMs) / 1000);
-    document.getElementById('top-timer').textContent = `⏱ ${String(sec).padStart(2, '0')}s`;
-  }, 500);
-}
-
-function stopMissionTimer() {
-  if (currentSession.timerInterval) {
-    clearInterval(currentSession.timerInterval);
-    currentSession.timerInterval = null;
-  }
-}
-
-function diffLabel(d) {
-  return {
-    1: "N1 Débutant (Globs POSIX)",
-    2: "N2 Intermédiaire (Classes & Dotfiles)",
-    3: "N3 Avancé (Fondamentaux extglob)",
-    4: "N4 Expert (Exclusions & Imbrications)"
-  }[d] || "Mixte";
-}
-
-function themeLabel(t) {
-  return {
-    NET: "Réseau & Infra (NET)",
-    SYS: "Admin Système Linux (SYS)",
-    SEC: "SOC & Cybersécurité (SEC)"
-  }[t] || t;
-}
-
-function loadCurrentMission() {
-  const m = getCurrentMissionObj();
+function printMission() {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
   if (!m) {
-    finishSession();
+    state.active = false;
+    state.awaitingNext = false;
+    updatePromptLabel();
+    printBlock([
+      "",
+      "========================================================================",
+      `[SESSION TERMINEE] Score Session : ${state.sessionScore} pts | Maitrise : ${profile.masteredIds.length}/36`,
+      "Tape 'submit' pour publier ton score sur le Leaderboard, ou 'menu'.",
+      "========================================================================",
+      ""
+    ]);
     return;
   }
 
-  currentSession.attempts = 0;
-  currentSession.usedHint = 0;
-  currentSession.awaitingNext = false;
+  state.attempts = 0;
+  state.usedHint = 0;
+  state.awaitingNext = false;
+  state.startTimeMs = Date.now();
+  updatePromptLabel();
 
-  document.getElementById('game-diff-badge').textContent = diffLabel(m.diff);
-  document.getElementById('game-theme-badge').textContent = themeLabel(m.theme);
-  document.getElementById('game-step-badge').textContent =
-    `${currentSession.modeLabel} : ${currentSession.stepIdx + 1}/${currentSession.playlist.length}`;
+  const mast = profile.masteredIds.includes(m.id) ? " [MAITRISEE]" : "";
+  printLine("");
+  printLine("------------------------------------------------------------------------");
+  printLine(`[MISSION #${String(m.id).padStart(2, '0')}/36] ${m.title} (N${m.diff} | ${m.theme})${mast}`, "bold");
+  printLine("------------------------------------------------------------------------");
+  printLine(m.scenario);
+  printLine("");
 
-  const mastBadge = document.getElementById('game-mastered-badge');
-  mastBadge.style.display = profile.masteredIds.includes(m.id) ? "inline-block" : "none";
-
-  document.getElementById('game-title').textContent = `[Mission #${String(m.id).padStart(2, '0')}] ${m.title}`;
-  document.getElementById('game-scenario').textContent = m.scenario;
-  document.getElementById('prompt-id').textContent = `#${String(m.id).padStart(2, '0')}`;
-
-  renderSandboxFiles(m, null);
-
-  const fb = document.getElementById('feedback-area');
-  fb.className = "feedback-box c-dim";
-  fb.innerHTML = "Saisis ton motif glob et appuie sur <b>[Entrée]</b>. Commandes : <code>hint</code>, <code>memo</code>, <code>sol</code>, <code>skip</code>, <code>goto &lt;1-36&gt;</code>.";
-
-  const inp = document.getElementById('glob-input');
-  inp.value = "";
-  inp.placeholder = "Tape ton motif glob (ex: @(nftables|ufw).conf?(.bak|.old)) puis [Entrée]...";
-  inp.focus();
-
-  updateTelemetryBar();
-  startMissionTimer();
+  const colWidth = 36;
+  printLine("TARGETS (a capturer) :".padEnd(colWidth) + "DECOYS (pieges a exclure) :", "bold");
+  const rows = Math.max(m.targets.length, m.decoys.length);
+  for (let i = 0; i < rows; i++) {
+    const t = m.targets[i] ? `  [+] ${m.targets[i]}` : "";
+    const d = m.decoys[i] ? `  [-] ${m.decoys[i]}` : "";
+    printLine(t.padEnd(colWidth) + d);
+  }
+  printLine("");
+  printLine("Tape ton motif glob (ou 'hint', 'sol', 'memo', 'skip', 'goto <N>', 'exit').", "dim");
 }
 
-function renderSandboxFiles(mission, evalResult) {
-  const tList = document.getElementById('targets-list');
-  const dList = document.getElementById('decoys-list');
+function evaluateGlobAttempt(pattern) {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
 
-  if (!evalResult) {
-    document.getElementById('target-counter').textContent = `0/${mission.targets.length}`;
-    document.getElementById('decoy-counter').textContent = `0 piège touché`;
-    tList.innerHTML = mission.targets.map(f =>
-      `<li class="file-item target-default"><span>${escapeHtml(f)}</span><span class="status-tag c-dim">Cible</span></li>`
-    ).join('');
-    dList.innerHTML = mission.decoys.map(f =>
-      `<li class="file-item decoy-default"><span>${escapeHtml(f)}</span><span class="status-tag c-dim">Piège</span></li>`
-    ).join('');
-    return;
-  }
-
-  document.getElementById('target-counter').textContent = `${evalResult.tp.length}/${mission.targets.length} capturées`;
-  document.getElementById('decoy-counter').textContent = `${evalResult.fp.length} touché(s)`;
-
-  tList.innerHTML = mission.targets.map(f => {
-    const hit = evalResult.tp.includes(f);
-    return `<li class="file-item ${hit ? 'matched-ok' : 'missed-target'}">
-      <span>${escapeHtml(f)}</span>
-      <span class="status-tag">${hit ? '✓ Capturé' : '! Manqué'}</span>
-    </li>`;
-  }).join('');
-
-  dList.innerHTML = mission.decoys.map(f => {
-    const hit = evalResult.fp.includes(f);
-    return `<li class="file-item ${hit ? 'false-positive' : 'decoy-default'}">
-      <span>${escapeHtml(f)}</span>
-      <span class="status-tag">${hit ? '✗ FAUX POSITIF' : 'Ignoré'}</span>
-    </li>`;
-  }).join('');
-}
-
-// =============================================================================
-// 5. TRAITEMENT DES COMMANDES & ÉVALUATION
-// =============================================================================
-function handleCommandSubmit(e) {
-  e.preventDefault();
-  const inp = document.getElementById('glob-input');
-  const raw = inp.value.trim();
-
-  // Si la mission est déjà réussie, Entrée passe à la mission suivante
-  if (currentSession.awaitingNext) {
-    currentSession.stepIdx++;
-    loadCurrentMission();
-    return;
-  }
-
-  if (!raw) return;
-  cmdHistory.unshift(raw);
-  cmdHistoryIdx = -1;
-
-  // Commandes spéciales CLI
-  const lower = raw.toLowerCase();
-  if (lower === 'quit' || lower === 'exit' || lower === 'q' || lower === 'menu') {
-    showMenu();
-    return;
-  }
-  if (lower === 'hint' || lower === 'indice') {
-    inp.value = "";
-    triggerHint();
-    return;
-  }
-  if (lower === 'sol' || lower === 'solution') {
-    inp.value = "";
-    triggerSolution();
-    return;
-  }
-  if (lower === 'memo' || lower === 'help' || lower === 'man') {
-    inp.value = "";
-    toggleInlineMemo();
-    return;
-  }
-  if (lower === 'skip' || lower === 'next') {
-    inp.value = "";
-    skipMission();
-    return;
-  }
-  if (lower === 'ls' || lower === 'clear') {
-    inp.value = "";
-    renderSandboxFiles(getCurrentMissionObj(), null);
-    return;
-  }
-  if (lower.startsWith('goto ')) {
-    const num = parseInt(lower.replace('goto ', '').trim(), 10);
-    inp.value = "";
-    jumpToMission(num);
-    return;
-  }
-
-  evaluatePlayerPattern(raw);
-}
-
-function evaluatePlayerPattern(pattern) {
-  const m = getCurrentMissionObj();
-  const fb = document.getElementById('feedback-area');
-
-  // 1. Espaces interdits
   if (/\s/.test(pattern)) {
-    fb.className = "feedback-box error";
-    fb.innerHTML = `<span class="c-yellow">[!] Refusé :</span> Les espaces sont interdits. Tu dois écrire <b>UN SEUL motif glob</b> unifié.`;
+    printLine("Erreur : espaces interdits. Ecris UN SEUL motif glob unifie.");
     return;
   }
-
-  // 2. Détection pédagogique de Brace Expansion {a,b}
   if (pattern.includes('{') && pattern.includes('}')) {
-    fb.className = "feedback-box error";
-    fb.innerHTML = `<span class="c-yellow">[!] Piège classique :</span> <code>{a,b}</code> est de la <b>Brace Expansion</b> (génération de chaînes), pas du globbing !\nEn Bash, utilise l'opérateur extglob <code class="c-cyan">@(a|b)</code> pour filtrer des fichiers existants.`;
+    printLine("Piege : '{a,b}' est de la Brace Expansion, pas du globbing ! Utilise '@(a|b)'.");
     return;
   }
-
-  // 3. Interdiction des slashs
   if (pattern.includes('/')) {
-    fb.className = "feedback-box error";
-    fb.innerHTML = `<span class="c-yellow">[!] Refusé :</span> Reste dans le répertoire courant (pas de <code>/</code>).`;
+    printLine("Erreur : reste dans le repertoire courant (pas de '/').");
     return;
   }
-
-  // 4. Présence d'au moins un opérateur glob
   if (!/[*?\[(|!]/.test(pattern)) {
-    fb.className = "feedback-box error";
-    fb.innerHTML = `<span class="c-yellow">[!] Attention :</span> Ce motif ne contient aucun opérateur de globbing (<code>*</code>, <code>?</code>, <code>[...]</code>, <code>extglob</code>).`;
+    printLine("Attention : ce motif ne contient aucun operateur glob (*, ?, [...], extglob).");
     return;
   }
 
-  currentSession.attempts++;
-
+  state.attempts++;
   let tp = [], fp = [], fn = [];
   try {
     for (const t of m.targets) {
@@ -1410,250 +765,442 @@ function evaluatePlayerPattern(pattern) {
       if (bashGlobMatch(pattern, d)) fp.push(d);
     }
   } catch (err) {
-    fb.className = "feedback-box error";
-    fb.innerHTML = `<span class="c-red">[✗] Erreur de syntaxe glob :</span> ${escapeHtml(err.message)}`;
+    printLine(`Erreur de syntaxe : ${err.message}`);
     return;
   }
-
-  renderSandboxFiles(m, { tp, fp, fn });
 
   if (tp.length === 0 && fp.length === 0) {
-    fb.className = "feedback-box error";
-    fb.innerHTML = `<span class="c-red">[✗] Aucun fichier ne correspond au motif :</span> <code>${escapeHtml(pattern)}</code>`;
+    printLine(`[✗] Aucun fichier ne correspond au motif : ${pattern}`);
     return;
   }
 
-  // Victoire !
   if (fp.length === 0 && fn.length === 0) {
-    handleMissionSuccess(m, pattern);
+    const elapsed = Math.max(1, Math.floor((Date.now() - state.startTimeMs) / 1000));
+    let pts = 100 - (state.attempts - 1) * 15 - (state.usedHint === 1 ? 30 : 0);
+    if (pts < 20) pts = 20;
+    let speed = elapsed <= 15 ? 30 : (elapsed <= 30 ? 15 : (elapsed <= 60 ? 5 : 0));
+    if (state.usedHint === 2) { pts = 10; speed = 0; }
+    else if (!profile.masteredIds.includes(m.id)) profile.masteredIds.push(m.id);
+
+    const totalPts = pts + speed;
+    state.sessionScore += totalPts;
+    profile.totalScore += totalPts;
+    if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
+    if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < MISSIONS.length) {
+      profile.campaignUnlocked = m.id + 1;
+    }
+    saveProfile();
+
+    state.awaitingNext = true;
+    printBlock([
+      "",
+      `>>> [✓] MISSION #${String(m.id).padStart(2, '0')} ACCOMPLIE ! (+${totalPts} pts | ${elapsed}s | Bonus vitesse: +${speed})`,
+      `    Ton motif         : ${pattern}`,
+      `    Solution optimale : ${m.solution}`,
+      `    Debriefing        : ${m.debrief}`,
+      "",
+      "Appuie sur [ENTREE] pour passer a la mission suivante..."
+    ]);
     return;
   }
 
-  // Rapport différentiel
-  let report = `<b>Analyse du motif <code class="c-cyan">${escapeHtml(pattern)}</code> :</b>\n`;
-  report += `  <span class="c-green">[✓] Cibles capturées (${tp.length}/${m.targets.length}) :</span> ${tp.length ? escapeHtml(tp.join('  ')) : 'Aucune'}\n`;
-  if (fp.length > 0) {
-    report += `  <span class="c-red">[✗] ALERTE FAUX POSITIFS (${fp.length} piège(s) touché(s)) :</span> ${escapeHtml(fp.join('  '))}\n`;
-  }
-  if (fn.length > 0) {
-    report += `  <span class="c-yellow">[!] Cibles manquées (${fn.length}) :</span> ${escapeHtml(fn.join('  '))}`;
-  }
-  fb.className = "feedback-box error";
-  fb.innerHTML = report;
+  printLine(`Analyse pour '${pattern}' :`);
+  printLine(`  [✓] Cibles capturees (${tp.length}/${m.targets.length}) : ${tp.join(' ') || 'aucune'}`);
+  if (fp.length > 0) printLine(`  [✗] FAUX POSITIFS (${fp.length} piege(s)) : ${fp.join(' ')}`);
+  if (fn.length > 0) printLine(`  [!] Cibles manquees (${fn.length})  : ${fn.join(' ')}`);
 }
 
-function handleMissionSuccess(m, pattern) {
-  currentSession.awaitingNext = true;
-  const elapsed = Math.max(1, Math.floor((Date.now() - currentSession.missionStartMs) / 1000));
-  currentSession.totalTimeSec += elapsed;
-  currentSession.solvedCount++;
-
-  let basePts = 100;
-  if (currentSession.attempts > 1) basePts -= (currentSession.attempts - 1) * 15;
-  if (currentSession.usedHint === 1) basePts -= 30;
-  if (basePts < 20) basePts = 20;
-
-  let speedBonus = 0;
-  if (currentSession.usedHint === 2) {
-    basePts = 10;
-    speedBonus = 0;
+// =============================================================================
+// 5. LEADERBOARD (SUPABASE REST OU LOCAL FALLBACK)
+// =============================================================================
+async function showLeaderboard() {
+  printLine("Recuperation du Leaderboard TSSR/SOC...");
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=pseudo,score,mastered&order=score.desc&limit=15`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        renderBoardTable(rows, "LEADERBOARD PUBLIC EN LIGNE");
+        return;
+      }
+    } catch (e) {}
+  }
+  // Classement local + joueur courant
+  const list = [...profile.localBoard];
+  const existing = list.find(x => x.pseudo === profile.pseudo);
+  const myBest = Math.max(profile.bestScore, profile.totalScore);
+  if (existing) {
+    existing.score = Math.max(existing.score, myBest);
+    existing.mastered = profile.masteredIds.length;
   } else {
-    if (elapsed <= 15) speedBonus = 30;
-    else if (elapsed <= 30) speedBonus = 15;
-    else if (elapsed <= 60) speedBonus = 5;
-
-    if (!profile.masteredIds.includes(m.id)) {
-      profile.masteredIds.push(m.id);
-    }
+    list.push({ pseudo: profile.pseudo, score: myBest, mastered: profile.masteredIds.length });
   }
+  list.sort((a, b) => b.score - a.score);
+  renderBoardTable(list.slice(0, 10), "LEADERBOARD (Mode Local - Configure SUPABASE_URL pour le mode Public)");
+}
 
-  const totalPts = basePts + speedBonus;
-  currentSession.score += totalPts;
+function renderBoardTable(rows, title) {
+  printLine("");
+  printLine(`=== ${title} ===`, "bold");
+  printLine("RANG  PSEUDO                SCORE       MAITRISE");
+  printLine("----  --------------------  ----------  --------");
+  rows.forEach((r, idx) => {
+    const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(6);
+    const ps = String(r.pseudo).slice(0, 20).padEnd(22);
+    const sc = `${r.score} pts`.padEnd(12);
+    const ma = `${r.mastered}/36`;
+    printLine(`${rk}${ps}${sc}${ma}`);
+  });
+  printLine("");
+  printLine("Astuce : tape 'nick <ton_pseudo>' puis 'submit' pour publier ton score.", "dim");
+}
 
-  // Mise à jour du profil persistant
-  profile.totalSolved++;
-  profile.totalTimeSec += elapsed;
-  if (currentSession.modeType === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < MISSIONS.length) {
-    profile.campaignUnlocked = m.id + 1;
+async function submitScoreToBoard() {
+  const best = Math.max(profile.bestScore, profile.totalScore);
+  if (best <= 0) {
+    printLine("Resous au moins une mission avant de publier ton score.");
+    return;
   }
-  if (currentSession.score > profile.bestScore) {
-    profile.bestScore = currentSession.score;
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pseudo: profile.pseudo,
+          score: best,
+          mastered: profile.masteredIds.length
+        })
+      });
+      if (res.ok) {
+        printLine(`[OK] Score de ${best} pts publie sous le pseudo '${profile.pseudo}' !`);
+        showLeaderboard();
+        return;
+      }
+    } catch (e) {}
   }
-  saveProfile();
-
-  const fb = document.getElementById('feedback-area');
-  fb.className = "feedback-box success";
-  fb.innerHTML = `<span class="c-green"><b>╔══════════════════════════════════════════════════════════════════════════╗
-║  [✓] MISSION #${String(m.id).padStart(2, '0')} ACCOMPLIE ! (+${totalPts} pts | ⏱ ${elapsed}s | Bonus vitesse: +${speedBonus} pts)
-╚══════════════════════════════════════════════════════════════════════════╝</b></span>
-<b>Ton motif         :</b> <code class="c-green">${escapeHtml(pattern)}</code>
-<b>Solution optimale :</b> <code class="c-cyan">${escapeHtml(m.solution)}</code>
-
-<span class="c-yellow"><b>Débriefing Technique :</b></span>
-${escapeHtml(m.debrief)}
-
-<span class="c-cyan">👉 Appuie sur <b>[Entrée]</b> pour passer à la mission suivante...</span>`;
-
-  const inp = document.getElementById('glob-input');
-  inp.value = "";
-  inp.placeholder = "Appuie sur [Entrée] pour continuer vers la mission suivante...";
-}
-
-function triggerHint() {
-  const m = getCurrentMissionObj();
-  if (!m || currentSession.awaitingNext) return;
-  if (currentSession.usedHint === 0) currentSession.usedHint = 1;
-  const fb = document.getElementById('feedback-area');
-  fb.className = "feedback-box hint";
-  fb.innerHTML = `<span class="c-yellow">💡 <b>[INDICE SOC] :</b> ${escapeHtml(m.hint)}</span>`;
-  document.getElementById('glob-input').focus();
-}
-
-function triggerSolution() {
-  const m = getCurrentMissionObj();
-  if (!m || currentSession.awaitingNext) return;
-  currentSession.usedHint = 2;
-  const fb = document.getElementById('feedback-area');
-  fb.className = "feedback-box hint";
-  fb.innerHTML = `<span class="c-magenta">🔑 <b>[SOLUTION CANONIQUE] :</b> <code>${escapeHtml(m.solution)}</code></span>\n<span class="c-dim">Tape-la dans le prompt pour valider et lire l'explication technique.</span>`;
-  document.getElementById('glob-input').focus();
-}
-
-function skipMission() {
-  currentSession.stepIdx++;
-  loadCurrentMission();
-}
-
-function jumpToMission(mid) {
-  const num = Number(mid);
-  if (!num || num < 1 || num > MISSIONS.length) return;
-  if (currentSession.modeType === "CAMPAIGN") {
-    const idx = currentSession.playlist.indexOf(num);
-    if (idx !== -1) {
-      currentSession.stepIdx = idx;
-    } else {
-      currentSession.playlist = [];
-      for (let i = num; i <= MISSIONS.length; i++) currentSession.playlist.push(i);
-      currentSession.stepIdx = 0;
-    }
-    loadCurrentMission();
-  }
-}
-
-function finishSession() {
-  stopMissionTimer();
-  profile.totalGames++;
-  logHistoryEntry(
-    currentSession.modeLabel,
-    currentSession.solvedCount,
-    currentSession.playlist.length,
-    currentSession.score,
-    currentSession.totalTimeSec
-  );
-  showStats();
+  printLine(`[OK] Score enregistre pour '${profile.pseudo}' (${best} pts | ${profile.masteredIds.length}/36).`);
+  showLeaderboard();
 }
 
 // =============================================================================
-// 6. ÉCRAN STATISTIQUES & MÉMO TECHNIQUE
+// 6. INTERPRÉTEUR DE COMMANDES SHELL PRINCIPAL
 // =============================================================================
-function showStats() {
-  stopMissionTimer();
-  const avg = profile.totalSolved > 0 ? Math.round(profile.totalTimeSec / profile.totalSolved) : 0;
+function onPromptSubmit(e) {
+  e.preventDefault();
+  const raw = inpEl.value;
+  inpEl.value = "";
+  handleInput(raw);
+}
 
-  let histHtml = `<p class="c-dim">Aucune session terminée pour le moment.</p>`;
-  if (sessionHistory.length > 0) {
-    histHtml = `<table class="memo-table">
-      <thead><tr><th>Date</th><th>Mode</th><th>Résolues</th><th>Score</th><th>Durée</th></tr></thead>
-      <tbody>` +
-      sessionHistory.map(h => `<tr>
-        <td class="c-dim">${escapeHtml(h.ts)}</td>
-        <td class="c-cyan">${escapeHtml(h.label)}</td>
-        <td class="c-green">${h.solved}/${h.total}</td>
-        <td class="c-yellow"><b>${h.score} pts</b></td>
-        <td>${h.sec}s</td>
-      </tr>`).join('') +
-      `</tbody></table>`;
+function handleInput(rawInput) {
+  const cmd = rawInput.trim();
+  printLine(`${promptLbl.textContent} ${cmd}`);
+
+  if (state.awaitingNext && cmd === "") {
+    state.stepIdx++;
+    printMission();
+    return;
   }
 
-  document.getElementById('stats-content').innerHTML = `
-    <div class="mission-scenario">
-      <p>• <b>Progression Campagne :</b> Niveau <span class="c-cyan">${profile.campaignUnlocked} / ${MISSIONS.length}</span></p>
-      <p>• <b>Missions maîtrisées (sans solution) :</b> <span class="c-green">${profile.masteredIds.length} / ${MISSIONS.length}</span></p>
-      <p>• <b>Meilleur Score Session :</b> <span class="c-yellow">${profile.bestScore} pts</span></p>
-      <p>• <b>Total de missions résolues :</b> ${profile.totalSolved} (${profile.totalGames} sessions complétées)</p>
-      <p>• <b>Temps de réflexion cumulé :</b> ${profile.totalTimeSec}s (Moyenne : <b>${avg}s / mission</b>)</p>
-    </div>
-    <h3 class="c-cyan" style="margin: 14px 0 8px;">📜 Historique des dernières sessions (localStorage)</h3>
-    ${histHtml}
-  `;
-  showScreen('screen-stats');
+  if (!cmd) return;
+  cmdHistory.unshift(cmd);
+  histIdx = -1;
+
+  // Assistant interactif du mode Custom
+  if (state.wizardStep > 0) {
+    handleCustomWizard(cmd);
+    return;
+  }
+
+  const parts = cmd.split(/\s+/);
+  const base = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(" ");
+
+  // Commandes globales disponibles partout (comme dans NetWatch)
+  if (base === "help" || base === "man") {
+    printBlock([
+      "available commands :",
+      "  start / camp       : lancer la campagne au niveau debloque (" + profile.campaignUnlocked + "/36)",
+      "  goto <1-36>        : sauter directement a une mission specifique",
+      "  custom             : generer une partie aleatoire (difficulte, theme, nombre)",
+      "  stats / tree       : afficher ta progression et l'arborescence des missions",
+      "  board              : afficher le classement (Leaderboard)",
+      "  nick <pseudo>      : definir ton pseudo (actuel: " + profile.pseudo + ")",
+      "  submit             : envoyer ton score sur le Leaderboard",
+      "  memo               : afficher le manuel technique globbing & extglob",
+      "  font <color>       : changer la couleur du texte (orange, green, cyan, red, white...)",
+      "  bg <color>         : changer la couleur de fond (dark, black, white, #hex...)",
+      "  clear              : effacer l'ecran du terminal",
+      "  hint / sol / skip  : (en mission) indice, solution, ou passer la mission"
+    ]);
+    return;
+  }
+
+  if (base === "clear" || base === "cls") {
+    outEl.innerHTML = "";
+    if (state.active) printMission();
+    return;
+  }
+
+  if (base === "font") {
+    if (!arg || arg === "--help") {
+      printLine("Usage: font <color>. Available: orange, green, cyan, red, yellow, magenta, white, matrix, or #hex.");
+      return;
+    }
+    const c = VALID_COLORS[arg.toLowerCase()] || (arg.startsWith('#') ? arg : null);
+    if (!c) {
+      printLine(`Unknown color: ${arg}`);
+      return;
+    }
+    profile.fontColor = c;
+    applyTheme();
+    saveProfile();
+    printLine(`Font color set to ${arg}.`);
+    return;
+  }
+
+  if (base === "bg") {
+    if (!arg || arg === "--help") {
+      printLine("Usage: bg <color>. Available: dark, black, white, or #hex.");
+      return;
+    }
+    const c = VALID_COLORS[arg.toLowerCase()] || (arg.startsWith('#') ? arg : null);
+    if (!c) {
+      printLine(`Unknown color: ${arg}`);
+      return;
+    }
+    profile.bgColor = c;
+    applyTheme();
+    saveProfile();
+    printLine(`Background color set to ${arg}.`);
+    return;
+  }
+
+  // Easter Egg NetWatch conservé !
+  if (cmd === "rm -rf") {
+    printLine("rm: permission denied");
+    return;
+  }
+  if (cmd.startsWith("rm -rf /")) {
+    printBlock([
+      "CRITICAL ERROR: UNAUTHORIZED ROOT DELETION ATTEMPT DETECTED.",
+      ">> Escalating threat level...",
+      ">> Escalate to sysadmin: FAILED (sysadmin unresponsive).",
+      ">> Engaging DEFCON 2 Automated Retaliation Protocol.",
+      "[SYSTEM] Uplinking to secure military subnet (USCYBERCOM)...",
+      "[SECURE-LINK] CONNECTION ESTABLISHED.",
+      "root@pentagon.gov:~$ request_kinetic_strike --target=origin_ip",
+      "[AUTH] Awaiting POTUS biometric signature...",
+      "[AUTH] Biometric signature VERIFIED.",
+      "[AUTH] Authorization code: DELTA-TANGO-77 ACCEPTED.",
+      ">> UCAV MQ-9 Reaper drone deployment: CONFIRMED.",
+      ">> Target locked on origin IP: 44.152.241.194",
+      ">> ETA to target impact: 00:04:30.",
+      "Please remain seated and do not leave the building."
+    ]);
+    return;
+  }
+
+  if (base === "memo") {
+    printBlock([
+      "=== MANUEL TECHNIQUE : GLOBBING POSIX & BASH EXTGLOB ===",
+      "  *              : 0, 1 ou N caracteres (sauf '.' initial d'un fichier cache)",
+      "  ?              : exactement 1 caractere quelconque (sauf '.' initial)",
+      "  [abc] [0-9]    : 1 caractere parmi la liste ou la plage ASCII",
+      "  [!abc]         : 1 caractere qui N'EST PAS dans la liste",
+      "  [[:xdigit:]]   : Hexadecimal [0-9a-fA-F]. Aussi: [:digit:], [:upper:], [:lower:], [:punct:]",
+      "  ?(p1|p2)       : 0 ou 1 occurrence des motifs (Optionnel)",
+      "  *(p1|p2)       : 0, 1 ou N occurrences des motifs",
+      "  +(p1|p2)       : 1 ou N occurrences (Au moins une occurrence !)",
+      "  @(p1|p2)       : exactement 1 des motifs listes",
+      "  !(p1|p2)       : tout SAUF les motifs listes (encadrable par prefixe/suffixe)"
+    ]);
+    return;
+  }
+
+  if (base === "tree" || base === "stats" || base === "profil") {
+    printBlock([
+      `Profil Joueur : ${profile.pseudo}`,
+      `|_ progression_campagne : Niveau ${profile.campaignUnlocked}/36`,
+      `|_ missions_maitrisees  : ${profile.masteredIds.length}/36`,
+      `|_ meilleur_score       : ${profile.bestScore} pts`,
+      `|_ score_cumule         : ${profile.totalScore} pts`,
+      `|_ paliers :`,
+      `   |_ [01..09] Tier 1 : Globs Standards (*, ?, [...], [!...] )`,
+      `   |_ [10..18] Tier 2 : Classes POSIX ([:xdigit:]) & Dotfiles`,
+      `   |_ [19..27] Tier 3 : Fondamentaux extglob (@, ?, *, +)`,
+      `   |_ [28..36] Tier 4 : Exclusions !() & Imbrications APT`
+    ]);
+    return;
+  }
+
+  if (base === "nick") {
+    if (!arg) { printLine("Usage: nick <ton_pseudo>"); return; }
+    profile.pseudo = arg.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+    saveProfile();
+    printLine(`Pseudo defini sur : ${profile.pseudo}`);
+    return;
+  }
+
+  if (base === "board" || base === "leaderboard") {
+    showLeaderboard();
+    return;
+  }
+
+  if (base === "submit") {
+    submitScoreToBoard();
+    return;
+  }
+
+  if (base === "start" || base === "camp" || base === "campagne") {
+    startCampaign(parseInt(arg, 10) || profile.campaignUnlocked);
+    return;
+  }
+
+  if (base === "goto" || base === "cd") {
+    const n = parseInt(arg, 10);
+    if (!n || n < 1 || n > MISSIONS.length) {
+      printLine(`Usage: goto <1-${MISSIONS.length}>`);
+      return;
+    }
+    startCampaign(n);
+    return;
+  }
+
+  if (base === "custom") {
+    state.active = false;
+    state.wizardStep = 1;
+    updatePromptLabel();
+    printBlock([
+      "=== CONFIGURATION D'OPERATION SUR-MESURE ===",
+      "Etape 1/3 - Choisis la difficulte [1=N1, 2=N2, 3=N3, 4=N4, ALL=Mixte] (defaut: ALL) :"
+    ]);
+    return;
+  }
+
+  // Commandes spécifiques lorsqu'une mission est active
+  if (state.active) {
+    const m = MISSIONS.find(x => x.id === state.playlist[state.stepIdx]);
+    if (base === "exit" || base === "quit" || base === "menu") {
+      state.active = false;
+      state.awaitingNext = false;
+      updatePromptLabel();
+      printLine("Retour au shell principal. Tape 'help' pour voir les commandes.");
+      return;
+    }
+    if (base === "ls") {
+      printMission();
+      return;
+    }
+    if (base === "hint" || base === "indice") {
+      if (state.usedHint === 0) state.usedHint = 1;
+      printLine(`[INDICE SOC] : ${m.hint}`);
+      return;
+    }
+    if (base === "sol" || base === "solution") {
+      state.usedHint = 2;
+      printLine(`[SOLUTION CANONIQUE] : ${m.solution}`);
+      return;
+    }
+    if (base === "skip" || base === "next") {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    if (state.awaitingNext) {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+
+    // Sinon, l'entrée est évaluée comme un motif glob !
+    evaluateGlobAttempt(cmd);
+    return;
+  }
+
+  printLine(`Unknown command: ${base}. Type 'help' for available commands.`);
 }
 
-function resetProfile() {
-  if (!confirm("Réinitialiser toute ta progression et tes scores locaux ?")) return;
-  localStorage.removeItem(STORAGE_KEY_PROFILE);
-  localStorage.removeItem(STORAGE_KEY_HISTORY);
-  profile = { campaignUnlocked: 1, bestScore: 0, totalGames: 0, totalSolved: 0, totalTimeSec: 0, masteredIds: [] };
-  sessionHistory = [];
-  saveProfile();
-  showStats();
+function handleCustomWizard(input) {
+  const val = input.trim().toUpperCase();
+  if (val === "EXIT" || val === "QUIT") {
+    state.wizardStep = 0;
+    updatePromptLabel();
+    printLine("Configuration annulee.");
+    return;
+  }
+
+  if (state.wizardStep === 1) {
+    state.wizardData.diff = ["1", "2", "3", "4"].includes(val) ? Number(val) : "ALL";
+    state.wizardStep = 2;
+    printLine("Etape 2/3 - Choisis le theme [NET, SYS, SEC, ALL] (defaut: ALL) :");
+    return;
+  }
+
+  if (state.wizardStep === 2) {
+    state.wizardData.theme = ["NET", "SYS", "SEC"].includes(val) ? val : "ALL";
+    state.wizardStep = 3;
+    printLine("Etape 3/3 - Nombre de missions a tirer au sort [1-36] (defaut: 5) :");
+    return;
+  }
+
+  if (state.wizardStep === 3) {
+    const count = parseInt(val, 10) || 5;
+    const pool = MISSIONS.filter(m =>
+      (state.wizardData.diff === "ALL" || m.diff === state.wizardData.diff) &&
+      (state.wizardData.theme === "ALL" || m.theme === state.wizardData.theme)
+    ).map(m => m.id);
+
+    for (let i = pool.length - 1; i > 0; i--) {
+      const r = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[r]] = [pool[r], pool[i]];
+    }
+
+    state.wizardStep = 0;
+    state.playlist = pool.slice(0, Math.min(count, pool.length));
+    state.mode = "CUSTOM";
+    state.stepIdx = 0;
+    state.sessionScore = 0;
+    state.active = true;
+    printMission();
+  }
 }
 
-function getMemoHtml() {
-  return `
-    <table class="memo-table">
-      <thead><tr><th>Opérateur</th><th>Catégorie</th><th>Comportement exact en Bash (LC_ALL=C)</th></tr></thead>
-      <tbody>
-        <tr><td><code class="c-cyan">*</code></td><td>Standard</td><td>Matche 0, 1 ou N caractères (sauf le <code>.</code> initial d'un fichier caché)</td></tr>
-        <tr><td><code class="c-cyan">?</code></td><td>Standard</td><td>Matche exactement 1 caractère quelconque (sauf <code>.</code> initial)</td></tr>
-        <tr><td><code class="c-cyan">[abc]</code> / <code class="c-cyan">[0-9]</code></td><td>Standard</td><td>Matche 1 caractère présent dans la liste ou la plage ASCII</td></tr>
-        <tr><td><code class="c-cyan">[!abc]</code></td><td>Standard</td><td>Matche 1 caractère qui <b>n'est pas</b> dans la liste (équivalent Bash : <code>[^abc]</code>)</td></tr>
-        <tr><td><code class="c-cyan">[[:xdigit:]]</code></td><td>POSIX</td><td>Chiffre hexadécimal <code>[0-9a-fA-F]</code>. Autres : <code>[:digit:]</code>, <code>[:upper:]</code>, <code>[:lower:]</code>, <code>[:alnum:]</code>, <code>[:punct:]</code></td></tr>
-        <tr><td><code class="c-yellow">?(p1|p2)</code></td><td>extglob</td><td>Matche <b>0 ou 1</b> occurrence des motifs listés (optionnel)</td></tr>
-        <tr><td><code class="c-yellow">*(p1|p2)</code></td><td>extglob</td><td>Matche <b>0, 1 ou N</b> occurrences concaténées des motifs listés</td></tr>
-        <tr><td><code class="c-yellow">+(p1|p2)</code></td><td>extglob</td><td>Matche <b>1 ou N</b> occurrences (exige au moins une occurrence !)</td></tr>
-        <tr><td><code class="c-yellow">@(p1|p2)</code></td><td>extglob</td><td>Matche <b>exactement 1</b> des motifs listés (alternative stricte)</td></tr>
-        <tr><td><code class="c-yellow">!(p1|p2)</code></td><td>extglob</td><td>Matche <b>tout SAUF</b> les motifs listés (peut être encadré par un préfixe et un suffixe)</td></tr>
-      </tbody>
-    </table>`;
-}
-
-function toggleInlineMemo() {
-  const el = document.getElementById('inline-memo');
-  el.innerHTML = `<h4 class="c-magenta" style="margin-bottom:6px;">📖 Aide-mémoire rapide Globbing & extglob</h4>` + getMemoHtml();
-  el.classList.toggle('open');
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
-}
-
-// Navigation dans l'historique avec Flèche Haut / Bas
-document.addEventListener('keydown', (e) => {
-  const inp = document.getElementById('glob-input');
-  if (document.activeElement !== inp) return;
+// Historique flèches Haut / Bas
+inpEl.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowUp') {
-    if (cmdHistoryIdx + 1 < cmdHistory.length) {
-      cmdHistoryIdx++;
-      inp.value = cmdHistory[cmdHistoryIdx];
+    if (histIdx + 1 < cmdHistory.length) {
+      histIdx++;
+      inpEl.value = cmdHistory[histIdx];
       e.preventDefault();
     }
   } else if (e.key === 'ArrowDown') {
-    if (cmdHistoryIdx > 0) {
-      cmdHistoryIdx--;
-      inp.value = cmdHistory[cmdHistoryIdx];
+    if (histIdx > 0) {
+      histIdx--;
+      inpEl.value = cmdHistory[histIdx];
       e.preventDefault();
-    } else if (cmdHistoryIdx === 0) {
-      cmdHistoryIdx = -1;
-      inp.value = "";
+    } else if (histIdx === 0) {
+      histIdx = -1;
+      inpEl.value = "";
       e.preventDefault();
     }
   }
 });
 
-// Initialisation au chargement
-document.getElementById('full-memo-content').innerHTML = getMemoHtml();
+// Démarrage initial façon NetWatch
 loadProfile();
+printBlock([
+  "GlobWatch Mainframe OS v3.0 (LC_ALL=C | shopt -s extglob nullglob)",
+  "available commands : start, custom, goto <1-36>, stats, board, nick <name>, memo, bg <color>, font <color>, help.",
+  "Type 'start' (or click [ Campagne ]) to launch mission #" + String(profile.campaignUnlocked).padStart(2, '0') + "."
+]);
 </script>
 </body>
 </html>
