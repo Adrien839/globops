@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GLOB-OPS // Terminal Training Mainframe</title>
+  <style>
+    :root {
+      --bg-color: #141414;
+      --font-color: #00d9ff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--font-color);
+      font-family: "Courier New", Courier, monospace;
+      font-size: 15px;
+      line-height: 1.55;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 20px;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    h1.main-title {
+      font-size: 36px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      margin-bottom: 22px;
+      text-align: center;
+      user-select: none;
+    }
+
+    .top-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 22px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .top-nav span {
+      cursor: pointer;
+      opacity: 0.85;
+    }
+
+    .top-nav span:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+
+    /* Cadre unique minimaliste type NetWatch */
+    .terminal-frame {
+      width: 100%;
+      max-width: 1050px;
+      height: 76vh;
+      min-height: 480px;
+      border: 1px solid var(--font-color);
+      padding: 28px 34px;
+      overflow-y: auto;
+      cursor: text;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #term-output {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-line {
+      margin-bottom: 2px;
+    }
+
+    .dim { opacity: 0.65; }
+    .bold { font-weight: bold; }
+
+    /* Ligne de prompt intégrée au flux */
+    .prompt-line {
+      display: flex;
+      align-items: center;
+      margin-top: 2px;
+      flex-wrap: nowrap;
+    }
+
+    .prompt-prefix {
+      white-space: nowrap;
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    #cmd-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--font-color);
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      caret-color: var(--font-color);
+    }
+
+    /* Scrollbar minimaliste */
+    .terminal-frame::-webkit-scrollbar { width: 6px; }
+    .terminal-frame::-webkit-scrollbar-track { background: transparent; }
+    .terminal-frame::-webkit-scrollbar-thumb { background: var(--font-color); opacity: 0.4; }
+  </style>
+</head>
+<body>
+
+  <h1 class="main-title">GlobWatch</h1>
+
+  <nav class="top-nav">
+    <span onclick="execFromNav('start')">[ Campagne ]</span>
+    <span onclick="execFromNav('custom')">[ Custom ]</span>
+    <span onclick="execFromNav('stats')">[ Profil ]</span>
+    <span onclick="execFromNav('board')">[ Leaderboard ]</span>
+    <span onclick="execFromNav('memo')">[ Memo ]</span>
+    <span onclick="execFromNav('help')">[ Help ]</span>
+  </nav>
+
+  <main class="terminal-frame" id="term-box" onclick="focusPrompt()">
+    <div id="term-output"></div>
+    <form class="prompt-line" onsubmit="onPromptSubmit(event)" autocomplete="off">
+      <span class="prompt-prefix" id="prompt-label">user@mainframe:~$</span>
+      <input type="text" id="cmd-input" autofocus spellcheck="false" />
+    </form>
+  </main>
+
+<script>
+// =============================================================================
+// CONFIGURATION OPTIONNELLE DU LEADERBOARD PUBLIC (SUPABASE REST API)
+// Laisse vide pour utiliser le classement local de démonstration.
+// =============================================================================
+const SUPABASE_URL = ""; // ex: "https://xyzcompany.supabase.co"
+const SUPABASE_KEY = ""; // ex: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+// =============================================================================
+// 1. BASE DE DONNÉES DES 36 MISSIONS (N1..N4 | NET, SYS, SEC)
+// =============================================================================
+const MISSIONS = [
+  { id: 1, diff: 1, theme: "NET", title: "Isolation de captures PCAP (?)",
+    scenario: "Une tempête de broadcast affecte l'interface 'eth0'. Isole uniquement les captures 2026 de 'eth0' ayant un numéro de séquence d'EXACTEMENT 2 caractères avant '.pcap'.",
+    targets: ["eth0_2026_01.pcap", "eth0_2026_02.pcap", "eth0_2026_99.pcap", "eth0_2026_ab.pcap"],
+    decoys: ["eth0_2026_1.pcap", "eth0_2026_100.pcap", "eth1_2026_01.pcap", "eth0_2025_01.pcap", "eth0_2026_01.pcap.gz"],
+    hint: "Combine le préfixe littéral et deux jokers '??' (1 caractère chacun).",
+    solution: "eth0_2026_??.pcap",
+    debrief: "'?' exige exactement 1 caractère, contrairement à '*' qui accepte 0 à N caractères." },
+  { id: 2, diff: 1, theme: "NET", title: "Rechargement de VLANs par plages ([...])",
+    scenario: "Charge les fichiers '.conf' des VLANs Management (10 à 19) et VoIP (30 à 39), sans toucher aux autres VLANs ni aux sauvegardes '.bak'.",
+    targets: ["vlan_10.conf", "vlan_15.conf", "vlan_19.conf", "vlan_30.conf", "vlan_38.conf"],
+    decoys: ["vlan_05.conf", "vlan_20.conf", "vlan_25.conf", "vlan_40.conf", "vlan_100.conf", "vlan_10.bak"],
+    hint: "Utilise '[13]' pour le chiffre des dizaines suivi de '[0-9]' pour les unités.",
+    solution: "vlan_[13][0-9].conf",
+    debrief: "Chaque bloc '[...]' représente un seul caractère. '[13][0-9]' couvre exactement 10-19 et 30-39." },
+  { id: 3, diff: 1, theme: "NET", title: "Déploiement Firewall hors Dev/Test ([!...])",
+    scenario: "Applique les règles '.rules' sur toutes les zones 'fw-zone-X.rules', SAUF les zones 'd' (dev) et 't' (test).",
+    targets: ["fw-zone-a.rules", "fw-zone-b.rules", "fw-zone-p.rules", "fw-zone-s.rules"],
+    decoys: ["fw-zone-d.rules", "fw-zone-t.rules", "fw-zone-d.bak", "router-zone-a.rules", "fw-zone-ab.rules"],
+    hint: "Utilise la négation de classe POSIX '[!dt]'.",
+    solution: "fw-zone-[!dt].rules",
+    debrief: "'[!dt]' matche n'importe quel caractère UNIQUE différent de 'd' et 't'." },
+  { id: 4, diff: 1, theme: "SYS", title: "Rotation des journaux syslog ([1-5])",
+    scenario: "Récupère les archives compressées 'syslog.N.gz' uniquement pour les rotations numérotées de 1 à 5.",
+    targets: ["syslog.1.gz", "syslog.2.gz", "syslog.4.gz", "syslog.5.gz"],
+    decoys: ["syslog.0.gz", "syslog.6.gz", "syslog.10.gz", "syslog.1.bz2", "auth.1.gz"],
+    hint: "Utilise la plage numérique '[1-5]' entre 'syslog.' et '.gz'.",
+    solution: "syslog.[1-5].gz",
+    debrief: "La plage '[1-5]' matche un seul chiffre compris entre 1 et 5, écartant '10' (2 caractères) et '0'." },
+  { id: 5, diff: 1, theme: "SYS", title: "Périphériques Série ttyS",
+    scenario: "Cible uniquement les 4 premiers ports série matériels 'ttyS0' à 'ttyS3' dans le dossier d'analyse.",
+    targets: ["ttyS0", "ttyS1", "ttyS2", "ttyS3"],
+    decoys: ["ttyS4", "ttyS9", "ttyS10", "ttyUSB0", "tty0"],
+    hint: "Préfixe 'ttyS' suivi de la plage '[0-3]'.",
+    solution: "ttyS[0-3]",
+    debrief: "Sous Linux (/dev), 'ttyS[0-3]' cible les UART matériels historiques sans toucher aux adaptateurs 'ttyUSB*'." },
+  { id: 6, diff: 1, theme: "SYS", title: "Unités Systemd de type Service (*)",
+    scenario: "Sélectionne toutes les unités commençant par 'systemd-' qui sont des fichiers '.service' actifs (sans les '.socket', '.timer' ou '.bak').",
+    targets: ["systemd-networkd.service", "systemd-resolved.service", "systemd-logind.service", "systemd-udevd.service"],
+    decoys: ["systemd-networkd.socket", "systemd-tmpfiles.timer", "networking.service", "sshd.service", "systemd-udevd.service.bak"],
+    hint: "Encadre le joker '*' entre 'systemd-' et '.service'.",
+    solution: "systemd-*.service",
+    debrief: "Fixer à la fois le préfixe 'systemd-' et le suffixe '.service' borne strictement l'expansion de '*'." },
+  { id: 7, diff: 1, theme: "SEC", title: "Rapports de vulnérabilités CVE récents",
+    scenario: "Isole les bulletins JSON des années 2024 à 2026 ayant un identifiant séquentiel d'exactement 4 caractères ('CVE-202X-YYYY.json').",
+    targets: ["CVE-2024-0001.json", "CVE-2025-1337.json", "CVE-2026-9999.json", "CVE-2026-4021.json"],
+    decoys: ["CVE-2023-0001.json", "CVE-2026-10005.json", "CVE-2026-123.json", "CVE-2025-1337.xml"],
+    hint: "Combine 'CVE-202[4-6]-' avec 4 points d'interrogation '????'.",
+    solution: "CVE-202[4-6]-????.json",
+    debrief: "'????' impose un identifiant de 4 caractères, écartant les ID à 3 ou 5 chiffres." },
+  { id: 8, diff: 1, theme: "SEC", title: "Journaux Honeypot SSH non vides",
+    scenario: "Récupère les logs 'ssh_honeypot_X.log' dont l'identifiant NE commence PAS par le chiffre '0'.",
+    targets: ["ssh_honeypot_1.log", "ssh_honeypot_25.log", "ssh_honeypot_99.log", "ssh_honeypot_ext.log"],
+    decoys: ["ssh_honeypot_0.log", "ssh_honeypot_01.log", "ssh_honeypot_1.bak", "http_honeypot_1.log"],
+    hint: "Utilise '[!0]*' entre 'ssh_honeypot_' et '.log'.",
+    solution: "ssh_honeypot_[!0]*.log",
+    debrief: "'[!0]*' exige au moins 1 caractère initial différent de '0', suivi de 0 ou N caractères quelconques." },
+  { id: 9, diff: 1, theme: "SEC", title: "Échantillons Malware par Hash court",
+    scenario: "Cible les binaires 'mal_XY.bin' où X est une lettre minuscule de 'a' à 'f' et Y est un chiffre de '0' à '9'.",
+    targets: ["mal_a0.bin", "mal_c5.bin", "mal_f9.bin", "mal_b2.bin"],
+    decoys: ["mal_g0.bin", "mal_a99.bin", "mal_0a.bin", "mal_a0.exe", "mal_A0.bin"],
+    hint: "Utilise deux classes consécutives : '[a-f][0-9]'.",
+    solution: "mal_[a-f][0-9].bin",
+    debrief: "Avec LC_ALL=C, '[a-f]' est strictement sensible à la casse et rejette 'mal_A0.bin' ainsi que 'mal_g0.bin'." },
+  { id: 10, diff: 2, theme: "NET", title: "Sanitisation de table ARP ([:xdigit:])",
+    scenario: "Isole les fichiers 'arp_XX.cache' dont l'identifiant 'XX' est un octet hexadécimal valide (2 caractères 0-9, a-f ou A-F).",
+    targets: ["arp_0a.cache", "arp_ff.cache", "arp_B4.cache", "arp_19.cache", "arp_c0.cache"],
+    decoys: ["arp_0g.cache", "arp_zz.cache", "arp_a.cache", "arp_fff.cache", "arp_1_.cache"],
+    hint: "Utilise deux fois la classe POSIX '[[:xdigit:]]'.",
+    solution: "arp_[[:xdigit:]][[:xdigit:]].cache",
+    debrief: "'[[:xdigit:]]' équivaut à '[0-9A-Fa-f]'. N'oublie jamais le double crochet '[[:classe:]]'." },
+  { id: 11, diff: 2, theme: "NET", title: "Le tiret littéral dans une classe ([0-9-])",
+    scenario: "Cible les profils de ports 'sw_port_X.cfg' où X est soit un chiffre (0-9), soit le tiret littéral '-' (template par défaut).",
+    targets: ["sw_port_0.cfg", "sw_port_5.cfg", "sw_port_9.cfg", "sw_port_-.cfg"],
+    decoys: ["sw_port_a.cfg", "sw_port__.cfg", "sw_port_10.cfg", "sw_port_0.bak"],
+    hint: "Place le tiret '-' tout à la fin (ou tout au début) des crochets : '[0-9-]'.",
+    solution: "sw_port_[0-9-].cfg",
+    debrief: "Dans '[...]', le caractère '-' définit une plage sauf s'il est placé en première ou dernière position, où il devient littéral." },
+  { id: 12, diff: 2, theme: "NET", title: "MIBs SNMP par version et constructeur",
+    scenario: "Sélectionne les fichiers 'snmp_vX_nom.mib' pour les versions 1, 2 ou 3 dont le nom constructeur commence par une lettre minuscule.",
+    targets: ["snmp_v2_cisco.mib", "snmp_v3_linux.mib", "snmp_v1_printer.mib", "snmp_v3_core.mib"],
+    decoys: ["snmp_v4_cisco.mib", "snmp_v2_Cisco.mib", "snmp_v2_01.mib", "snmp_v3_linux.txt"],
+    hint: "Combine 'snmp_v[1-3]_' avec '[[:lower:]]*.mib'.",
+    solution: "snmp_v[1-3]_[[:lower:]]*.mib",
+    debrief: "'[[:lower:]]*' impose une minuscule en tête du nom constructeur avant d'autoriser la suite avec '*'." },
+  { id: 13, diff: 2, theme: "SYS", title: "Chasse aux scripts cachés (Dotfiles)",
+    scenario: "Cible les scripts cachés commençant par un '.' suivi d'une lettre minuscule et finissant par '.sh' (sans capturer '..hidden_swap.sh').",
+    targets: [".beacon.sh", ".reverse_shell.sh", ".persistence.sh", ".cron_hook.sh"],
+    decoys: ["..hidden_swap.sh", ".0_init.sh", ".Beacon.sh", "beacon.sh", ".beacon.sh.bak"],
+    hint: "Commence par un point littéral suivi de '[[:lower:]]*.sh'.",
+    solution: ".[[:lower:]]*.sh",
+    debrief: "Sans 'dotglob', le '.' initial d'un fichier caché ne peut être matché que par un '.' littéral en début de motif." },
+  { id: 14, diff: 2, theme: "SYS", title: "Modules Kernel normalisés ([:alpha:][:digit:])",
+    scenario: "Isole les modules noyau 'kmod_XY.ko' où X est une lettre (majuscule ou minuscule) et Y est un chiffre unique.",
+    targets: ["kmod_a1.ko", "kmod_Z9.ko", "kmod_b0.ko", "kmod_M4.ko"],
+    decoys: ["kmod_1a.ko", "kmod_aa.ko", "kmod_11.ko", "kmod_a10.ko", "kmod_a1.ko.xz"],
+    hint: "Utilise '[[:alpha:]][[:digit:]]' entre 'kmod_' et '.ko'.",
+    solution: "kmod_[[:alpha:]][[:digit:]].ko",
+    debrief: "'[[:alpha:]]' regroupe '[[:lower:]]' et '[[:upper:]]' indépendamment des bizarreries d'encodage local." },
+  { id: 15, diff: 2, theme: "SYS", title: "Fichiers cachés sans les doubles points (.[!.]*)",
+    scenario: "Cible toutes les configs cachées '.xxx.conf' commençant par un seul point (exclure '..swap.conf' et '..backup.conf').",
+    targets: [".bashrc.conf", ".01_net.conf", ".Xauthority.conf", ".tmux.conf"],
+    decoys: ["..swap.conf", "..backup.conf", "bashrc.conf", ".bashrc.bak"],
+    hint: "Utilise '.[!.]*.conf' pour interdire un second point en 2e position.",
+    solution: ".[!.]*.conf",
+    debrief: "Le motif classique Unix '.[!.]*' matche tout fichier caché commençant par un point tout en excluant '.', '..' et '..*'." },
+  { id: 16, diff: 2, theme: "SEC", title: "Conformité PKI & Certificats TLS",
+    scenario: "Valide les certificats 'cert_XX-NNN.pem' où XX sont 2 lettres MAJUSCULES (pays) et NNN sont exactement 3 chiffres.",
+    targets: ["cert_FR-001.pem", "cert_DE-402.pem", "cert_US-999.pem", "cert_JP-105.pem"],
+    decoys: ["cert_fr-001.pem", "cert_F1-001.pem", "cert_FR-01.pem", "cert_FR-001a.pem", "cert_FR-001.crt"],
+    hint: "Combine 2 '[[:upper:]]', un tiret, et 3 '[[:digit:]]'.",
+    solution: "cert_[[:upper:]][[:upper:]]-[[:digit:]][[:digit:]][[:digit:]].pem",
+    debrief: "Dans certaines locales UTF-8, '[A-Z]' inclut les minuscules ! '[[:upper:]]' reste la méthode POSIX la plus sûre." },
+  { id: 17, diff: 2, theme: "SEC", title: "Signatures obfusquées par ponctuation ([:punct:])",
+    scenario: "Isole les fichiers 'hash_X_Y.sig' où X est un caractère alphanumérique et Y est un symbole de ponctuation.",
+    targets: ["hash_a_!.sig", "hash_9_#.sig", "hash_Z_@.sig", "hash_4_%.sig"],
+    decoys: ["hash_a_1.sig", "hash_a_b.sig", "hash_!_a.sig", "hash_ab_!.sig", "hash_a_!.bak"],
+    hint: "Utilise '[[:alnum:]]' suivi de '_' puis '[[:punct:]]'.",
+    solution: "hash_[[:alnum:]]_[[:punct:]].sig",
+    debrief: "'[[:punct:]]' cible tout caractère imprimable qui n'est ni un espace ni alphanumérique (!, @, #, $, %, etc.)." },
+  { id: 18, diff: 2, theme: "SEC", title: "Marqueurs IOC Hybrides (Majuscule + Hexa)",
+    scenario: "Cible les marqueurs 'ioc_XY.ioc' où X est n'importe quelle lettre MAJUSCULE (A-Z) et Y est un chiffre hexadécimal.",
+    targets: ["ioc_G9.ioc", "ioc_Z0.ioc", "ioc_M4.ioc", "ioc_Aa.ioc"],
+    decoys: ["ioc_a0.ioc", "ioc_99.ioc", "ioc_GZ.ioc", "ioc_G99.ioc", "ioc_G9.txt"],
+    hint: "Combine '[[:upper:]]' en première position et '[[:xdigit:]]' en seconde.",
+    solution: "ioc_[[:upper:]][[:xdigit:]].ioc",
+    debrief: "'G', 'Z' et 'M' sont dans '[[:upper:]]' mais pas dans '[[:xdigit:]]', tandis que le 2e caractère est limité à 0-9a-fA-F." },
+  { id: 19, diff: 3, theme: "NET", title: "Protocoles de routage dynamique (@)",
+    scenario: "Cible en un seul motif exactement les 3 configurations 'bgp.conf', 'ospf.conf' et 'rip.conf'.",
+    targets: ["bgp.conf", "ospf.conf", "rip.conf"],
+    decoys: ["eigrp.conf", "isis.conf", "bgp.conf.bak", "ospf_v3.conf", "bgp.log"],
+    hint: "Utilise '@(bgp|ospf|rip).conf'.",
+    solution: "@(bgp|ospf|rip).conf",
+    debrief: "'@(p1|p2|...)' matche exactement une des alternatives. Contrairement à '{bgp,ospf,rip}', c'est un vrai filtre glob." },
+  { id: 20, diff: 3, theme: "NET", title: "Audit Pare-feu & Sauvegardes Optionnelles (?)",
+    scenario: "Récupère 'nftables.conf' et 'ufw.conf' ainsi que leurs sauvegardes directes '.bak' ou '.old' (sans les '.bak.old' ni '.tmp').",
+    targets: ["nftables.conf", "nftables.conf.bak", "nftables.conf.old", "ufw.conf", "ufw.conf.bak"],
+    decoys: ["nftables.conf.tmp", "nftables.conf.bak.old", "iptables.conf", "ufw.conf.gz"],
+    hint: "Combine '@(nftables|ufw).conf' avec '?(.bak|.old)'.",
+    solution: "@(nftables|ufw).conf?(.bak|.old)",
+    debrief: "'?(list)' autorise 0 ou 1 occurrence, ce qui bloque la double extension 'nftables.conf.bak.old'." },
+  { id: 21, diff: 3, theme: "NET", title: "Routeurs avec préfixe de zone optionnel (? et +)",
+    scenario: "Cible 'router_N.cfg' où N est composé d'AU MOINS un chiffre, précédé optionnellement du préfixe 'dmz_' ou 'wan_'.",
+    targets: ["router_1.cfg", "router_42.cfg", "dmz_router_1.cfg", "wan_router_105.cfg"],
+    decoys: ["lan_router_1.cfg", "dmz_wan_router_1.cfg", "router_.cfg", "router_1a.cfg", "router_1.bak"],
+    hint: "Combine '?(dmz_|wan_)router_' avec '+([0-9]).cfg'.",
+    solution: "?(dmz_|wan_)router_+([0-9]).cfg",
+    debrief: "'?(dmz_|wan_)' rend le préfixe optionnel (0 ou 1 fois), et '+([0-9])' valide un nombre de longueur quelconque." },
+  { id: 22, diff: 3, theme: "SYS", title: "Extraction chirurgicale d'identités (@)",
+    scenario: "Cible exactement les 4 fichiers système 'passwd', 'shadow', 'group' et 'gshadow', sans aucun fichier de backup.",
+    targets: ["passwd", "shadow", "group", "gshadow"],
+    decoys: ["passwd-", "shadow.bak", "group.old", "hosts", "sudoers", "oshadow"],
+    hint: "Utilise '@(passwd|shadow|group|gshadow)' ou '@(passwd|?(g)shadow|group)'.",
+    solution: "@(passwd|shadow|group|gshadow)",
+    debrief: "Tu peux lister les alternatives dans '@(...)' ou imbriquer '?()' : '@(passwd|?(g)shadow|group)'." },
+  { id: 23, diff: 3, theme: "SYS", title: "Archives Tar compressées ou brutes (?)",
+    scenario: "Cible 'backup.tar' ainsi que ses versions compressées en '.gz', '.bz2' ou '.xz' uniquement.",
+    targets: ["backup.tar", "backup.tar.gz", "backup.tar.bz2", "backup.tar.xz"],
+    decoys: ["backup.tar.zst", "backup.tar.gz.bak", "backup.zip", "old_backup.tar.gz"],
+    hint: "Ajoute '?(.gz|.bz2|.xz)' après 'backup.tar'.",
+    solution: "backup.tar?(.gz|.bz2|.xz)",
+    debrief: "'?(.gz|.bz2|.xz)' capture aussi bien l'archive non compressée 'backup.tar' (0 occurrence) que les 3 formats ciblés." },
+  { id: 24, diff: 3, theme: "SYS", title: "Journaux Kernel avec tags cumulables (*)",
+    scenario: "Cible 'kernel_boot.log' ainsi que les variantes contenant 0, 1 ou plusieurs tags 'debug_' ou 'trace_' avant 'boot.log'.",
+    targets: ["kernel_boot.log", "kernel_debug_boot.log", "kernel_trace_boot.log", "kernel_debug_trace_boot.log"],
+    decoys: ["kernel_info_boot.log", "kernel_debug_boot.bak", "user_boot.log", "kernel_debug_crash.log"],
+    hint: "Utilise l'opérateur '*(debug_|trace_)' entre 'kernel_' et 'boot.log'.",
+    solution: "kernel_*(debug_|trace_)boot.log",
+    debrief: "'*(list)' matche 0, 1 ou N occurrences des motifs : il inclut donc 'kernel_boot.log' (0 tag) ET 'kernel_debug_trace_boot.log' (2 tags)." },
+  { id: 25, diff: 3, theme: "SEC", title: "Détection de NOP Sled (+ vs *)",
+    scenario: "Isole les payloads 'sled_...shell.bin' contenant AU MOINS UNE répétition de 'nop_' ou 'x90_'. Ne touche pas à 'sled_shell.bin' !",
+    targets: ["sled_nop_shell.bin", "sled_x90_shell.bin", "sled_nop_nop_shell.bin", "sled_x90_nop_x90_shell.bin"],
+    decoys: ["sled_shell.bin", "sled_junk_shell.bin", "sled_nop_shell.txt", "sled_nop_x90_debug.bin"],
+    hint: "Utilise '+(nop_|x90_)' pour exiger au moins une occurrence.",
+    solution: "sled_+(nop_|x90_)shell.bin",
+    debrief: "Contrairement à '*()', '+()' exige au moins 1 occurrence, protégeant ainsi le binaire légitime 'sled_shell.bin'." },
+  { id: 26, diff: 3, theme: "SEC", title: "Agrégation d'échecs d'authentification (+)",
+    scenario: "Cible les journaux 'auth_<tag>_<id>.log' où <tag> est composé d'une ou plusieurs occurrences de 'fail' ou 'err', et <id> est un nombre.",
+    targets: ["auth_fail_1.log", "auth_err_42.log", "auth_failerr_99.log", "auth_fail_100.log"],
+    decoys: ["auth__1.log", "auth_ok_1.log", "auth_fail_.log", "auth_fail_1a.log", "auth_fail_1.bak"],
+    hint: "Combine '+(fail|err)' et '+([0-9])'.",
+    solution: "auth_+(fail|err)_+([0-9]).log",
+    debrief: "'+(fail|err)' accepte 'fail', 'err' et leur concaténation 'failerr', tandis que '+([0-9])' remplace avantageusement '[0-9]+' des regex." },
+  { id: 27, diff: 3, theme: "SEC", title: "Pièces jointes Phishing à double extension",
+    scenario: "Isole les faux PDF 'invoice.pdf.<ext>' (avec suffixe optionnel '_final' ou '_v2' après 'invoice') finissant par '.exe', '.scr' ou '.vbs'.",
+    targets: ["invoice.pdf.exe", "invoice_final.pdf.scr", "invoice_v2.pdf.vbs", "invoice.pdf.scr"],
+    decoys: ["invoice.pdf", "invoice_final.pdf", "invoice_v3.pdf.exe", "invoice_final_v2.pdf.exe", "invoice.pdf.bat"],
+    hint: "Structure : 'invoice?(_final|_v2).pdf.@(exe|scr|vbs)'.",
+    solution: "invoice?(_final|_v2).pdf.@(exe|scr|vbs)",
+    debrief: "La combinaison de '?()' et '@()' permet de modéliser précisément des règles de détection proches des signatures YARA/Sigma." },
+  { id: 28, diff: 4, theme: "NET", title: "Exclusion des routeurs Core (! + suffixe)",
+    scenario: "Cible tous les fichiers '.cfg' du dossier SAUF 'core-01.cfg' et 'core-02.cfg' (attention à ne pas capturer les '.bak' ou '.log').",
+    targets: ["edge-01.cfg", "edge-02.cfg", "dist-01.cfg", "wifi-ap.cfg"],
+    decoys: ["core-01.cfg", "core-02.cfg", "edge-01.bak", "core-01.log", "README.md"],
+    hint: "Applique la négation uniquement sur le nom avant l'extension : '!(core-01|core-02).cfg'.",
+    solution: "!(core-01|core-02).cfg",
+    debrief: "Si tu avais écrit '!(core-01.cfg|core-02.cfg)', tu aurais capturé 'edge-01.bak' et 'README.md' ! Garder '.cfg' hors de '!()' verrouille l'extension." },
+  { id: 29, diff: 4, theme: "NET", title: "Le piège de l'exclusion partielle (Préfixe + !)",
+    scenario: "Archive tous les journaux 'fw_2026_*.log' SAUF ceux de 'dev' et 'staging', sans toucher aux 'ids_2026_*', 'fw_2025_*' ni aux '.bak'.",
+    targets: ["fw_2026_prod.log", "fw_2026_dmz.log", "fw_2026_wan.log", "fw_2026_core.log"],
+    decoys: ["fw_2026_dev.log", "fw_2026_staging.log", "ids_2026_prod.log", "fw_2026_prod.bak", "fw_2025_prod.log"],
+    hint: "Encadre '!()' par le préfixe et le suffixe : 'fw_2026_!(dev|staging).log'.",
+    solution: "fw_2026_!(dev|staging).log",
+    debrief: "Encadrer '!(dev|staging)' entre 'fw_2026_' et '.log' restreint la négation au seul segment d'environnement." },
+  { id: 30, diff: 4, theme: "NET", title: "Filtrage Trunk VLAN & Protocoles (! et @)",
+    scenario: "Isole les captures TCP et UDP ('vlan_<id>_<proto>.pcap') de tous les VLANs SAUF les VLANs 1, 99 et 100 (ignorer ICMP et '.gz').",
+    targets: ["vlan_10_tcp.pcap", "vlan_20_udp.pcap", "vlan_50_tcp.pcap", "vlan_200_udp.pcap"],
+    decoys: ["vlan_1_tcp.pcap", "vlan_99_udp.pcap", "vlan_100_tcp.pcap", "vlan_10_icmp.pcap", "vlan_10_tcp.pcap.gz"],
+    hint: "Combine 'vlan_!(1|99|100)_' avec '@(tcp|udp).pcap'.",
+    solution: "vlan_!(1|99|100)_@(tcp|udp).pcap",
+    debrief: "Associer '!()' sur un segment et '@()' sur un autre permet d'exprimer une condition logique (NON A) ET (B OU C)." },
+  { id: 31, diff: 4, theme: "SYS", title: "Quarantaine Totale par Exclusion (!)",
+    scenario: "Un webshell a pollué le dossier. Cible TOUS les fichiers présents SAUF les 3 fichiers légitimes : 'index.php', 'config.php' et 'robots.txt'.",
+    targets: ["c99.php", "b374k.php", "dump.sql.gz", "reverse.elf", "pwn.sh"],
+    decoys: ["index.php", "config.php", "robots.txt"],
+    hint: "Utilise l'opérateur global '!(index.php|config.php|robots.txt)'.",
+    solution: "!(index.php|config.php|robots.txt)",
+    debrief: "'!(liste)' matche tout fichier du dossier qui ne correspond à aucun des motifs listés. Indispensable pour 'rm !(a_garder)'." },
+  { id: 32, diff: 4, theme: "SYS", title: "Exclusion d'extensions temporaires (app.!())",
+    scenario: "Sélectionne tous les fichiers appartenant à 'app.*' SAUF ceux ayant l'extension '.bak', '.tmp' ou '.swp'.",
+    targets: ["app.conf", "app.service", "app.socket", "app.yaml"],
+    decoys: ["app.bak", "app.tmp", "app.swp", "db.conf", "sys.yaml"],
+    hint: "Place la négation après le point : 'app.!(bak|tmp|swp)'.",
+    solution: "app.!(bak|tmp|swp)",
+    debrief: "'app.!(bak|tmp|swp)' impose le préfixe 'app.' tout en rejetant les trois extensions indésirables." },
+  { id: 33, diff: 4, theme: "SYS", title: "Collecte de logs Services hors Debug/Test",
+    scenario: "Récupère les journaux 'svc_<nom>.log' et leurs archives '.log.gz' pour tous les services SAUF 'debug' et 'test'.",
+    targets: ["svc_auth.log", "svc_auth.log.gz", "svc_cron.log", "svc_mail.log.gz"],
+    decoys: ["svc_debug.log", "svc_test.log.gz", "svc_auth.log.bz2", "app_auth.log", "svc_debug.log.gz"],
+    hint: "Combine 'svc_!(debug|test).log' avec '?(.gz)'.",
+    solution: "svc_!(debug|test).log?(.gz)",
+    debrief: "Même avec '?(.gz)' en fin de chaîne, '.log' sert d'ancre fixe empêchant '!(debug|test)' d'absorber la fin du nom." },
+  { id: 34, diff: 4, theme: "SEC", title: "Triage d'alertes SIEM (Exclusion + ID numérique)",
+    scenario: "Isole les alertes JSON 'alert_<type>_<id>.json' ayant un ID strictement numérique, en excluant les types 'sim' et 'false'.",
+    targets: ["alert_intrusion_1.json", "alert_ddos_402.json", "alert_exfil_99.json", "alert_malware_7.json"],
+    decoys: ["alert_sim_1.json", "alert_false_402.json", "alert_intrusion_abc.json", "alert_intrusion_.json", "alert_intrusion_1.xml"],
+    hint: "Structure : 'alert_!(sim|false)_+([0-9]).json'.",
+    solution: "alert_!(sim|false)_+([0-9]).json",
+    debrief: "L'association de '!(sim|false)' et '+([0-9])' élimine simultanément les faux positifs d'entraînement et les IDs malformés." },
+  { id: 35, diff: 4, theme: "SEC", title: "Chasse aux Webshells PHP & Backups",
+    scenario: "Cible tous les fichiers '.php' et '.phtml' (ainsi que leurs copies '.bak') SAUF les pages légitimes 'index', 'login' et 'admin'.",
+    targets: ["shell.php", "upload.phtml", "backdoor.php.bak", "cmd.phtml.bak"],
+    decoys: ["index.php", "login.phtml", "admin.php.bak", "style.css", "shell.php.txt"],
+    hint: "Combine '!(index|login|admin)', '.@(php|phtml)' et '?(.bak)'.",
+    solution: "!(index|login|admin).@(php|phtml)?(.bak)",
+    debrief: "Ce motif triple bloque 'admin.php.bak' tout en capturant à la fois les scripts actifs et leurs sauvegardes '.bak'." },
+  { id: 36, diff: 4, theme: "SEC", title: "BOSS FINAL — Chasse APT Multi-Critères",
+    scenario: "Isole les binaires APT : (1) préfixe 'apt_' ou 'c2_', (2) suivi de '-' et d'au moins un chiffre, (3) suivi de '_' et d'un module quelconque SAUF 'clean' et 'patched', (4) extension '.bin' ou '.elf'.",
+    targets: ["apt_-1_dropper.bin", "c2_-42_beacon.elf", "apt_-108_keylogger.bin", "c2_-7_exfil.elf"],
+    decoys: ["apt_-1_clean.bin", "c2_-42_patched.elf", "apt_-_dropper.bin", "apt_-12a_dropper.bin", "ssh_-1_dropper.bin", "apt_-1_dropper.log"],
+    hint: "Combine '@(apt|c2)' + '_-' + '+([0-9])' + '_' + '!(clean|patched)' + '.@(bin|elf)'.",
+    solution: "@(apt|c2)_-+([0-9])_!(clean|patched).@(bin|elf)",
+    debrief: "Maîtrise totale d'extglob : tu as combiné '@()', '+()', '!()' et les classes numériques en un seul filtre déterministe." }
+];
+
+// =============================================================================
+// 2. MOTEUR AST BASH GLOB & EXTGLOB (IDENTIQUE À BASH LC_ALL=C)
+// =============================================================================
+const POSIX_CLASSES = {
+  digit: "0123456789",
+  xdigit: "0123456789abcdefABCDEF",
+  lower: "abcdefghijklmnopqrstuvwxyz",
+  upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  alpha: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  alnum: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  punct: "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+};
+
+function parseBracketExpression(pattern, startBracketIdx) {
+  let i = startBracketIdx + 1;
+  if (i >= pattern.length) return null;
+  let negated = false;
+  if (pattern[i] === '!' || pattern[i] === '^') { negated = true; i++; }
+  const charSet = new Set();
+  let first = true;
+  while (i < pattern.length) {
+    if (pattern[i] === ']' && !first) {
+      return { token: { type: 'BRACKET', negated, charSet }, nextIdx: i + 1 };
+    }
+    first = false;
+    if (pattern[i] === '[' && pattern[i + 1] === ':') {
+      const closePosix = pattern.indexOf(':]', i + 2);
+      if (closePosix !== -1) {
+        const cls = pattern.slice(i + 2, closePosix);
+        if (POSIX_CLASSES[cls]) {
+          for (const ch of POSIX_CLASSES[cls]) charSet.add(ch);
+          i = closePosix + 2;
+          continue;
+        }
+      }
+    }
+    if (i + 2 < pattern.length && pattern[i + 1] === '-' && pattern[i + 2] !== ']') {
+      for (let c = pattern.charCodeAt(i); c <= pattern.charCodeAt(i + 2); c++) {
+        charSet.add(String.fromCharCode(c));
+      }
+      i += 3;
+      continue;
+    }
+    charSet.add(pattern[i++]);
+  }
+  return null;
+}
+
+function findClosingParen(pattern, openIdx) {
+  let depth = 1, i = openIdx + 1;
+  while (i < pattern.length) {
+    if (pattern[i] === '[') {
+      const br = parseBracketExpression(pattern, i);
+      if (br) { i = br.nextIdx; continue; }
+    }
+    if (pattern[i] === '(') depth++;
+    else if (pattern[i] === ')' && --depth === 0) return i;
+    i++;
+  }
+  return -1;
+}
+
+function splitTopLevelPipes(innerStr) {
+  const branches = [];
+  let depth = 0, last = 0, i = 0;
+  while (i < innerStr.length) {
+    if (innerStr[i] === '[') {
+      const br = parseBracketExpression(innerStr, i);
+      if (br) { i = br.nextIdx; continue; }
+    }
+    if (innerStr[i] === '(') depth++;
+    else if (innerStr[i] === ')') depth--;
+    else if (innerStr[i] === '|' && depth === 0) {
+      branches.push(innerStr.slice(last, i));
+      last = i + 1;
+    }
+    i++;
+  }
+  branches.push(innerStr.slice(last));
+  return branches;
+}
+
+function parseGlobAST(pattern) {
+  const tokens = [];
+  let i = 0;
+  while (i < pattern.length) {
+    const ch = pattern[i];
+    if ("?*+@!".includes(ch) && pattern[i + 1] === '(') {
+      const closeIdx = findClosingParen(pattern, i + 1);
+      if (closeIdx === -1) throw new Error(`Parenthèse ')' manquante pour '${ch}('`);
+      const branches = splitTopLevelPipes(pattern.slice(i + 2, closeIdx)).map(parseGlobAST);
+      tokens.push({ type: 'EXTGLOB', op: ch, branches });
+      i = closeIdx + 1;
+      continue;
+    }
+    if (ch === '*') { tokens.push({ type: 'STAR' }); i++; }
+    else if (ch === '?') { tokens.push({ type: 'ANY_CHAR' }); i++; }
+    else if (ch === '[') {
+      const br = parseBracketExpression(pattern, i);
+      if (br) { tokens.push(br.token); i = br.nextIdx; }
+      else { tokens.push({ type: 'LITERAL', char: '[' }); i++; }
+    } else {
+      tokens.push({ type: 'LITERAL', char: ch });
+      i++;
+    }
+  }
+  return tokens;
+}
+
+function matchTokensExact(tokens, tIdx, str, sIdx, endIdx) {
+  if (tIdx === tokens.length) return sIdx === endIdx;
+  const tk = tokens[tIdx];
+  const isLeadingDot = (sIdx === 0 && str.length > 0 && str[0] === '.');
+
+  if (tk.type === 'LITERAL') {
+    return (sIdx < endIdx && str[sIdx] === tk.char)
+      ? matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx) : false;
+  }
+  if (tk.type === 'ANY_CHAR') {
+    if (isLeadingDot || sIdx >= endIdx) return false;
+    return matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx);
+  }
+  if (tk.type === 'BRACKET') {
+    if (isLeadingDot || sIdx >= endIdx) return false;
+    const inSet = tk.charSet.has(str[sIdx]);
+    return (tk.negated ? !inSet : inSet)
+      ? matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx) : false;
+  }
+  if (tk.type === 'STAR') {
+    if (isLeadingDot) return matchTokensExact(tokens, tIdx + 1, str, sIdx, endIdx);
+    for (let k = sIdx; k <= endIdx; k++) {
+      if (matchTokensExact(tokens, tIdx + 1, str, k, endIdx)) return true;
+    }
+    return false;
+  }
+  if (tk.type === 'EXTGLOB') {
+    for (let k = sIdx; k <= endIdx; k++) {
+      if (matchExtglobSegment(tk.op, tk.branches, str, sIdx, k) &&
+          matchTokensExact(tokens, tIdx + 1, str, k, endIdx)) return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+function matchesAnyBranch(branches, str, sIdx, endIdx) {
+  return branches.some(b => matchTokensExact(b, 0, str, sIdx, endIdx));
+}
+
+function matchBranchRep(branches, str, sIdx, endIdx, count) {
+  if (sIdx === endIdx) return count >= 1 ? true : matchesAnyBranch(branches, str, sIdx, endIdx);
+  for (let m = sIdx + 1; m <= endIdx; m++) {
+    if (matchesAnyBranch(branches, str, sIdx, m) &&
+        matchBranchRep(branches, str, m, endIdx, count + 1)) return true;
+  }
+  return false;
+}
+
+function matchExtglobSegment(op, branches, str, sIdx, endIdx) {
+  const consumesLeadingDot = (sIdx === 0 && endIdx > 0 && str[0] === '.');
+  if (op === '@') return matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '?') return (sIdx === endIdx) || matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '!') return consumesLeadingDot ? false : !matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '+') return matchBranchRep(branches, str, sIdx, endIdx, 0);
+  if (op === '*') return (sIdx === endIdx) || matchBranchRep(branches, str, sIdx, endIdx, 0);
+  return false;
+}
+
+function bashGlobMatch(pattern, filename) {
+  const ast = parseGlobAST(pattern);
+  return matchTokensExact(ast, 0, filename, 0, filename.length);
+}
+
+// =============================================================================
+// 3. ÉTAT DU TERMINAL, PROFIL LOCAL & COMMANDES SHELL
+// =============================================================================
+const STORAGE_KEY = "globwatch_v3_profile";
+const VALID_COLORS = {
+  orange: "#ff9d00", amber: "#ff9d00", green: "#33ff33", red: "#ff4444",
+  cyan: "#00e5ff", blue: "#4da6ff", white: "#f0f0f0", black: "#0a0a0a",
+  dark: "#141414", yellow: "#ffe600", magenta: "#ff66ff", matrix: "#00ff66"
+};
+
+let profile = {
+  pseudo: "user",
+  bgColor: "#141414",
+  fontColor: "#ff9d00",
+  campaignUnlocked: 1,
+  bestScore: 0,
+  totalScore: 0,
+  masteredIds: [],
+  localBoard: [
+    { pseudo: "root_soc", score: 3420, mastered: 32 },
+    { pseudo: "net_admin", score: 2150, mastered: 21 },
+    { pseudo: "tssr_guest", score: 980, mastered: 10 }
+  ]
+};
+
+let state = {
+  active: false,       // true quand une mission est en cours
+  awaitingNext: false, // true quand une mission vient d'être résolue
+  wizardStep: 0,       // > 0 pendant la config 'custom'
+  wizardData: {},
+  mode: "CAMPAIGN",
+  playlist: [],
+  stepIdx: 0,
+  sessionScore: 0,
+  attempts: 0,
+  usedHint: 0,
+  startTimeMs: 0
+};
+
+let cmdHistory = [];
+let histIdx = -1;
+
+const outEl = document.getElementById('term-output');
+const inpEl = document.getElementById('cmd-input');
+const boxEl = document.getElementById('term-box');
+const promptLbl = document.getElementById('prompt-label');
+
+function printLine(text = "", cls = "") {
+  const div = document.createElement('div');
+  div.className = "log-line" + (cls ? " " + cls : "");
+  div.textContent = text;
+  outEl.appendChild(div);
+  boxEl.scrollTop = boxEl.scrollHeight;
+}
+
+function printBlock(lines, cls = "") {
+  lines.forEach(l => printLine(l, cls));
+}
+
+function updatePromptLabel() {
+  const u = profile.pseudo || "user";
+  if (state.wizardStep > 0) {
+    promptLbl.textContent = `${u}@mainframe:~/custom$`;
+  } else if (state.active) {
+    const mid = state.playlist[state.stepIdx];
+    promptLbl.textContent = `${u}@glob-ops:mission-${String(mid).padStart(2, '0')}$`;
+  } else {
+    promptLbl.textContent = `${u}@mainframe:~$`;
+  }
+}
+
+function applyTheme() {
+  document.documentElement.style.setProperty('--bg-color', profile.bgColor);
+  document.documentElement.style.setProperty('--font-color', profile.fontColor);
+}
+
+function loadProfile() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) profile = { ...profile, ...JSON.parse(saved) };
+  } catch (e) {}
+  applyTheme();
+  updatePromptLabel();
+}
+
+function saveProfile() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch (e) {}
+  updatePromptLabel();
+}
+
+function focusPrompt() {
+  if (window.getSelection().toString() === "") inpEl.focus();
+}
+
+function execFromNav(cmd) {
+  inpEl.value = cmd;
+  handleInput(cmd);
+  inpEl.value = "";
+  inpEl.focus();
+}
+
+// =============================================================================
+// 4. GESTION DES MISSIONS DANS LE FLUX DU TERMINAL
+// =============================================================================
+function startCampaign(startAt) {
+  const s = startAt || profile.campaignUnlocked || 1;
+  state.playlist = [];
+  for (let i = s; i <= MISSIONS.length; i++) state.playlist.push(i);
+  state.mode = "CAMPAIGN";
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  printMission();
+}
+
+function printMission() {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+  if (!m) {
+    state.active = false;
+    state.awaitingNext = false;
+    updatePromptLabel();
+    printBlock([
+      "",
+      "========================================================================",
+      `[SESSION TERMINEE] Score Session : ${state.sessionScore} pts | Maitrise : ${profile.masteredIds.length}/36`,
+      "Tape 'submit' pour publier ton score sur le Leaderboard, ou 'menu'.",
+      "========================================================================",
+      ""
+    ]);
+    return;
+  }
+
+  state.attempts = 0;
+  state.usedHint = 0;
+  state.awaitingNext = false;
+  state.startTimeMs = Date.now();
+  updatePromptLabel();
+
+  const mast = profile.masteredIds.includes(m.id) ? " [MAITRISEE]" : "";
+  printLine("");
+  printLine("------------------------------------------------------------------------");
+  printLine(`[MISSION #${String(m.id).padStart(2, '0')}/36] ${m.title} (N${m.diff} | ${m.theme})${mast}`, "bold");
+  printLine("------------------------------------------------------------------------");
+  printLine(m.scenario);
+  printLine("");
+
+  const colWidth = 36;
+  printLine("TARGETS (a capturer) :".padEnd(colWidth) + "DECOYS (pieges a exclure) :", "bold");
+  const rows = Math.max(m.targets.length, m.decoys.length);
+  for (let i = 0; i < rows; i++) {
+    const t = m.targets[i] ? `  [+] ${m.targets[i]}` : "";
+    const d = m.decoys[i] ? `  [-] ${m.decoys[i]}` : "";
+    printLine(t.padEnd(colWidth) + d);
+  }
+  printLine("");
+  printLine("Tape ton motif glob (ou 'hint', 'sol', 'memo', 'skip', 'goto <N>', 'exit').", "dim");
+}
+
+function evaluateGlobAttempt(pattern) {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+
+  if (/\s/.test(pattern)) {
+    printLine("Erreur : espaces interdits. Ecris UN SEUL motif glob unifie.");
+    return;
+  }
+  if (pattern.includes('{') && pattern.includes('}')) {
+    printLine("Piege : '{a,b}' est de la Brace Expansion, pas du globbing ! Utilise '@(a|b)'.");
+    return;
+  }
+  if (pattern.includes('/')) {
+    printLine("Erreur : reste dans le repertoire courant (pas de '/').");
+    return;
+  }
+  if (!/[*?\[(|!]/.test(pattern)) {
+    printLine("Attention : ce motif ne contient aucun operateur glob (*, ?, [...], extglob).");
+    return;
+  }
+
+  state.attempts++;
+  let tp = [], fp = [], fn = [];
+  try {
+    for (const t of m.targets) {
+      if (bashGlobMatch(pattern, t)) tp.push(t);
+      else fn.push(t);
+    }
+    for (const d of m.decoys) {
+      if (bashGlobMatch(pattern, d)) fp.push(d);
+    }
+  } catch (err) {
+    printLine(`Erreur de syntaxe : ${err.message}`);
+    return;
+  }
+
+  if (tp.length === 0 && fp.length === 0) {
+    printLine(`[✗] Aucun fichier ne correspond au motif : ${pattern}`);
+    return;
+  }
+
+  if (fp.length === 0 && fn.length === 0) {
+    const elapsed = Math.max(1, Math.floor((Date.now() - state.startTimeMs) / 1000));
+    let pts = 100 - (state.attempts - 1) * 15 - (state.usedHint === 1 ? 30 : 0);
+    if (pts < 20) pts = 20;
+    let speed = elapsed <= 15 ? 30 : (elapsed <= 30 ? 15 : (elapsed <= 60 ? 5 : 0));
+    if (state.usedHint === 2) { pts = 10; speed = 0; }
+    else if (!profile.masteredIds.includes(m.id)) profile.masteredIds.push(m.id);
+
+    const totalPts = pts + speed;
+    state.sessionScore += totalPts;
+    profile.totalScore += totalPts;
+    if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
+    if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < MISSIONS.length) {
+      profile.campaignUnlocked = m.id + 1;
+    }
+    saveProfile();
+
+    state.awaitingNext = true;
+    printBlock([
+      "",
+      `>>> [✓] MISSION #${String(m.id).padStart(2, '0')} ACCOMPLIE ! (+${totalPts} pts | ${elapsed}s | Bonus vitesse: +${speed})`,
+      `    Ton motif         : ${pattern}`,
+      `    Solution optimale : ${m.solution}`,
+      `    Debriefing        : ${m.debrief}`,
+      "",
+      "Appuie sur [ENTREE] pour passer a la mission suivante..."
+    ]);
+    return;
+  }
+
+  printLine(`Analyse pour '${pattern}' :`);
+  printLine(`  [✓] Cibles capturees (${tp.length}/${m.targets.length}) : ${tp.join(' ') || 'aucune'}`);
+  if (fp.length > 0) printLine(`  [✗] FAUX POSITIFS (${fp.length} piege(s)) : ${fp.join(' ')}`);
+  if (fn.length > 0) printLine(`  [!] Cibles manquees (${fn.length})  : ${fn.join(' ')}`);
+}
+
+// =============================================================================
+// 5. LEADERBOARD (SUPABASE REST OU LOCAL FALLBACK)
+// =============================================================================
+async function showLeaderboard() {
+  printLine("Recuperation du Leaderboard TSSR/SOC...");
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=pseudo,score,mastered&order=score.desc&limit=15`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        renderBoardTable(rows, "LEADERBOARD PUBLIC EN LIGNE");
+        return;
+      }
+    } catch (e) {}
+  }
+  // Classement local + joueur courant
+  const list = [...profile.localBoard];
+  const existing = list.find(x => x.pseudo === profile.pseudo);
+  const myBest = Math.max(profile.bestScore, profile.totalScore);
+  if (existing) {
+    existing.score = Math.max(existing.score, myBest);
+    existing.mastered = profile.masteredIds.length;
+  } else {
+    list.push({ pseudo: profile.pseudo, score: myBest, mastered: profile.masteredIds.length });
+  }
+  list.sort((a, b) => b.score - a.score);
+  renderBoardTable(list.slice(0, 10), "LEADERBOARD (Mode Local - Configure SUPABASE_URL pour le mode Public)");
+}
+
+function renderBoardTable(rows, title) {
+  printLine("");
+  printLine(`=== ${title} ===`, "bold");
+  printLine("RANG  PSEUDO                SCORE       MAITRISE");
+  printLine("----  --------------------  ----------  --------");
+  rows.forEach((r, idx) => {
+    const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(6);
+    const ps = String(r.pseudo).slice(0, 20).padEnd(22);
+    const sc = `${r.score} pts`.padEnd(12);
+    const ma = `${r.mastered}/36`;
+    printLine(`${rk}${ps}${sc}${ma}`);
+  });
+  printLine("");
+  printLine("Astuce : tape 'nick <ton_pseudo>' puis 'submit' pour publier ton score.", "dim");
+}
+
+async function submitScoreToBoard() {
+  const best = Math.max(profile.bestScore, profile.totalScore);
+  if (best <= 0) {
+    printLine("Resous au moins une mission avant de publier ton score.");
+    return;
+  }
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pseudo: profile.pseudo,
+          score: best,
+          mastered: profile.masteredIds.length
+        })
+      });
+      if (res.ok) {
+        printLine(`[OK] Score de ${best} pts publie sous le pseudo '${profile.pseudo}' !`);
+        showLeaderboard();
+        return;
+      }
+    } catch (e) {}
+  }
+  printLine(`[OK] Score enregistre pour '${profile.pseudo}' (${best} pts | ${profile.masteredIds.length}/36).`);
+  showLeaderboard();
+}
+
+// =============================================================================
+// 6. INTERPRÉTEUR DE COMMANDES SHELL PRINCIPAL
+// =============================================================================
+function onPromptSubmit(e) {
+  e.preventDefault();
+  const raw = inpEl.value;
+  inpEl.value = "";
+  handleInput(raw);
+}
+
+function handleInput(rawInput) {
+  const cmd = rawInput.trim();
+  printLine(`${promptLbl.textContent} ${cmd}`);
+
+  if (state.awaitingNext && cmd === "") {
+    state.stepIdx++;
+    printMission();
+    return;
+  }
+
+  if (!cmd) return;
+  cmdHistory.unshift(cmd);
+  histIdx = -1;
+
+  // Assistant interactif du mode Custom
+  if (state.wizardStep > 0) {
+    handleCustomWizard(cmd);
+    return;
+  }
+
+  const parts = cmd.split(/\s+/);
+  const base = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(" ");
+
+  // Commandes globales disponibles partout (comme dans NetWatch)
+  if (base === "help" || base === "man") {
+    printBlock([
+      "available commands :",
+      "  start / camp       : lancer la campagne au niveau debloque (" + profile.campaignUnlocked + "/36)",
+      "  goto <1-36>        : sauter directement a une mission specifique",
+      "  custom             : generer une partie aleatoire (difficulte, theme, nombre)",
+      "  stats / tree       : afficher ta progression et l'arborescence des missions",
+      "  board              : afficher le classement (Leaderboard)",
+      "  nick <pseudo>      : definir ton pseudo (actuel: " + profile.pseudo + ")",
+      "  submit             : envoyer ton score sur le Leaderboard",
+      "  memo               : afficher le manuel technique globbing & extglob",
+      "  font <color>       : changer la couleur du texte (orange, green, cyan, red, white...)",
+      "  bg <color>         : changer la couleur de fond (dark, black, white, #hex...)",
+      "  clear              : effacer l'ecran du terminal",
+      "  hint / sol / skip  : (en mission) indice, solution, ou passer la mission"
+    ]);
+    return;
+  }
+
+  if (base === "clear" || base === "cls") {
+    outEl.innerHTML = "";
+    if (state.active) printMission();
+    return;
+  }
+
+  if (base === "font") {
+    if (!arg || arg === "--help") {
+      printLine("Usage: font <color>. Available: orange, green, cyan, red, yellow, magenta, white, matrix, or #hex.");
+      return;
+    }
+    const c = VALID_COLORS[arg.toLowerCase()] || (arg.startsWith('#') ? arg : null);
+    if (!c) {
+      printLine(`Unknown color: ${arg}`);
+      return;
+    }
+    profile.fontColor = c;
+    applyTheme();
+    saveProfile();
+    printLine(`Font color set to ${arg}.`);
+    return;
+  }
+
+  if (base === "bg") {
+    if (!arg || arg === "--help") {
+      printLine("Usage: bg <color>. Available: dark, black, white, or #hex.");
+      return;
+    }
+    const c = VALID_COLORS[arg.toLowerCase()] || (arg.startsWith('#') ? arg : null);
+    if (!c) {
+      printLine(`Unknown color: ${arg}`);
+      return;
+    }
+    profile.bgColor = c;
+    applyTheme();
+    saveProfile();
+    printLine(`Background color set to ${arg}.`);
+    return;
+  }
+
+  // Easter Egg NetWatch conservé !
+  if (cmd === "rm -rf") {
+    printLine("rm: permission denied");
+    return;
+  }
+  if (cmd.startsWith("rm -rf /")) {
+    printBlock([
+      "CRITICAL ERROR: UNAUTHORIZED ROOT DELETION ATTEMPT DETECTED.",
+      ">> Escalating threat level...",
+      ">> Escalate to sysadmin: FAILED (sysadmin unresponsive).",
+      ">> Engaging DEFCON 2 Automated Retaliation Protocol.",
+      "[SYSTEM] Uplinking to secure military subnet (USCYBERCOM)...",
+      "[SECURE-LINK] CONNECTION ESTABLISHED.",
+      "root@pentagon.gov:~$ request_kinetic_strike --target=origin_ip",
+      "[AUTH] Awaiting POTUS biometric signature...",
+      "[AUTH] Biometric signature VERIFIED.",
+      "[AUTH] Authorization code: DELTA-TANGO-77 ACCEPTED.",
+      ">> UCAV MQ-9 Reaper drone deployment: CONFIRMED.",
+      ">> Target locked on origin IP: 44.152.241.194",
+      ">> ETA to target impact: 00:04:30.",
+      "Please remain seated and do not leave the building."
+    ]);
+    return;
+  }
+
+  if (base === "memo") {
+    printBlock([
+      "=== MANUEL TECHNIQUE : GLOBBING POSIX & BASH EXTGLOB ===",
+      "  *              : 0, 1 ou N caracteres (sauf '.' initial d'un fichier cache)",
+      "  ?              : exactement 1 caractere quelconque (sauf '.' initial)",
+      "  [abc] [0-9]    : 1 caractere parmi la liste ou la plage ASCII",
+      "  [!abc]         : 1 caractere qui N'EST PAS dans la liste",
+      "  [[:xdigit:]]   : Hexadecimal [0-9a-fA-F]. Aussi: [:digit:], [:upper:], [:lower:], [:punct:]",
+      "  ?(p1|p2)       : 0 ou 1 occurrence des motifs (Optionnel)",
+      "  *(p1|p2)       : 0, 1 ou N occurrences des motifs",
+      "  +(p1|p2)       : 1 ou N occurrences (Au moins une occurrence !)",
+      "  @(p1|p2)       : exactement 1 des motifs listes",
+      "  !(p1|p2)       : tout SAUF les motifs listes (encadrable par prefixe/suffixe)"
+    ]);
+    return;
+  }
+
+  if (base === "tree" || base === "stats" || base === "profil") {
+    printBlock([
+      `Profil Joueur : ${profile.pseudo}`,
+      `|_ progression_campagne : Niveau ${profile.campaignUnlocked}/36`,
+      `|_ missions_maitrisees  : ${profile.masteredIds.length}/36`,
+      `|_ meilleur_score       : ${profile.bestScore} pts`,
+      `|_ score_cumule         : ${profile.totalScore} pts`,
+      `|_ paliers :`,
+      `   |_ [01..09] Tier 1 : Globs Standards (*, ?, [...], [!...] )`,
+      `   |_ [10..18] Tier 2 : Classes POSIX ([:xdigit:]) & Dotfiles`,
+      `   |_ [19..27] Tier 3 : Fondamentaux extglob (@, ?, *, +)`,
+      `   |_ [28..36] Tier 4 : Exclusions !() & Imbrications APT`
+    ]);
+    return;
+  }
+
+  if (base === "nick") {
+    if (!arg) { printLine("Usage: nick <ton_pseudo>"); return; }
+    profile.pseudo = arg.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+    saveProfile();
+    printLine(`Pseudo defini sur : ${profile.pseudo}`);
+    return;
+  }
+
+  if (base === "board" || base === "leaderboard") {
+    showLeaderboard();
+    return;
+  }
+
+  if (base === "submit") {
+    submitScoreToBoard();
+    return;
+  }
+
+  if (base === "start" || base === "camp" || base === "campagne") {
+    startCampaign(parseInt(arg, 10) || profile.campaignUnlocked);
+    return;
+  }
+
+  if (base === "goto" || base === "cd") {
+    const n = parseInt(arg, 10);
+    if (!n || n < 1 || n > MISSIONS.length) {
+      printLine(`Usage: goto <1-${MISSIONS.length}>`);
+      return;
+    }
+    startCampaign(n);
+    return;
+  }
+
+  if (base === "custom") {
+    state.active = false;
+    state.wizardStep = 1;
+    updatePromptLabel();
+    printBlock([
+      "=== CONFIGURATION D'OPERATION SUR-MESURE ===",
+      "Etape 1/3 - Choisis la difficulte [1=N1, 2=N2, 3=N3, 4=N4, ALL=Mixte] (defaut: ALL) :"
+    ]);
+    return;
+  }
+
+  // Commandes spécifiques lorsqu'une mission est active
+  if (state.active) {
+    const m = MISSIONS.find(x => x.id === state.playlist[state.stepIdx]);
+    if (base === "exit" || base === "quit" || base === "menu") {
+      state.active = false;
+      state.awaitingNext = false;
+      updatePromptLabel();
+      printLine("Retour au shell principal. Tape 'help' pour voir les commandes.");
+      return;
+    }
+    if (base === "ls") {
+      printMission();
+      return;
+    }
+    if (base === "hint" || base === "indice") {
+      if (state.usedHint === 0) state.usedHint = 1;
+      printLine(`[INDICE SOC] : ${m.hint}`);
+      return;
+    }
+    if (base === "sol" || base === "solution") {
+      state.usedHint = 2;
+      printLine(`[SOLUTION CANONIQUE] : ${m.solution}`);
+      return;
+    }
+    if (base === "skip" || base === "next") {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    if (state.awaitingNext) {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+
+    // Sinon, l'entrée est évaluée comme un motif glob !
+    evaluateGlobAttempt(cmd);
+    return;
+  }
+
+  printLine(`Unknown command: ${base}. Type 'help' for available commands.`);
+}
+
+function handleCustomWizard(input) {
+  const val = input.trim().toUpperCase();
+  if (val === "EXIT" || val === "QUIT") {
+    state.wizardStep = 0;
+    updatePromptLabel();
+    printLine("Configuration annulee.");
+    return;
+  }
+
+  if (state.wizardStep === 1) {
+    state.wizardData.diff = ["1", "2", "3", "4"].includes(val) ? Number(val) : "ALL";
+    state.wizardStep = 2;
+    printLine("Etape 2/3 - Choisis le theme [NET, SYS, SEC, ALL] (defaut: ALL) :");
+    return;
+  }
+
+  if (state.wizardStep === 2) {
+    state.wizardData.theme = ["NET", "SYS", "SEC"].includes(val) ? val : "ALL";
+    state.wizardStep = 3;
+    printLine("Etape 3/3 - Nombre de missions a tirer au sort [1-36] (defaut: 5) :");
+    return;
+  }
+
+  if (state.wizardStep === 3) {
+    const count = parseInt(val, 10) || 5;
+    const pool = MISSIONS.filter(m =>
+      (state.wizardData.diff === "ALL" || m.diff === state.wizardData.diff) &&
+      (state.wizardData.theme === "ALL" || m.theme === state.wizardData.theme)
+    ).map(m => m.id);
+
+    for (let i = pool.length - 1; i > 0; i--) {
+      const r = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[r]] = [pool[r], pool[i]];
+    }
+
+    state.wizardStep = 0;
+    state.playlist = pool.slice(0, Math.min(count, pool.length));
+    state.mode = "CUSTOM";
+    state.stepIdx = 0;
+    state.sessionScore = 0;
+    state.active = true;
+    printMission();
+  }
+}
+
+// Historique flèches Haut / Bas
+inpEl.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp') {
+    if (histIdx + 1 < cmdHistory.length) {
+      histIdx++;
+      inpEl.value = cmdHistory[histIdx];
+      e.preventDefault();
+    }
+  } else if (e.key === 'ArrowDown') {
+    if (histIdx > 0) {
+      histIdx--;
+      inpEl.value = cmdHistory[histIdx];
+      e.preventDefault();
+    } else if (histIdx === 0) {
+      histIdx = -1;
+      inpEl.value = "";
+      e.preventDefault();
+    }
+  }
+});
+
+// Démarrage initial façon NetWatch
+loadProfile();
+printBlock([
+  "GlobWatch Mainframe OS v3.0 (LC_ALL=C | shopt -s extglob nullglob)",
+  "available commands : start, custom, goto <1-36>, stats, board, nick <name>, memo, bg <color>, font <color>, help.",
+  "Type 'start' (or click [ Campagne ]) to launch mission #" + String(profile.campaignUnlocked).padStart(2, '0') + "."
+]);
+</script>
+</body>
+</html>
