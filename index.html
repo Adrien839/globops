@@ -1,199 +1,688 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSSR Training Center // Mainframe Portal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #120f0a;
-            --font-color: #ffb000;
-            --dim-color: #996900;
-            --border-color: #4d3600;
-            --hover-color: #ffd875;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TSSR Training Center // Mainframe Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #120f0a;
+      --bar-bg: #090704;
+      --font-color: #ffb000;
+      --dim-color: #996900;
+      --border-color: #4d3600;
+      --hover-color: #ffd875;
+      --accent-green: #a6e22e;
+      --accent-cyan: #ffd875;
+      --accent-magenta: #ff8c00;
+    }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--font-color);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 15px;
-            line-height: 1.6;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+    body {
+      background-color: var(--bg-color);
+      color: var(--font-color);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      line-height: 1.55;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      transition: background-color 0.18s ease, color 0.18s ease;
+    }
 
-        .portal-container {
-            width: 100%;
-            max-width: 820px;
-            border: 1px solid var(--font-color);
-            padding: 40px;
-            box-shadow: 0 0 30px rgba(255, 176, 0, 0.05);
-            background-color: rgba(18, 15, 10, 0.95);
-        }
+    .portal-container {
+      width: 100%;
+      max-width: 880px;
+      border: 1px solid var(--font-color);
+      padding: 32px 36px;
+      box-shadow: 0 0 36px rgba(0, 0, 0, 0.45);
+      background-color: var(--bar-bg);
+    }
 
-        .ascii-header {
-            color: var(--font-color);
-            font-weight: bold;
-            font-size: 8.5px;
-            line-height: 1.1;
-            white-space: pre;
-            overflow-x: auto;
-            margin-bottom: 24px;
-            text-align: center;
-        }
+    .ascii-header {
+      color: var(--font-color);
+      font-weight: bold;
+      font-size: 8.5px;
+      line-height: 1.1;
+      white-space: pre;
+      overflow-x: auto;
+      margin-bottom: 22px;
+      text-align: center;
+    }
 
-        .system-info {
-            color: var(--dim-color);
-            margin-bottom: 30px;
-            font-size: 13px;
-            border-bottom: 1px dashed var(--border-color);
-            padding-bottom: 15px;
-        }
+    /* En-tête système + Sélecteur de thème */
+    .system-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      color: var(--dim-color);
+      margin-bottom: 20px;
+      font-size: 12.5px;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 16px;
+    }
 
-        .menu-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
+    .sys-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
 
-        .menu-item {
-            border: 1px solid var(--border-color);
-            padding: 14px 18px;
-            transition: all 0.2s ease;
-            background: rgba(77, 54, 0, 0.05);
-        }
+    .sys-val {
+      color: var(--font-color);
+      font-weight: bold;
+    }
 
-        .menu-item:hover {
-            border-color: var(--font-color);
-            background: rgba(255, 176, 0, 0.05);
-            transform: translateX(4px);
-        }
+    .theme-ctrl {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
 
-        .menu-item a {
-            color: var(--font-color);
-            text-decoration: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-        }
+    .theme-select {
+      background-color: var(--bg-color);
+      color: var(--font-color);
+      border: 1px solid var(--border-color);
+      padding: 5px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+      border-radius: 2px;
+    }
 
-        .menu-item a:hover {
-            color: var(--hover-color);
-        }
+    .theme-select:hover, .theme-select:focus {
+      border-color: var(--font-color);
+    }
 
-        .menu-desc {
-            font-size: 12px;
-            color: var(--dim-color);
-            margin-top: 4px;
-            font-weight: normal;
-        }
+    /* Résumé global de progression TSSR */
+    .global-telemetry {
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-color);
+      padding: 12px 16px;
+      margin-bottom: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-        .tag {
-            font-size: 11px;
-            padding: 2px 6px;
-            border: 1px solid var(--border-color);
-            color: var(--dim-color);
-        }
+    .telemetry-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12.5px;
+    }
 
-        .menu-item:hover .tag {
-            border-color: var(--font-color);
-            color: var(--font-color);
-        }
+    .global-rank-badge {
+      background-color: var(--font-color);
+      color: var(--bg-color);
+      font-weight: bold;
+      padding: 1px 8px;
+      border-radius: 2px;
+      font-size: 11.5px;
+    }
 
-        .footer-prompt {
-            margin-top: 35px;
-            font-size: 13px;
-            color: var(--dim-color);
-        }
+    /* Cartes des modules */
+    .menu-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
 
-        .cursor {
-            display: inline-block;
-            width: 8px;
-            height: 15px;
-            background-color: var(--font-color);
-            animation: blink 1s infinite;
-            vertical-align: middle;
-            margin-left: 5px;
-        }
+    .menu-item {
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-color);
+      transition: all 0.16s ease;
+    }
 
-        @keyframes blink {
-            0%, 49% { opacity: 1; }
-            50%, 100% { opacity: 0; }
-        }
-    </style>
+    .menu-item:hover {
+      border-color: var(--font-color);
+      transform: translateX(4px);
+    }
+
+    .menu-link {
+      color: var(--font-color);
+      text-decoration: none;
+      display: block;
+      padding: 14px 18px;
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-weight: bold;
+      font-size: 14.5px;
+    }
+
+    .menu-item:hover .item-title {
+      color: var(--hover-color);
+    }
+
+    .tag-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .rank-pill {
+      font-size: 11px;
+      padding: 1px 7px;
+      background-color: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: var(--accent-cyan);
+      font-weight: normal;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 1px 7px;
+      border: 1px solid var(--border-color);
+      color: var(--dim-color);
+      font-weight: bold;
+    }
+
+    .menu-item:hover .tag {
+      border-color: var(--font-color);
+      color: var(--font-color);
+    }
+
+    .menu-desc {
+      font-size: 12px;
+      color: var(--dim-color);
+      margin-top: 5px;
+      margin-bottom: 12px;
+    }
+
+    /* Zone de progression par jeu */
+    .prog-section {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-top: 8px;
+      border-top: 1px dotted var(--border-color);
+      font-size: 11.5px;
+    }
+
+    .prog-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--dim-color);
+    }
+
+    .prog-stats b {
+      color: var(--font-color);
+    }
+
+    .prog-bar-track {
+      width: 100%;
+      height: 6px;
+      background-color: var(--bar-bg);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .prog-bar-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--accent-green);
+      transition: width 0.5s ease;
+    }
+
+    .footer-prompt {
+      margin-top: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 12.5px;
+      color: var(--dim-color);
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 15px;
+      background-color: var(--font-color);
+      animation: blink 1s infinite;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    @media (max-width: 640px) {
+      .portal-container { padding: 20px 16px; }
+      .ascii-header { font-size: 6px; }
+      .theme-ctrl { align-items: flex-start; width: 100%; }
+    }
+  </style>
 </head>
 <body>
 
-    <div class="portal-container">
-        <div class="ascii-header">
+  <div class="portal-container">
+    <div class="ascii-header">
 ████████╗███████╗███████╗██████╗     ████████╗██████╗   █████╗ ██╗███╗   ██╗██╗███╗   ██╗ ██████╗ 
 ╚══██╔══╝██╔════╝██╔════╝██╔══██╗    ╚══██╔══╝██╔══██╗ ██╔══██╗██║████╗  ██║██║████╗  ██║██╔════╝ 
    ██║   ███████╗███████╗██████╔╝       ██║   ██████╔╝ ███████║██║██╔██╗ ██║██║██╔██╗ ██║██║  ███╗
    ██║   ╚════██║╚════██║██╔══██╗       ██║   ██╔══██╗ ██╔══██║██║██║╚██╗██║██║██║╚██╗██║██║   ██║
    ██║   ███████║███████║██║  ██║       ██║   ██║  ██║ ██║  ██║██║██║ ╚████║██║██║ ╚████║╚██████╔╝
    ╚═╝   ╚══════╝╚══════╝╚═╝  ╚═╝       ╚═╝   ╚═╝  ╚═╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝ 
-        </div>
-
-        <div class="system-info">
-            [SYS_ID]: TSSR-TRAINING-CENTER-V4<br>
-            [SECURITY_LEVEL]: ACCREDITED_OPERATOR<br>
-            [ACTIVE_THEME]: JENSEN (SARIF AMBER)
-        </div>
-
-        <ul class="menu-list">
-              <li class="menu-item">
-                <a href="./netops/">
-                    <div>
-                        <div>[ 01 ] NET-OPS // Routing, Subnetting &amp; Packet Analysis</div>
-                        <div class="menu-desc">CIDR, Technique du Pas, TP 3 Domaines (sim L2/L3), iproute2, Supernetting &amp; tcpdump (48 Missions)</div>
-                    </div>
-                    <span class="tag">NET_OPS</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="./terminal/">
-                    <div>
-                        <div>[ 02 ] GLOB-OPS // Terminal Simulator</div>
-                        <div class="menu-desc">Maîtrise du globbing POSIX et des subtilités bash extglob (48 Missions)</div>
-                    </div>
-                    <span class="tag">CLI_MODE</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="./regex/">
-                    <div>
-                        <div>[ 03 ] REGEX-OPS // SIEM &amp; Packet Inspection</div>
-                        <div class="menu-desc">Entraînement avancé aux Expressions Régulières PCRE, X-Ray et Lookarounds (48 Missions)</div>
-                    </div>
-                    <span class="tag">SEC_OPS</span>
-                </a>
-            </li>
-               <li class="menu-item">
-                <a href="./vim_ops/">
-                    <div>
-                        <div>[ 04 ] VIM-OPS //</div>
-                        <div class="menu-desc">Simulateur Tactique d'Édition Modale — Des bases HJKL à l'expertise Text-Objects</div>
-                    </div>
-                    <span class="tag">VIM_OPS</span>
-                </a>
-            </li>
-        </ul>
-        <div class="footer-prompt">
-            root@tssr-center:~$ select training module...<span class="cursor"></span>
-        </div>
     </div>
 
+    <!-- BARRE SYSTÈME & SÉLECTEUR DE THÈME UNIFIÉ -->
+    <div class="system-bar">
+      <div class="sys-lines">
+        <div>[SYS_ID]: <span class="sys-val">TSSR-TRAINING-CENTER-V4.2</span></div>
+        <div>[OPERATOR]: <span class="sys-val" id="op-pseudo">ACCREDITED_OPERATOR</span></div>
+        <div>[ACTIVE_THEME]: <span class="sys-val" id="active-theme-label">JENSEN (SARIF AMBER)</span></div>
+      </div>
+
+      <div class="theme-ctrl">
+        <label for="portal-theme-select">[TERMINAL_PALETTE_SYNC]:</label>
+        <select id="portal-theme-select" class="theme-select" onchange="onPortalThemeChange(this.value)">
+          <optgroup label="Univers Sci-Fi & Cyber">
+            <option value="jensen">Jensen (Sarif Amber)</option>
+            <option value="case">Case (Chiba Matrix)</option>
+            <option value="smith">Smith (MegaCity CRT)</option>
+            <option value="cyberdyne">Cyberdyne (Skynet HUD)</option>
+            <option value="hill-valley">Hill Valley (1985 LED)</option>
+            <option value="encom">Encom (MCP Grid)</option>
+            <option value="tyrell">Tyrell (LA 2019)</option>
+            <option value="nostromo">Nostromo (MU-TH-UR 6000)</option>
+            <option value="discovery">Discovery (HAL 9000)</option>
+            <option value="black-mesa">Black Mesa (Sector C)</option>
+            <option value="arrakis">Arrakis (Spice Melange)</option>
+          </optgroup>
+          <optgroup label="Standards Modernes">
+            <option value="bash-classic">Bash / Pop!_OS</option>
+            <option value="dracula">Dracula</option>
+            <option value="catppuccin">Catppuccin Mocha</option>
+            <option value="tokyo-night">Tokyo Night</option>
+            <option value="gruvbox">Gruvbox Dark</option>
+            <option value="nord">Nord Polar</option>
+            <option value="solarized">Solarized Dark</option>
+          </optgroup>
+          <optgroup label="Machines Historiques">
+            <option value="vt100">DEC VT100 (PDP-11 P1)</option>
+            <option value="ibm3270">IBM 3270 (Mainframe)</option>
+            <option value="c64">Commodore 64 (PETSCII)</option>
+            <option value="amiga">Amiga Workbench 1.3</option>
+            <option value="apple2">Apple IIe (Monitor II)</option>
+            <option value="win98">Windows 98 (MS-DOS)</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <!-- TÉLÉMÉTRIE GLOBALE DES 4 MODULES -->
+    <div class="global-telemetry">
+      <div class="telemetry-top">
+        <div>
+          <span>[GLOBAL_CERTIFICATION_STATUS]:</span>
+          <span class="global-rank-badge" id="global-rank">ASPIRANT TSSR</span>
+        </div>
+        <div>
+          <span>MAÎTRISE TOTALE : <b id="global-mastered" style="color:var(--font-color)">0 / 184</b> (<span id="global-pct">0%</span>)</span>
+          <span style="margin-left: 12px;">SCORE CUMULÉ : <b id="global-score" style="color:var(--font-color)">0 pts</b></span>
+        </div>
+      </div>
+      <div class="prog-bar-track">
+        <div class="prog-bar-fill" id="global-bar"></div>
+      </div>
+    </div>
+
+    <!-- LISTE DES 4 SIMULATEURS -->
+    <ul class="menu-list">
+      <!-- 01 : NET-OPS -->
+      <li class="menu-item">
+        <a class="menu-link" href="./netops/">
+          <div class="item-header">
+            <span class="item-title">[ 01 ] NET-OPS // Routing, Subnetting &amp; Packet Analysis</span>
+            <div class="tag-group">
+              <span class="rank-pill" id="rank-net">Non Initialisé</span>
+              <span class="tag">NET_OPS</span>
+            </div>
+          </div>
+          <div class="menu-desc">CIDR, Technique du Pas, TP 3 Domaines (sim L2/L3), iproute2, Supernetting &amp; tcpdump (48 Missions)</div>
+          <div class="prog-section">
+            <div class="prog-stats">
+              <span id="ascii-net">[░░░░░░░░░░░░░░░░] 0%</span>
+              <span>Maîtrise : <b id="mast-net">0/48</b> │ Campagne : <b id="camp-net">Niv. 1</b> │ Record : <b id="score-net">0 pts</b></span>
+            </div>
+            <div class="prog-bar-track"><div class="prog-bar-fill" id="bar-net"></div></div>
+          </div>
+        </a>
+      </li>
+
+      <!-- 02 : GLOB-OPS -->
+      <li class="menu-item">
+        <a class="menu-link" href="./terminal/">
+          <div class="item-header">
+            <span class="item-title">[ 02 ] GLOB-OPS // POSIX &amp; Bash Extglob Simulator</span>
+            <div class="tag-group">
+              <span class="rank-pill" id="rank-glob">Non Initialisé</span>
+              <span class="tag">CLI_MODE</span>
+            </div>
+          </div>
+          <div class="menu-desc">Maîtrise du globbing POSIX, classes [:xdigit:], dotfiles et opérateurs bash extglob (48 Missions)</div>
+          <div class="prog-section">
+            <div class="prog-stats">
+              <span id="ascii-glob">[░░░░░░░░░░░░░░░░] 0%</span>
+              <span>Maîtrise : <b id="mast-glob">0/48</b> │ Campagne : <b id="camp-glob">Niv. 1</b> │ Record : <b id="score-glob">0 pts</b></span>
+            </div>
+            <div class="prog-bar-track"><div class="prog-bar-fill" id="bar-glob"></div></div>
+          </div>
+        </a>
+      </li>
+
+      <!-- 03 : REGEX-OPS -->
+      <li class="menu-item">
+        <a class="menu-link" href="./regex/">
+          <div class="item-header">
+            <span class="item-title">[ 03 ] REGEX-OPS // SIEM &amp; Packet Inspection</span>
+            <div class="tag-group">
+              <span class="rank-pill" id="rank-regex">Non Initialisé</span>
+              <span class="tag">SEC_OPS</span>
+            </div>
+          </div>
+          <div class="menu-desc">Entraînement avancé aux Expressions Régulières ERE/PCRE, backreferences et Lookarounds (48 Missions)</div>
+          <div class="prog-section">
+            <div class="prog-stats">
+              <span id="ascii-regex">[░░░░░░░░░░░░░░░░] 0%</span>
+              <span>Maîtrise : <b id="mast-regex">0/48</b> │ Campagne : <b id="camp-regex">Niv. 1</b> │ Record : <b id="score-regex">0 pts</b></span>
+            </div>
+            <div class="prog-bar-track"><div class="prog-bar-fill" id="bar-regex"></div></div>
+          </div>
+        </a>
+      </li>
+
+      <!-- 04 : VIM-OPS -->
+      <li class="menu-item">
+        <a class="menu-link" href="./vim_ops/">
+          <div class="item-header">
+            <span class="item-title">[ 04 ] VIM-OPS // Modal Tactical Editor Simulator</span>
+            <div class="tag-group">
+              <span class="rank-pill" id="rank-vim">Non Initialisé</span>
+              <span class="tag">VIM_OPS</span>
+            </div>
+          </div>
+          <div class="menu-desc">Édition modale haute vélocité — Motions, Text-Objects (ci", da[), Registres, Macros &amp; Ex (40 Missions)</div>
+          <div class="prog-section">
+            <div class="prog-stats">
+              <span id="ascii-vim">[░░░░░░░░░░░░░░░░] 0%</span>
+              <span>Maîtrise : <b id="mast-vim">0/40</b> │ Golf : <b id="golf-vim">★ 0</b> │ Reliques : <b id="relic-vim">0/13</b> │ Record : <b id="score-vim">0 pts</b></span>
+            </div>
+            <div class="prog-bar-track"><div class="prog-bar-fill" id="bar-vim"></div></div>
+          </div>
+        </a>
+      </li>
+    </ul>
+
+    <div class="footer-prompt">
+      <div><span id="prompt-user">root</span>@tssr-center:~$ select training module [1-4]...<span class="cursor"></span></div>
+      <div style="font-size:11.5px;">Raccourcis clavier : touches <b>[1]</b> à <b>[4]</b></div>
+    </div>
+  </div>
+
+<script>
+// =============================================================================
+// 1. DICTIONNAIRE UNIFIÉ DES 23 THÈMES (SYNCHRONISÉ AVEC LES 4 JEUX)
+// =============================================================================
+const THEMES = {
+  "jensen":      { bg: "#120f0a", bar: "#090704", fg: "#ffb000", dim: "#996900", border: "#4d3600", hover: "#ffd875", green: "#a6e22e", cyan: "#ffd875" },
+  "case":        { bg: "#0b001a", bar: "#05000d", fg: "#00f0ff", dim: "#8a6bbd", border: "#ff0055", hover: "#e0fbfc", green: "#00ff9f", cyan: "#fcee09" },
+  "smith":       { bg: "#050d05", bar: "#020602", fg: "#00ff41", dim: "#267326", border: "#144514", hover: "#a8ffa8", green: "#00ff41", cyan: "#d4ff00" },
+  "cyberdyne":   { bg: "#140404", bar: "#0a0101", fg: "#ff3b30", dim: "#99221b", border: "#5c0f0a", hover: "#ffd60a", green: "#ffd60a", cyan: "#ff9f0a" },
+  "hill-valley": { bg: "#0c0f14", bar: "#06080b", fg: "#ffd60a", dim: "#7c8594", border: "#ff4500", hover: "#00e5ff", green: "#32d74b", cyan: "#00e5ff" },
+  "encom":       { bg: "#020813", bar: "#01040a", fg: "#00f0ff", dim: "#3b7ea1", border: "#00d9ff", hover: "#d6f6ff", green: "#00ffaa", cyan: "#ffaa00" },
+  "tyrell":      { bg: "#0b0e17", bar: "#06080d", fg: "#f4d06f", dim: "#6c7a9c", border: "#2b3a55", hover: "#4ea8de", green: "#52b788", cyan: "#4ea8de" },
+  "nostromo":    { bg: "#041108", bar: "#020904", fg: "#4aff85", dim: "#1e7a3d", border: "#134e26", hover: "#99ffbb", green: "#33ff77", cyan: "#e6ff44" },
+  "discovery":   { bg: "#0a0a0c", bar: "#050507", fg: "#e5e5ea", dim: "#8e8e93", border: "#ff3b30", hover: "#ff453a", green: "#30d158", cyan: "#ff453a" },
+  "black-mesa":  { bg: "#14110e", bar: "#0b0907", fg: "#ff9500", dim: "#8c6228", border: "#4a3312", hover: "#ffc857", green: "#66cc66", cyan: "#ffc857" },
+  "arrakis":     { bg: "#16100b", bar: "#0d0906", fg: "#f3d5b5", dim: "#9c7a54", border: "#523a24", hover: "#ff9f1c", green: "#80ed99", cyan: "#38a3a5" },
+  "bash-classic":{ bg: "#0f1419", bar: "#090c10", fg: "#e6edf3", dim: "#7d8590", border: "#30363d", hover: "#39c5cf", green: "#3fb950", cyan: "#58a6ff" },
+  "dracula":     { bg: "#282a36", bar: "#191a21", fg: "#f8f8f2", dim: "#6272a4", border: "#44475a", hover: "#8be9fd", green: "#50fa7b", cyan: "#ff79c6" },
+  "catppuccin":  { bg: "#1e1e2e", bar: "#11111b", fg: "#cdd6f4", dim: "#6c7086", border: "#313244", hover: "#89dceb", green: "#a6e3a1", cyan: "#cba6f7" },
+  "tokyo-night": { bg: "#1a1b26", bar: "#13141c", fg: "#c0caf5", dim: "#565f89", border: "#292e42", hover: "#7dcfff", green: "#9ece6a", cyan: "#bb9af7" },
+  "gruvbox":     { bg: "#282828", bar: "#1d2021", fg: "#ebdbb2", dim: "#928374", border: "#3c3836", hover: "#fabd2f", green: "#b8bb26", cyan: "#8ec07c" },
+  "nord":        { bg: "#2e3440", bar: "#242933", fg: "#eceff4", dim: "#81a1c1", border: "#3b4252", hover: "#88c0d0", green: "#a3be8c", cyan: "#ebcb8b" },
+  "solarized":   { bg: "#002b36", bar: "#001f27", fg: "#93a1a1", dim: "#586e75", border: "#073642", hover: "#2aa198", green: "#859900", cyan: "#b58900" },
+  "vt100":       { bg: "#061006", bar: "#030803", fg: "#33ff33", dim: "#1f991f", border: "#145214", hover: "#80ff80", green: "#33ff33", cyan: "#ccff33" },
+  "ibm3270":     { bg: "#000000", bar: "#0d0d0d", fg: "#44ff44", dim: "#2b9348", border: "#0077b6", hover: "#00e5ff", green: "#44ff44", cyan: "#ffff44" },
+  "c64":         { bg: "#40318d", bar: "#352879", fg: "#bfce72", dim: "#a093e0", border: "#7869c4", hover: "#ffffff", green: "#9ae29b", cyan: "#6abfc6" },
+  "amiga":       { bg: "#0055aa", bar: "#003b77", fg: "#ffffff", dim: "#aaccff", border: "#ff8800", hover: "#ffcc00", green: "#55ff55", cyan: "#00ffff" },
+  "apple2":      { bg: "#0a0f0a", bar: "#141c14", fg: "#48ff48", dim: "#2e8b2e", border: "#225522", hover: "#ffd166", green: "#48ff48", cyan: "#00bfff" },
+  "win98":       { bg: "#000080", bar: "#000055", fg: "#ffffff", dim: "#b8c4ff", border: "#00ffff", hover: "#ffff55", green: "#55ff55", cyan: "#00ffff" }
+};
+
+const PORTAL_THEME_KEY = "tssr_portal_active_theme";
+
+// Applique visuellement le thème sur le portail
+function applyThemeToPortal(themeKey) {
+  const t = THEMES[themeKey] || THEMES["jensen"];
+  const r = document.documentElement.style;
+  r.setProperty('--bg-color', t.bg);
+  r.setProperty('--bar-bg', t.bar);
+  r.setProperty('--font-color', t.fg);
+  r.setProperty('--dim-color', t.dim);
+  r.setProperty('--border-color', t.border);
+  r.setProperty('--hover-color', t.hover);
+  r.setProperty('--accent-green', t.green);
+  r.setProperty('--accent-cyan', t.cyan);
+
+  const sel = document.getElementById('portal-theme-select');
+  if (sel && THEMES[themeKey]) {
+    sel.value = themeKey;
+    const optText = sel.options[sel.selectedIndex]?.text || themeKey;
+    document.getElementById('active-theme-label').textContent = optText.toUpperCase();
+  }
+}
+
+// Lorsque l'utilisateur change le thème sur le portail, on synchronise tous les jeux
+function onPortalThemeChange(newTheme) {
+  applyThemeToPortal(newTheme);
+  try {
+    localStorage.setItem(PORTAL_THEME_KEY, newTheme);
+    // Synchronise aussi le thème dans toutes les sauvegardes de jeux existantes
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && /_ops|netops|regex|glob|vim/i.test(k)) {
+        try {
+          const obj = JSON.parse(localStorage.getItem(k));
+          if (obj && typeof obj === 'object' && 'theme' in obj) {
+            obj.theme = newTheme;
+            localStorage.setItem(k, JSON.stringify(obj));
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+}
+
+// =============================================================================
+// 2. EXTRACTION INTELLIGENTE DES SAUVEGARDES DEPUIS LOCALSTORAGE
+// =============================================================================
+function findProfileInStorage(exactKeys, fallbackRegex) {
+  try {
+    for (const k of exactKeys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    }
+    // Recherche heuristique si la clé porte un nom de version différent
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && fallbackRegex.test(key)) {
+        const parsed = JSON.parse(localStorage.getItem(key));
+        if (parsed && typeof parsed === 'object' && (Array.isArray(parsed.masteredIds) || 'campaignUnlocked' in parsed)) {
+          return parsed;
+        }
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+// Échelles de grades par module
+const MODULE_RANKS = {
+  net: [
+    { min: 0,  title: "Technicien N1 (Couche 1)" },
+    { min: 8,  title: "Opérateur Sous-Réseaux CIDR" },
+    { min: 18, title: "Administrateur L2/L3 VLAN" },
+    { min: 30, title: "Ingénieur Routage iproute2" },
+    { min: 40, title: "Analyste Packet & tcpdump" },
+    { min: 48, title: "Architecte Réseau Core" }
+  ],
+  glob: [
+    { min: 0,  title: "Apprenti Shell POSIX" },
+    { min: 9,  title: "Technicien Globs N1" },
+    { min: 18, title: "Admin Système Classes POSIX" },
+    { min: 27, title: "Analyste SOC extglob" },
+    { min: 36, title: "Expert Forensics N4" },
+    { min: 48, title: "Architecte SecOps N5" }
+  ],
+  regex: [
+    { min: 0,  title: "Lecteur de Logs Brut" },
+    { min: 9,  title: "Opérateur Grep ERE" },
+    { min: 18, title: "Chasseur d'IOCs N2" },
+    { min: 27, title: "Spécialiste Backreferences" },
+    { min: 36, title: "Maître Lookarounds PCRE" },
+    { min: 48, title: "Architecte Règles SIEM" }
+  ],
+  vim: [
+    { min: 0,  title: "Prisonnier du Mode Insert" },
+    { min: 4,  title: "Évadé de :wq!" },
+    { min: 10, title: "Éclaireur HJKL" },
+    { min: 18, title: "Chirurgien Text-Object" },
+    { min: 27, title: "Maître des Registres" },
+    { min: 34, title: "Sorcier Ex & Regex" },
+    { min: 40, title: "Architecte Modal Suprême" }
+  ]
+};
+
+const GLOBAL_RANKS = [
+  { min: 0,   title: "STAGIAIRE TSSR // NIVEAU 0" },
+  { min: 15,  title: "TECHNICIEN SUPPORT N1" },
+  { min: 45,  title: "ADMINISTRATEUR SYSTÈMES & RÉSEAUX N2" },
+  { min: 90,  title: "INGÉNIEUR INFRASTRUCTURE & SECOPS N3" },
+  { min: 140, title: "EXPERT CYBERSÉCURITÉ & CLOUD" },
+  { min: 184, title: "MAÎTRE ABSOLU DU TERMINAL (100%)" }
+];
+
+function computeRank(list, masteredCount) {
+  let r = list[0].title;
+  for (const item of list) {
+    if (masteredCount >= item.min) r = item.title;
+  }
+  return r;
+}
+
+function makeAsciiBar(pct, width = 16) {
+  const filled = Math.round((pct / 100) * width);
+  const empty = Math.max(0, width - filled);
+  return `[${"█".repeat(filled)}${"░".repeat(empty)}] ${pct}%`;
+}
+
+function hydratePortalTelemetry() {
+  const netProf   = findProfileInStorage(["net_ops_v4_terminal", "net_ops_v3_terminal", "netops_terminal", "net_ops_terminal"], /net_?ops/i);
+  const globProf  = findProfileInStorage(["glob_ops_v4_terminal", "glob_ops_v3_terminal"], /glob_?ops/i);
+  const regexProf = findProfileInStorage(["regex_ops_v4_terminal", "regex_ops_v3_terminal", "regex_terminal"], /regex_?ops/i);
+  const vimProf   = findProfileInStorage(["vim_ops_v2_terminal", "vim_ops_v1_terminal"], /vim_?ops/i);
+
+  const modules = [
+    { key: "net",   prof: netProf,   total: 48 },
+    { key: "glob",  prof: globProf,  total: 48 },
+    { key: "regex", prof: regexProf, total: 48 },
+    { key: "vim",   prof: vimProf,   total: 40 }
+  ];
+
+  let totalMastered = 0;
+  let totalScore = 0;
+  let detectedTheme = localStorage.getItem(PORTAL_THEME_KEY) || null;
+  let detectedPseudo = null;
+
+  modules.forEach(m => {
+    const p = m.prof || {};
+    const mastered = Array.isArray(p.masteredIds) ? p.masteredIds.length : 0;
+    const camp = p.campaignUnlocked || 1;
+    const best = Math.max(p.bestScore || 0, p.totalScore || 0);
+    const pct = Math.min(100, Math.round((mastered / m.total) * 100));
+
+    totalMastered += mastered;
+    totalScore += best;
+
+    if (!detectedTheme && p.theme && THEMES[p.theme]) detectedTheme = p.theme;
+    if (!detectedPseudo && p.pseudo && p.pseudo !== "soc" && p.pseudo !== "op") detectedPseudo = p.pseudo;
+
+    document.getElementById(`rank-${m.key}`).textContent = computeRank(MODULE_RANKS[m.key], mastered);
+    document.getElementById(`ascii-${m.key}`).textContent = makeAsciiBar(pct, 16);
+    document.getElementById(`mast-${m.key}`).textContent = `${mastered}/${m.total}`;
+    document.getElementById(`score-${m.key}`).textContent = `${best} pts`;
+    document.getElementById(`bar-${m.key}`).style.width = `${pct}%`;
+
+    const campEl = document.getElementById(`camp-${m.key}`);
+    if (campEl) campEl.textContent = `Niv. ${camp}/${m.total}`;
+
+    if (m.key === "vim") {
+      const golfCount = Array.isArray(p.golfedIds) ? p.golfedIds.length : 0;
+      const relicCount = Array.isArray(p.relics) ? p.relics.length : 0;
+      document.getElementById("golf-vim").textContent = `★ ${golfCount}/40`;
+      document.getElementById("relic-vim").textContent = `${relicCount}/13`;
+    }
+  });
+
+  // Mise à jour du bandeau global (sur 184 missions)
+  const grandTotal = 184;
+  const globalPct = Math.min(100, Math.round((totalMastered / grandTotal) * 100));
+  document.getElementById("global-mastered").textContent = `${totalMastered} / ${grandTotal}`;
+  document.getElementById("global-pct").textContent = `${globalPct}%`;
+  document.getElementById("global-score").textContent = `${totalScore} pts`;
+  document.getElementById("global-bar").style.width = `${globalPct}%`;
+  document.getElementById("global-rank").textContent = computeRank(GLOBAL_RANKS, totalMastered);
+
+  if (detectedPseudo) {
+    document.getElementById("op-pseudo").textContent = detectedPseudo.toUpperCase();
+    document.getElementById("prompt-user").textContent = detectedPseudo.toLowerCase();
+  }
+
+  applyThemeToPortal(detectedTheme || "jensen");
+}
+
+// Navigation rapide au clavier (Touches 1, 2, 3, 4)
+window.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
+  if (e.key === "1") window.location.href = "./netops/";
+  else if (e.key === "2") window.location.href = "./terminal/";
+  else if (e.key === "3") window.location.href = "./regex/";
+  else if (e.key === "4") window.location.href = "./vim_ops/";
+});
+
+hydratePortalTelemetry();
+</script>
 </body>
 </html>

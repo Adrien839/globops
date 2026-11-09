@@ -6,7 +6,7 @@
   <title>VIM-OPS // Modal Tactical Editor Simulator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Inconsolata:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&family=Source+Code+Pro:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --c-bg: #0f1419;
@@ -22,8 +22,11 @@
       --c-yellow: #d29922;
       --c-magenta: #bc8cff;
       --c-blue: #58a6ff;
-      --term-font: 'Fira Code', monospace;
+      --term-font: 'JetBrains Mono', monospace;
       --term-size: 14px;
+      --cursor-bg: var(--c-cyan);
+      --cursor-fg: var(--c-bg);
+      --cursor-border: none;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,7 +39,10 @@
       color: var(--c-fg);
       font-family: var(--term-font);
       font-size: var(--term-size);
-      line-height: 1.5;
+      font-variant-ligatures: none;
+      font-feature-settings: "liga" 0, "calt" 0;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.45;
       display: flex;
       flex-direction: column;
       transition: background-color 0.15s, color 0.15s;
@@ -46,7 +52,7 @@
       flex: 1;
       width: 100%;
       overflow-y: auto;
-      padding: 20px 20px 32px 20px;
+      padding: 18px 20px 28px 20px;
       cursor: text;
       display: flex;
       flex-direction: column;
@@ -55,7 +61,7 @@
 
     .terminal-inner {
       width: 100%;
-      max-width: 960px;
+      max-width: 1040px;
       margin: 0 auto;
     }
 
@@ -65,7 +71,14 @@
       width: 100%;
     }
 
-    .log-line { margin-bottom: 1px; }
+    .log-line {
+      margin-bottom: 1px;
+    }
+    .box-line {
+      white-space: pre;
+      overflow-x: auto;
+      font-variant-ligatures: none;
+    }
 
     /* Classes de coloration sémantique ANSI */
     .c-fg { color: var(--c-fg); }
@@ -79,10 +92,10 @@
     .bold { font-weight: bold; }
 
     .vim-cursor {
-      background-color: var(--c-cyan);
-      color: var(--c-bg);
+      background-color: var(--cursor-bg);
+      color: var(--cursor-fg);
+      border-bottom: var(--cursor-border);
       font-weight: bold;
-      border-radius: 1px;
     }
 
     .badge-tier {
@@ -110,11 +123,17 @@
       background-color: var(--c-green);
       color: var(--c-bg);
       font-weight: bold;
-      padding: 2px 8px;
+      padding: 1px 7px;
+      border-radius: 2px;
+    }
+    .badge-loot {
+      background-color: var(--c-magenta);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 7px;
       border-radius: 2px;
     }
 
-    /* Barre de touches rapides pour séquences Vim (<Esc>, <CR>, <C-a>) */
     .vim-helper-bar {
       display: flex;
       flex-wrap: wrap;
@@ -136,17 +155,13 @@
       cursor: pointer;
       font-family: inherit;
       font-size: 11px;
-      transition: border-color 0.12s, transform 0.08s;
+      transition: border-color 0.12s;
     }
     .key-pill:hover {
       border-color: var(--c-cyan);
       color: var(--c-fg);
     }
-    .key-pill:active {
-      transform: translateY(1px);
-    }
 
-    /* Ligne de prompt active */
     .prompt-line {
       display: flex;
       align-items: center;
@@ -172,7 +187,6 @@
       caret-color: var(--c-cyan);
     }
 
-    /* Pied de page minimaliste style barre de statut tmux */
     .status-footer {
       height: 38px;
       background-color: var(--c-bar-bg);
@@ -181,7 +195,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 0 14px;
+      padding: 0 12px;
       font-size: 12px;
       user-select: none;
       flex-shrink: 0;
@@ -190,17 +204,17 @@
 
     .footer-inner {
       width: 100%;
-      max-width: 1180px;
+      max-width: 1220px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .footer-left, .footer-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       white-space: nowrap;
     }
 
@@ -208,7 +222,7 @@
       background: var(--c-green);
       color: #000000;
       font-weight: bold;
-      padding: 2px 7px;
+      padding: 2px 6px;
       border-radius: 2px;
     }
 
@@ -219,6 +233,15 @@
       font-weight: bold;
       padding: 1px 6px;
       border-radius: 2px;
+    }
+
+    .blitz-pill {
+      background: var(--c-red);
+      color: #000000;
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+      display: none;
     }
 
     .nav-cmd {
@@ -245,7 +268,7 @@
       color: var(--c-fg);
       border: 1px solid var(--c-border);
       border-radius: 3px;
-      padding: 2px 6px;
+      padding: 2px 5px;
       font-family: inherit;
       font-size: 11px;
       cursor: pointer;
@@ -278,12 +301,14 @@
 
       <!-- BARRE D'INSERTION DE TOUCHES SPÉCIALES VIM -->
       <div class="vim-helper-bar" id="vim-helper">
-        <span class="c-dim">Insérer touche :</span>
-        <button type="button" class="key-pill" onclick="insertToken('<Esc>')" title="Raccourci : touche Escape">&lt;Esc&gt;</button>
-        <button type="button" class="key-pill" onclick="insertToken('<CR>')" title="Validation commande :s ou /search">&lt;CR&gt;</button>
+        <span class="c-dim">Touches Vim :</span>
+        <button type="button" class="key-pill" onclick="insertToken('<Esc>')" title="Raccourci : touche Échap">&lt;Esc&gt;</button>
+        <button type="button" class="key-pill" onclick="insertToken('<CR>')" title="Entrée pour valider :s ou /search">&lt;CR&gt;</button>
         <button type="button" class="key-pill" onclick="insertToken('<C-a>')" title="Ctrl+A : Incrémenter nombre">&lt;C-a&gt;</button>
         <button type="button" class="key-pill" onclick="insertToken('<C-x>')" title="Ctrl+X : Décrémenter nombre">&lt;C-x&gt;</button>
-        <span class="c-dim" style="margin-left:auto;">Astuce : appuie sur [Échap] dans le champ pour insérer <span class="c-cyan">&lt;Esc&gt;</span></span>
+        <button type="button" class="key-pill" onclick="execFromNav('armory')" title="Voir tes Reliques & Curseurs">🎁 Armurerie</button>
+        <button type="button" class="key-pill" onclick="execFromNav('vimrc')" title="Générer et télécharger ton .vimrc">⚙️ Forge .vimrc</button>
+        <span class="c-dim" style="margin-left:auto;">[Échap] insère <span class="c-cyan">&lt;Esc&gt;</span></span>
       </div>
     </div>
   </main>
@@ -293,15 +318,16 @@
     <div class="footer-inner">
       <div class="footer-left">
         <span class="tmux-tag">0:vim-ops*</span>
-        <span class="streak-pill" id="footer-streak" title="Série de victoires sans indice (Multiplicateur de score)">🔥 0 (x1.0)</span>
+        <span class="streak-pill" id="footer-streak" title="Série sans indice (Multiplicateur)">🔥 0 (x1.0)</span>
+        <span class="blitz-pill" id="footer-blitz">⏱ 60s</span>
         <span class="nav-cmd" onclick="execFromNav('start')">[<b>1</b>:Campagne]</span>
-        <span class="nav-cmd" onclick="execFromNav('custom')">[<b>2</b>:Custom]</span>
-        <span class="nav-cmd" onclick="execFromNav('stats')">[<b>3</b>:Profil]</span>
-        <span class="nav-cmd" onclick="execFromNav('badges')">[<b>4</b>:Badges]</span>
-        <span class="nav-cmd" onclick="execFromNav('board')">[<b>5</b>:Board]</span>
-        <span class="nav-cmd" onclick="execFromNav('memo')">[<b>6</b>:Mémo]</span>
-        <span class="nav-cmd" onclick="execFromNav('hint')">[<b>7</b>:Indice]</span>
-        <span class="nav-cmd" onclick="execFromNav('clear')">[<b>8</b>:Clear]</span>
+        <span class="nav-cmd" onclick="execFromNav('blitz')">[<b>2</b>:Blitz 60s]</span>
+        <span class="nav-cmd" onclick="execFromNav('custom')">[<b>3</b>:Custom]</span>
+        <span class="nav-cmd" onclick="execFromNav('stats')">[<b>4</b>:Profil]</span>
+        <span class="nav-cmd" onclick="execFromNav('armory')">[<b>5</b>:Armurerie]</span>
+        <span class="nav-cmd" onclick="execFromNav('vimrc')">[<b>6</b>:.vimrc]</span>
+        <span class="nav-cmd" onclick="execFromNav('memo')">[<b>7</b>:Mémo]</span>
+        <span class="nav-cmd" onclick="execFromNav('hint')">[<b>8</b>:Indice]</span>
         <span class="nav-cmd" onclick="window.location.href='../'">[<b>↩</b>:Portail]</span>
       </div>
 
@@ -310,7 +336,7 @@
           <span>Thème:</span>
           <select id="theme-select" class="term-select" onchange="setTheme(this.value)">
             <optgroup label="Standards Modernes">
-              <option value="bash-classic">Bash / Pop!_OS (Défaut)</option>
+              <option value="bash-classic">Bash / Pop!_OS</option>
               <option value="dracula">Dracula</option>
               <option value="catppuccin">Catppuccin Mocha</option>
               <option value="tokyo-night">Tokyo Night</option>
@@ -320,39 +346,34 @@
             </optgroup>
             <optgroup label="Univers Sci-Fi & Cyber">
               <option value="jensen">Jensen (Sarif Amber)</option>
-              <option value="case">Case (Chiba City Matrix)</option>
+              <option value="case">Case (Chiba Matrix)</option>
               <option value="smith">Smith (MegaCity CRT)</option>
               <option value="cyberdyne">Cyberdyne (Skynet HUD)</option>
-              <option value="hill-valley">Hill Valley (1985 Time Circuits)</option>
+              <option value="hill-valley">Hill Valley (1985 LED)</option>
               <option value="encom">Encom (MCP Grid)</option>
-              <option value="tyrell">Tyrell (Los Angeles 2019)</option>
-              <option value="nostromo">Nostromo (MU-TH-UR 6000)</option>
-              <option value="discovery">Discovery (HAL 9000 Logic)</option>
-              <option value="black-mesa">Black Mesa (HEV Mk IV)</option>
-              <option value="arrakis">Arrakis (Mental Calcul)</option>
+              <option value="tyrell">Tyrell (LA 2019)</option>
+              <option value="nostromo">Nostromo (MU-TH-UR)</option>
+              <option value="discovery">Discovery (HAL 9000)</option>
+              <option value="black-mesa">Black Mesa (Sector C)</option>
+              <option value="arrakis">Arrakis (Spice Melange)</option>
             </optgroup>
             <optgroup label="Machines Historiques">
-              <option value="vt100">DEC VT100 (PDP-11 P1)</option>
+              <option value="vt100">DEC VT100 (PDP-11)</option>
               <option value="ibm3270">IBM 3270 (Mainframe)</option>
-              <option value="c64">Commodore 64 (PETSCII)</option>
+              <option value="c64">Commodore 64</option>
               <option value="amiga">Amiga Workbench 1.3</option>
-              <option value="apple2">Apple IIe (Monitor II)</option>
+              <option value="apple2">Apple IIe</option>
               <option value="win98">Windows 98 (MS-DOS)</option>
             </optgroup>
           </select>
         </div>
 
         <div class="ctrl-group">
-          <span>Police:</span>
+          <span>Police (100% Iso):</span>
           <select id="font-select" class="term-select" onchange="setFontFamily(this.value)">
+            <option value="'JetBrains Mono', monospace">JetBrains Mono (Défaut)</option>
             <option value="'Fira Code', monospace">Fira Code</option>
-            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
             <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
-            <option value="'Source Code Pro', monospace">Source Code Pro</option>
-            <option value="'Ubuntu Mono', monospace">Ubuntu Mono</option>
-            <option value="'Inconsolata', monospace">Inconsolata</option>
-            <option value="'Share Tech Mono', monospace">Share Tech Mono (CRT)</option>
-            <option value="'Courier New', Courier, monospace">Courier New</option>
           </select>
         </div>
 
@@ -364,8 +385,6 @@
             <option value="14px">14px</option>
             <option value="15px">15px</option>
             <option value="16px">16px</option>
-            <option value="18px">18px</option>
-            <option value="20px">20px</option>
           </select>
         </div>
       </div>
@@ -374,13 +393,7 @@
 
 <script>
 // =============================================================================
-// CONFIGURATION OPTIONNELLE DU LEADERBOARD PUBLIC (SUPABASE REST API)
-// =============================================================================
-const SUPABASE_URL = "";
-const SUPABASE_KEY = "";
-
-// =============================================================================
-// 1. PALETTES DE THÈMES (STANDARDS, SCI-FI ICONIQUES & MACHINES HISTORIQUES)
+// 1. PALETTES DE THÈMES
 // =============================================================================
 const THEMES = {
   "bash-classic": {
@@ -411,7 +424,6 @@ const THEMES = {
     bg: "#002b36", bar: "#001f27", fg: "#93a1a1", dim: "#586e75", border: "#073642",
     cyan: "#2aa198", green: "#859900", red: "#dc322f", yellow: "#b58900", magenta: "#d33682", blue: "#268bd2"
   },
-  // --- Univers Sci-Fi & Cyber (Noms de lieux/entités/personnages uniquement) ---
   "jensen": {
     bg: "#120f0a", bar: "#090704", fg: "#ffb000", dim: "#996900", border: "#4d3600",
     cyan: "#ffd875", green: "#a6e22e", red: "#ff5533", yellow: "#ffe066", magenta: "#ff8c00", blue: "#e69500"
@@ -456,7 +468,6 @@ const THEMES = {
     bg: "#16100b", bar: "#0d0906", fg: "#f3d5b5", dim: "#9c7a54", border: "#523a24",
     cyan: "#38a3a5", green: "#80ed99", red: "#e05a47", yellow: "#ff9f1c", magenta: "#d4a373", blue: "#4ea8de"
   },
-  // --- Machines Historiques ---
   "vt100": {
     bg: "#061006", bar: "#030803", fg: "#33ff33", dim: "#1f991f", border: "#145214",
     cyan: "#80ff80", green: "#33ff33", red: "#ff6644", yellow: "#ccff33", magenta: "#66ff99", blue: "#29cc29"
@@ -487,7 +498,7 @@ const THEMES = {
 };
 
 // =============================================================================
-// 2. SYSTÈME DE RANGS ET DE HAUTS-FAITS (ACHIEVEMENTS)
+// 2. SYSTÈME DE PROGRESSION : RANGS, CURSEURS, RELIQUES CYBER & BADGES
 // =============================================================================
 const RANKS = [
   { min: 0,  title: "Prisonnier du Mode Insert" },
@@ -499,24 +510,51 @@ const RANKS = [
   { min: 40, title: "Architecte Modal Suprême" }
 ];
 
+const CURSOR_SKINS = [
+  { id: 1, name: "Standard Cyan Block",   reqMastered: 0,  reqGolf: 0,  bg: "var(--c-cyan)",    fg: "var(--c-bg)", border: "none" },
+  { id: 2, name: "Phosphore Vert ADM-3A", reqMastered: 5,  reqGolf: 0,  bg: "#00ff41",          fg: "#000000",     border: "none" },
+  { id: 3, name: "Sarif Gold Underline",  reqMastered: 12, reqGolf: 0,  bg: "transparent",      fg: "#ffb000",     border: "2px solid #ffb000" },
+  { id: 4, name: "Laser Rouge Cyberdyne", reqMastered: 20, reqGolf: 0,  bg: "#ff2d55",          fg: "#ffffff",     border: "none" },
+  { id: 5, name: "Néon Violet Chiba",     reqMastered: 30, reqGolf: 0,  bg: "#bc8cff",          fg: "#000000",     border: "none" },
+  { id: 6, name: "Or Pur Golf-Master",    reqMastered: 0,  reqGolf: 15, bg: "#ffd700",          fg: "#000000",     border: "2px solid #ffffff" }
+];
+
+const RELICS = [
+  { id: "adm3a",     reqM: 1,  reqG: 0,  name: "Touche ESC du terminal Lear Siegler ADM-3A", lore: "1976 — Le clavier sur lequel Bill Joy a codé vi, où ESC était à la place de Tab." },
+  { id: "floppy",    reqM: 4,  reqG: 0,  name: "Disquette 5.25\" 'Stevie / Vim 1.14'",        lore: "1991 — Première release publique de 'Vi IMitation' par Bram Moolenaar sur Amiga." },
+  { id: "keycaps",   reqM: 8,  reqG: 0,  name: "Set de Keycaps PBT Gravés HJKL",             lore: "Les flèches directionnelles ont été retirées physiquement du châssis." },
+  { id: "casette",   reqM: 12, reqG: 0,  name: "Micro-Cassette Ono-Sendai Cyberspace 7",     lore: "Contient les macros d'intrusion ICE de Chiba City." },
+  { id: "flux",      reqM: 16, reqG: 0,  name: "Condensateur Temporel 1.21 Gigowatt",        lore: "Permet d'annuler (u) et de refaire (Ctrl-R) à travers les branches temporelles." },
+  { id: "neural",    reqM: 20, reqG: 0,  name: "CPU Neuronal Cyberdyne Série 800",           lore: "Prédit le Text-Object optimal en 0.004 milliseconde." },
+  { id: "identity",  reqM: 25, reqG: 0,  name: "Disque d'Identité Encom MCP",                lore: "Tout ce que tu éditeras dans la Grille sera gravé sur cet anneau lumineux." },
+  { id: "origami",   reqM: 30, reqG: 0,  name: "Licorne en Origami de Gaff",                 lore: "Trouvée devant ton terminal après une substitution regex à 3 groupes de capture." },
+  { id: "hal_lens",  reqM: 35, reqG: 0,  name: "Lentille Optique Rouge HAL-9000",            lore: "'I'm sorry Dave, I cannot let you use Nano.'" },
+  { id: "spice",     reqM: 40, reqG: 0,  name: "Fiole d'Épice Gériatrique d'Arrakis",        lore: "Confère la prescience totale sur les commandes globales :g/re/norm." },
+  { id: "golf_cup",  reqM: 0,  reqG: 10, name: "Calice d'Or du Vim-Golfeur",                 lore: "Décerné aux opérateurs ayant égalé ou battu le Par sur 10 missions." },
+  { id: "chronos",   reqM: 0,  reqG: 0,  name: "Chronomètre Overclocké à Azote Liquide",     lore: "Récompense spéciale : survivre à un Blitz de 60s avec au moins 4 buffers validés.", reqBlitz: 4 },
+  { id: "reaper_tag",reqM: 0,  reqG: 0,  name: "Transpondeur Télémétrique MQ-9 Reaper",      lore: "Relique Secrète : récupérée après avoir déclenché un protocole interdit (rm -rf /*, emacs ou nano).", reqSecret: true }
+];
+
 const BADGES = [
-  { id: "first_blood",  name: "Survivant Modal",       desc: "Accomplir ta toute première mission sous Vim." },
-  { id: "streak_3",     name: "Flux Cognitif (🔥 3)",  desc: "Enchaîner 3 missions d'affilée sans indice." },
-  { id: "streak_7",     name: "Mémoire Musculaire (🔥 7)", desc: "Enchaîner 7 missions d'affilée sans indice." },
-  { id: "streak_15",    name: "Cyber-Cerveau (🔥 15)", desc: "Enchaîner 15 missions d'affilée sans indice." },
-  { id: "golf_1",       name: "Économe en Frappes",    desc: "Réussir une mission avec un nombre de frappes <= au Par (Vim-Golf)." },
-  { id: "golf_10",      name: "Grand Maître Vim-Golf", desc: "Obtenir l'insigne Vim-Golf sur 10 missions distinctes." },
-  { id: "speed_demon",  name: "Réflexe Éclair",        desc: "Résoudre une mission en moins de 5 secondes." },
-  { id: "text_surgeon", name: "Chirurgien Syntaxique", desc: "Maîtriser toutes les missions du Palier 3 (Text Objects ci\", da(, dit...)." },
-  { id: "ex_alchemist", name: "Alchimiste Ex",         desc: "Maîtriser toutes les missions du Palier 5 (:s, \\1, :g/re/d)." },
-  { id: "grandmaster",  name: "Légende d'Ubik",        desc: "Maîtriser l'intégralité des 40 missions du simulateur." }
+  { id: "first_blood",  name: "Survivant Modal",          desc: "Accomplir ta toute première mission sous Vim." },
+  { id: "streak_3",     name: "Flux Cognitif (Streak 3)", desc: "Enchaîner 3 missions d'affilée sans indice." },
+  { id: "streak_7",     name: "Mémoire Musculaire (7)",   desc: "Enchaîner 7 missions d'affilée sans indice." },
+  { id: "streak_15",    name: "Cyber-Cerveau (15)",       desc: "Enchaîner 15 missions d'affilée sans indice." },
+  { id: "golf_1",       name: "Économe en Frappes",       desc: "Réussir une mission avec un nombre de frappes <= au Par." },
+  { id: "golf_10",      name: "Grand Maître Vim-Golf",    desc: "Obtenir l'insigne Vim-Golf sur 10 missions distinctes." },
+  { id: "speed_demon",  name: "Réflexe Éclair (<5s)",     desc: "Résoudre une mission en moins de 5 secondes." },
+  { id: "blitz_hero",   name: "Sprinter de la Matrice",   desc: "Valider au moins 4 buffers en 60s en mode Blitz." },
+  { id: "text_surgeon", name: "Chirurgien Syntaxique",    desc: "Maîtriser toutes les missions du Palier 3 (Text Objects)." },
+  { id: "ex_alchemist", name: "Alchimiste Ex",            desc: "Maîtriser toutes les missions du Palier 5 (:s, \\1, :g/re/d)." },
+  { id: "heretic",      name: "Chasseur d'Easter Eggs",   desc: "Déclencher un protocole secret dans le terminal (rm -rf /*, emacs, nano)." },
+  { id: "grandmaster",  name: "Légende d'Ubik",           desc: "Maîtriser l'intégralité des 40 missions du simulateur." }
 ];
 
 // =============================================================================
 // 3. BASE DE DONNÉES DES 40 MISSIONS VIM (5 PALIERS PROGRESSIFS)
 // =============================================================================
 const MISSIONS = [
-  // --- TIER 1 : SURVIE & NAVIGATION RAPIDE (Motions & Éditions atomiques) ---
+  // --- TIER 1 : SURVIE & NAVIGATION RAPIDE ---
   { id: 1, diff: 1, theme: "SYS", title: "Frappe chirurgicale (x)",
     scenario: "Une faute de frappe s'est glissée dans 'sshd_config'. Le curseur est déjà positionné sur le 'z' parasite. Supprime uniquement ce caractère en mode Normal.",
     initialLines: ["PermitRootLzogin no"], cursor: [0, 11],
@@ -646,7 +684,7 @@ const MISSIONS = [
     hint: "Combine l'opérateur 'd' avec le compteur '3' et la motion 'w' : 'd3w'.",
     debrief: "'d3w' (ou '3dw') supprime exactement 3 mots consécutifs d'un coup." },
 
-  // --- TIER 3 : TEXT OBJECTS & CHIRURGIE SYNTAXIQUE (iw, ci", da(, dit...) ---
+  // --- TIER 3 : TEXT OBJECTS & CHIRURGIE SYNTAXIQUE ---
   { id: 17, diff: 3, theme: "SYS", title: "Remplacement de chaîne entre guillemets (ci\")",
     scenario: "Le curseur est au milieu de \"development\". Change le contenu entre les guillemets doubles par \"production\" sans toucher aux guillemets.",
     initialLines: ["APP_ENV=\"development\""], cursor: [0, 13],
@@ -745,7 +783,7 @@ const MISSIONS = [
     debrief: "En Vim, 'delete' ('d') est en réalité un 'couper'. 'ddp' échange deux lignes, et 'xp' échange deux caractères !" },
 
   { id: 29, diff: 4, theme: "NET", title: "Le secret des maîtres : la commande Point (.)",
-    scenario: "Les 3 lignes doivent être supprimées... non, attends : ajoute ';' à la fin de la ligne 1, puis répète l'opération sur la ligne 2 avec '.'.",
+    scenario: "Ajoute ';' à la fin de la ligne 1, puis répète l'opération sur la ligne 2 grâce à la commande '.'.",
     initialLines: ["nameserver 1.1.1.1", "nameserver 9.9.9.9"], cursor: [0, 0],
     expectedLines: ["nameserver 1.1.1.1;", "nameserver 9.9.9.9;"],
     par: 5, solution: "A;<Esc>j.",
@@ -753,15 +791,15 @@ const MISSIONS = [
     debrief: "La touche '.' répète la dernière modification complète (du passage en Insert jusqu'à <Esc>)." },
 
   { id: 30, diff: 4, theme: "SEC", title: "Recherche du mot sous le curseur (*) + Point (.)",
-    scenario: "Le curseur est sur la première occurrence de 'http'. Remplace les deux 'http' par 'https' en utilisant '*' et '.'.",
+    scenario: "Le curseur est sur la première occurrence de 'http'. Remplace les deux 'http' par 'https' en utilisant 'ciw', '*' (ou 'n') et '.'.",
     initialLines: ["url1 = http://api.internal", "url2 = http://auth.internal"], cursor: [0, 7],
     expectedLines: ["url1 = https://api.internal", "url2 = https://auth.internal"],
     par: 8, solution: "*ciwhttps<Esc>n.",
-    hint: "Ou plus court : 'ea s<Esc>j.' ou 'ciwhttps<Esc>*.' ! Essaie 'ciwhttps<Esc>n.' ou '/http<CR>'.",
+    hint: "Tape '*ciwhttps<Esc>n.' (ou 'eas<Esc>j.').",
     debrief: "Combiner une recherche ('*' ou 'n') avec '.' (n.n.n.) permet de refactoriser un fichier en gardant un contrôle visuel total." },
 
   { id: 31, diff: 4, theme: "NET", title: "Saut à la parenthèse fermante correspondante (%)",
-    scenario: "Ce bloc d'options sur une ligne a un caractère ';' manquant ou plutôt : supprime tout le bloc '(...)' en sautant avec 'd%'. Le curseur est sur '('.",
+    scenario: "Supprime tout le bloc '(permit 10, metric 50)' parenthèses incluses en utilisant le saut de paire '%'. Le curseur est sur '('.",
     initialLines: ["route_map (permit 10, metric 50) active"], cursor: [0, 10],
     expectedLines: ["route_map  active"],
     par: 2, solution: "d%",
@@ -778,14 +816,14 @@ const MISSIONS = [
 
   // --- TIER 5 : MAÎTRE EX, SUBSTITUTIONS REGEX (:s) & COMMANDES GLOBALES (:g) ---
   { id: 33, diff: 5, theme: "SEC", title: "Substitution globale dans tout le buffer (:%s)",
-    scenario: "Remplace toutes les occurrences de 'PermitRootLogin yes' ou plutôt de 'yes' par 'no' sur toutes les lignes du fichier.",
+    scenario: "Remplace toutes les occurrences de 'yes' par 'no' sur toutes les lignes du fichier.",
     initialLines: ["PermitRootLogin yes", "PasswordAuthentication yes", "ChallengeResponseAuthentication yes"], cursor: [0, 0],
     expectedLines: ["PermitRootLogin no", "PasswordAuthentication no", "ChallengeResponseAuthentication no"],
     par: 12, solution: ":%s/yes/no/g<CR>",
     hint: "Utilise la plage globale '%' : ':%s/yes/no/g<CR>'.",
     debrief: "Dans ':%s/ancien/nouveau/g', '%' cible toutes les lignes du fichier et le drapeau 'g' cible toutes les occurrences par ligne." },
 
-  { id: 34, diff: 5, theme: "NET", title: "Substitution de chemins sans 'Picket Fence' (:%s#...#)",
+  { id: 34, diff: 5, theme: "NET", title: "Substitution de chemins sans 'Picket Fence' (:s#...#)",
     scenario: "Remplace le chemin '/var/log/old' par '/srv/logs' sur la ligne courante sans avoir à échapper les slashs '/'.",
     initialLines: ["logfile = /var/log/old/access.log"], cursor: [0, 0],
     expectedLines: ["logfile = /srv/logs/access.log"],
@@ -811,8 +849,8 @@ const MISSIONS = [
 
   { id: 37, diff: 5, theme: "NET", title: "Substitution bornée par plage de lignes (:2,3s)",
     scenario: "Remplace 'ACCEPT' par 'DROP' UNIQUEMENT sur les lignes 2 et 3 (ne touche ni à la ligne 1 ni à la ligne 4 !).",
-    initialLines: ["Chain Lo: ACCEPT", "Chain WAN_IN: ACCEPT", "ChainGUEST: ACCEPT", "Chain LAN_OUT: ACCEPT"], cursor: [0, 0],
-    expectedLines: ["Chain Lo: ACCEPT", "Chain WAN_IN: DROP", "ChainGUEST: DROP", "Chain LAN_OUT: ACCEPT"],
+    initialLines: ["Chain Lo: ACCEPT", "Chain WAN_IN: ACCEPT", "Chain GUEST: ACCEPT", "Chain LAN_OUT: ACCEPT"], cursor: [0, 0],
+    expectedLines: ["Chain Lo: ACCEPT", "Chain WAN_IN: DROP", "Chain GUEST: DROP", "Chain LAN_OUT: ACCEPT"],
     par: 18, solution: ":2,3s/ACCEPT/DROP/<CR>",
     hint: "Spécifie la plage '2,3' avant 's' : ':2,3s/ACCEPT/DROP/<CR>'.",
     debrief: "Les plages Ex (':2,3s', ':.,$s' de la ligne courante à la fin) permettent de cibler chirurgicalement une zone du fichier." },
@@ -834,18 +872,18 @@ const MISSIONS = [
     debrief: "Les backreferences '\\1' et '\\2' transforment Vim en un véritable moteur awk/sed interactif." },
 
   { id: 40, diff: 5, theme: "SYS", title: "ULTIMATE BOSS — Nettoyage & Normalisation multi-passes",
-    scenario: "1) Supprime toutes les lignes commençant par '#' (:g/^#/d) PUIS 2) remplace tous les 'http://' par 'https://' (separe les 2 commandes ou fais-les en chaîne).",
+    scenario: "1) Supprime toutes les lignes commençant par '#' (:g/^#/d) PUIS 2) remplace tous les 'http://' par 'https://'.",
     initialLines: ["# Legacy endpoints", "api = http://10.0.0.1/v1", "# Deprecated node", "auth = http://10.0.0.2/login"], cursor: [0, 0],
     expectedLines: ["api = https://10.0.0.1/v1", "auth = https://10.0.0.2/login"],
     par: 27, solution: ":g/^#/d<CR>:%s#http://#https://#g<CR>",
-    hint: "Enchaîne ':g/^#/d<CR>' suivi de ':%s#http://#https://#g<CR>' (ou ':%s/http:/https:/g<CR>').",
+    hint: "Enchaîne ':g/^#/d<CR>' suivi de ':%s#http://#https://#g<CR>'.",
     debrief: "Félicitations ! Tu maîtrises la chaîne complète de Vim : navigation modale, Text Objects, commande Point et pipelines Ex." }
 ];
 
 const TOTAL_MISSIONS = MISSIONS.length;
 
 // =============================================================================
-// 4. MOTEUR D'EXÉCUTION VIM DÉTERMINISTE (BUFFER 2D, MOTIONS, TEXT OBJECTS, EX)
+// 4. MOTEUR D'EXÉCUTION VIM DÉTERMINISTE
 // =============================================================================
 function tokenizeVimInput(str) {
   const tokens = [];
@@ -880,7 +918,6 @@ function clampCol(lines, r, c, insertMode = false) {
   return Math.max(0, Math.min(c, insertMode ? len : len - 1));
 }
 
-// Résout la position de fin d'une motion sur la ligne courante
 function findWordMotionCol(line, col, type, count) {
   let c = col;
   const len = line.length;
@@ -916,7 +953,6 @@ function findWordMotionCol(line, col, type, count) {
   return c;
 }
 
-// Trouve l'intervalle [start, endExcl] d'un Text Object sur la ligne courante
 function findTextObjectSpan(line, col, inner, objChar) {
   if (objChar === 'w' || objChar === 'W') {
     const big = (objChar === 'W');
@@ -950,9 +986,6 @@ function findTextObjectSpan(line, col, inner, objChar) {
   }
 
   if (objChar === 't') {
-    // <tag>...</tag>
-    const openEnd = line.indexOf('>', col >= 0 ? 0 : 0);
-    // Cherche la balise englobante autour ou après col
     const regex = /<([a-zA-Z0-9_-]+)[^>]*>(.*?)<\/\1>/g;
     let m;
     while ((m = regex.exec(line)) !== null) {
@@ -1000,14 +1033,13 @@ function findTextObjectSpan(line, col, inner, objChar) {
   return null;
 }
 
-// Convertit une regex Vim (:s) en RegExp JS
 function vimRegexToJS(vimPat, flags) {
   let jsPat = "";
   for (let i = 0; i < vimPat.length; i++) {
     if (vimPat[i] === '\\' && i + 1 < vimPat.length) {
       const nxt = vimPat[i + 1];
       if (nxt === '(' || nxt === ')' || nxt === '+' || nxt === '?' || nxt === '|') {
-        jsPat += nxt; // En Vim magic, \( \+ \? \| sont les métacaractères
+        jsPat += nxt;
         i++;
         continue;
       }
@@ -1026,7 +1058,6 @@ function executeExCommand(cmdStr, stateObj) {
   let s = cmdStr.trim();
   if (!s) return;
 
-  // Support des commandes chaînées par '|'
   if (s.includes('|') && !s.includes('\\|')) {
     const subCmds = s.split('|');
     subCmds.forEach(sc => executeExCommand(sc, stateObj));
@@ -1035,14 +1066,11 @@ function executeExCommand(cmdStr, stateObj) {
 
   let { lines, r } = stateObj;
 
-  // :g/pattern/d ou :v/pattern/d ou :g!/pattern/d
   const gMatch = s.match(/^(?:%|1,\$)?\s*(g!?|v)\/([^/]+)\/d$/);
   if (gMatch) {
     const mode = gMatch[1];
     const re = vimRegexToJS(gMatch[2], "");
     const invert = (mode === 'v' || mode === 'g!');
-    stateObj.lines = lines.filter(ln => invert ? !re.test(ln) : !re.test(ln) ? true : false);
-    // Clarification explicite :
     stateObj.lines = lines.filter(ln => {
       const matched = re.test(ln);
       return invert ? matched : !matched;
@@ -1053,14 +1081,12 @@ function executeExCommand(cmdStr, stateObj) {
     return;
   }
 
-  // Plage + substitution : [range]s<delim>pat<delim>rep[<delim>[flags]]
   const rangeMatch = s.match(/^([0-9.,$%]+)?\s*s([^\w\s])(.*)$/);
   if (rangeMatch) {
     const rangeSpec = rangeMatch[1] || ".";
     const delim = rangeMatch[2];
     const rest = rangeMatch[3];
 
-    // Découpage selon delim (en respectant \delim)
     const parts = [];
     let cur = "";
     for (let i = 0; i < rest.length; i++) {
@@ -1104,7 +1130,6 @@ function executeExCommand(cmdStr, stateObj) {
     return;
   }
 
-  // :d ou :<N>d
   if (s === "d") {
     lines.splice(r, 1);
     if (lines.length === 0) lines.push("");
@@ -1125,7 +1150,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
     lastFind: null
   };
 
-  // Enregistrement de la dernière action d'édition pour la commande '.'
   let lastChangeTokens = [];
   let recordingChange = false;
   let currentChangeStart = 0;
@@ -1165,7 +1189,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         continue;
       }
 
-      // MODE NORMAL
       let cmdStartIdx = idx;
       let countStr = "";
       while (idx < tkList.length && /^[0-9]$/.test(tkList[idx]) && !(countStr === "" && tkList[idx] === "0")) {
@@ -1175,11 +1198,8 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
       if (idx >= tkList.length) break;
 
       const tk = tkList[idx++];
-
-      // Ignorer un <Esc> surnuméraire en mode Normal
       if (tk === '<Esc>') continue;
 
-      // Répétition '.'
       if (tk === '.') {
         if (lastChangeTokens.length > 0) {
           for (let k = 0; k < count; k++) {
@@ -1189,7 +1209,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         continue;
       }
 
-      // Commandes Ex ':'
       if (tk === ':') {
         let exCmd = "";
         while (idx < tkList.length && tkList[idx] !== '<CR>' && tkList[idx] !== '<Esc>') {
@@ -1200,7 +1219,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         continue;
       }
 
-      // Recherche '/pattern<CR>'
       if (tk === '/') {
         let pat = "";
         while (idx < tkList.length && tkList[idx] !== '<CR>' && tkList[idx] !== '<Esc>') {
@@ -1212,7 +1230,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         continue;
       }
 
-      // '*' : recherche du mot sous le curseur
       if (tk === '*') {
         const ln = st.lines[st.r];
         const span = findTextObjectSpan(ln, st.c, true, 'w');
@@ -1223,13 +1240,11 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         continue;
       }
 
-      // 'n' : occurrence suivante
       if (tk === 'n') {
         if (st.lastSearch) jumpToSearchMatch(st, st.lastSearch, count);
         continue;
       }
 
-      // Motions simples en Mode Normal
       if (tk === 'h') { st.c = clampCol(st.lines, st.r, st.c - count); continue; }
       if (tk === 'l' || tk === ' ') { st.c = clampCol(st.lines, st.r, st.c + count); continue; }
       if (tk === 'j') { st.r = Math.min(st.lines.length - 1, st.r + count); st.c = clampCol(st.lines, st.r, st.c); continue; }
@@ -1274,7 +1289,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         continue;
       }
 
-      // Entrées en Mode Insert (enregistrées pour '.')
       if (['i', 'a', 'I', 'A', 'o', 'O', 's', 'S', 'C'].includes(tk)) {
         if (!isReplay) { recordingChange = true; currentChangeStart = cmdStartIdx; }
         const ln = st.lines[st.r];
@@ -1290,7 +1304,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         continue;
       }
 
-      // Éditions atomiques immédiates
       if (tk === 'x') {
         const ln = st.lines[st.r];
         st.reg = ln.slice(st.c, st.c + count);
@@ -1343,7 +1356,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
       if (tk === '<C-a>' || tk === '<C-x>') {
         const delta = (tk === '<C-a>' ? 1 : -1) * count;
         const ln = st.lines[st.r];
-        // Cherche un nombre couvrant ou après st.c
         const numRegex = /-?\d+/g;
         let m;
         while ((m = numRegex.exec(ln)) !== null) {
@@ -1376,7 +1388,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         continue;
       }
 
-      // Opérateurs composés : d, c, y, >, <
       if (['d', 'c', 'y', '>', '<'].includes(tk) && idx < tkList.length) {
         const op = tk;
         let subCountStr = "";
@@ -1387,7 +1398,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         if (idx >= tkList.length) break;
         const mTk = tkList[idx++];
 
-        // Cas Linewise (dd, cc, yy, >>, <<, dG, >G)
         if (mTk === op || mTk === 'G') {
           let startR = st.r;
           let endR = mTk === 'G' ? (subCountStr ? parseInt(subCountStr, 10) - 1 : st.lines.length - 1) : Math.min(st.lines.length - 1, st.r + totalCount - 1);
@@ -1421,7 +1431,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
           continue;
         }
 
-        // Cas Text Objects : i/a + caractère (ciw, di", da[, cit...)
         let span = null;
         const ln = st.lines[st.r];
         if ((mTk === 'i' || mTk === 'a') && idx < tkList.length) {
@@ -1434,7 +1443,6 @@ function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
         } else if ('wWbBeE'.includes(mTk)) {
           let targetCol = findWordMotionCol(ln, st.c, mTk, totalCount);
           if (op === 'c' && (mTk === 'w' || mTk === 'W')) {
-            // En Vim, 'cw' se comporte comme 'ce' (ne mange pas l'espace après le mot)
             targetCol = findWordMotionCol(ln, st.c, mTk === 'w' ? 'e' : 'E', totalCount) + 1;
           } else if (mTk === 'e' || mTk === 'E') {
             targetCol++;
@@ -1520,7 +1528,6 @@ function jumpToSearchMatch(st, pat, count) {
   if (!pat) return;
   const totalLines = st.lines.length;
   for (let step = 0; step < count; step++) {
-    // Cherche d'abord sur la même ligne après st.c
     const curLn = st.lines[st.r];
     const sameIdx = curLn.indexOf(pat, st.c + 1);
     if (sameIdx !== -1) {
@@ -1540,23 +1547,27 @@ function jumpToSearchMatch(st, pat, count) {
 }
 
 // =============================================================================
-// 5. GESTION DU PROFIL, STREAK, BADGES, THÈMES & POLICES
+// 5. GESTION DU PROFIL, STREAK, BADGES, ARMURERIE & MODE BLITZ
 // =============================================================================
-const STORAGE_KEY = "vim_ops_v1_terminal";
+const STORAGE_KEY = "vim_ops_v2_terminal";
 
 let profile = {
   pseudo: "adrien",
   theme: "jensen",
-  fontFamily: "'Fira Code', monospace",
+  fontFamily: "'JetBrains Mono', monospace",
   fontSize: "14px",
+  cursorSkinId: 1,
   campaignUnlocked: 1,
   bestScore: 0,
   totalScore: 0,
   streak: 0,
   bestStreak: 0,
+  bestBlitzCount: 0,
+  foundEasterEgg: false,
   masteredIds: [],
   golfedIds: [],
   badges: [],
+  relics: [],
   localBoard: [
     { pseudo: "bram_m", score: 8940, mastered: 40, golfed: 38 },
     { pseudo: "root_soc", score: 5420, mastered: 32, golfed: 21 },
@@ -1576,7 +1587,10 @@ let state = {
   sessionScore: 0,
   attempts: 0,
   usedHint: 0,
-  startTimeMs: 0
+  startTimeMs: 0,
+  blitzEndMs: 0,
+  blitzSolved: 0,
+  blitzTimerId: null
 };
 
 let cmdHistory = [];
@@ -1588,6 +1602,7 @@ const boxEl = document.getElementById('term-box');
 const promptLbl = document.getElementById('prompt-label');
 const promptForm = document.getElementById('prompt-form');
 const footerStreakEl = document.getElementById('footer-streak');
+const footerBlitzEl = document.getElementById('footer-blitz');
 
 function esc(str) {
   return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
@@ -1600,6 +1615,10 @@ function printHtml(html = "", cls = "") {
   outEl.appendChild(div);
   boxEl.scrollTop = boxEl.scrollHeight;
   return div;
+}
+
+function printBoxLine(html = "") {
+  return printHtml(html, "box-line");
 }
 
 function printText(text = "", cls = "") {
@@ -1628,38 +1647,81 @@ function updateStreakDisplay() {
   footerStreakEl.textContent = `🔥 ${profile.streak} (x${mult})`;
 }
 
-function checkAndUnlockBadges(elapsedSec) {
-  const newlyUnlocked = [];
-  function grant(id) {
+function applyCursorSkin(skinId, silent = false) {
+  const skin = CURSOR_SKINS.find(s => s.id === skinId) || CURSOR_SKINS[0];
+  const unlocked = profile.masteredIds.length >= skin.reqMastered && profile.golfedIds.length >= skin.reqGolf;
+  if (!unlocked && !silent) {
+    printHtml(`  <span class="c-red">[✗] Curseur verrouillé.</span> Requis : ${skin.reqMastered} missions maîtrisées et ${skin.reqGolf} étoiles Vim-Golf.`);
+    return false;
+  }
+  profile.cursorSkinId = skin.id;
+  const r = document.documentElement.style;
+  r.setProperty('--cursor-bg', skin.bg);
+  r.setProperty('--cursor-fg', skin.fg);
+  r.setProperty('--cursor-border', skin.border);
+  saveProfile();
+  if (!silent) {
+    printHtml(`  <span class="c-green">[✓]</span> Style de curseur équipé : <span class="c-cyan bold">${esc(skin.name)}</span>`);
+  }
+  return true;
+}
+
+function checkAndUnlockRewards(elapsedSec) {
+  const newBadges = [];
+  const newRelics = [];
+
+  function grantBadge(id) {
     if (!profile.badges.includes(id)) {
       profile.badges.push(id);
       const b = BADGES.find(x => x.id === id);
-      if (b) newlyUnlocked.push(b);
+      if (b) newBadges.push(b);
     }
   }
 
-  if (profile.masteredIds.length >= 1) grant("first_blood");
-  if (profile.streak >= 3) grant("streak_3");
-  if (profile.streak >= 7) grant("streak_7");
-  if (profile.streak >= 15) grant("streak_15");
-  if (profile.golfedIds.length >= 1) grant("golf_1");
-  if (profile.golfedIds.length >= 10) grant("golf_10");
-  if (elapsedSec !== null && elapsedSec <= 5) grant("speed_demon");
+  if (profile.masteredIds.length >= 1) grantBadge("first_blood");
+  if (profile.streak >= 3) grantBadge("streak_3");
+  if (profile.streak >= 7) grantBadge("streak_7");
+  if (profile.streak >= 15) grantBadge("streak_15");
+  if (profile.golfedIds.length >= 1) grantBadge("golf_1");
+  if (profile.golfedIds.length >= 10) grantBadge("golf_10");
+  if (elapsedSec !== null && elapsedSec <= 5) grantBadge("speed_demon");
+  if (profile.bestBlitzCount >= 4) grantBadge("blitz_hero");
+  if (profile.foundEasterEgg) grantBadge("heretic");
 
-  // Vérification maîtrise Palier 3 (missions 17..24)
   const tier3Ids = [17, 18, 19, 20, 21, 22, 23, 24];
-  if (tier3Ids.every(id => profile.masteredIds.includes(id))) grant("text_surgeon");
+  if (tier3Ids.every(id => profile.masteredIds.includes(id))) grantBadge("text_surgeon");
 
-  // Vérification maîtrise Palier 5 (missions 33..40)
   const tier5Ids = [33, 34, 35, 36, 37, 38, 39, 40];
-  if (tier5Ids.every(id => profile.masteredIds.includes(id))) grant("ex_alchemist");
+  if (tier5Ids.every(id => profile.masteredIds.includes(id))) grantBadge("ex_alchemist");
 
-  if (profile.masteredIds.length >= TOTAL_MISSIONS) grant("grandmaster");
+  if (profile.masteredIds.length >= TOTAL_MISSIONS) grantBadge("grandmaster");
 
-  if (newlyUnlocked.length > 0) {
+  RELICS.forEach(rel => {
+    if (!profile.relics.includes(rel.id)) {
+      if (rel.reqSecret) {
+        if (profile.foundEasterEgg) {
+          profile.relics.push(rel.id);
+          newRelics.push(rel);
+        }
+        return;
+      }
+      const okM = profile.masteredIds.length >= rel.reqM;
+      const okG = profile.golfedIds.length >= rel.reqG;
+      const okB = rel.reqBlitz ? (profile.bestBlitzCount >= rel.reqBlitz) : true;
+      if (okM && okG && okB && (rel.reqM > 0 || rel.reqG > 0 || rel.reqBlitz)) {
+        profile.relics.push(rel.id);
+        newRelics.push(rel);
+      }
+    }
+  });
+
+  if (newBadges.length > 0 || newRelics.length > 0) {
     saveProfile();
-    newlyUnlocked.forEach(b => {
-      printHtml(`  <span class="badge-unlock"> 🏅 HAUT-FAIT DÉBLOQUÉ </span> <span class="c-yellow bold">${esc(b.name)}</span> — <span class="c-fg">${esc(b.desc)}</span>`);
+    newBadges.forEach(b => {
+      printHtml(`  <span class="badge-unlock"> HAUT-FAIT DÉBLOQUÉ </span> <span class="c-yellow bold">${esc(b.name)}</span> — <span class="c-fg">${esc(b.desc)}</span>`);
+    });
+    newRelics.forEach(r => {
+      printHtml(`  <span class="badge-loot"> NOUVELLE RELIQUE </span> <span class="c-cyan bold">${esc(r.name)}</span> <span class="c-dim">(tape 'armory' pour inspecter)</span>`);
     });
   }
 }
@@ -1693,7 +1755,7 @@ function setFontFamily(fontVal, silent = false) {
   document.documentElement.style.setProperty('--term-font', fontVal);
   document.getElementById('font-select').value = fontVal;
   saveProfile();
-  if (!silent) printHtml(`<span class="c-green">[✓]</span> Police modifiée : <span class="c-cyan bold">${esc(fontVal.split(',')[0])}</span>`);
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Police isométrique : <span class="c-cyan bold">${esc(fontVal.split(',')[0])}</span>`);
 }
 
 function setFontSize(sizeVal, silent = false) {
@@ -1711,7 +1773,8 @@ function updatePromptLabel() {
     promptLbl.innerHTML = `<span class="c-cyan bold">${u}@vim-ops</span>:<span class="c-blue bold">~/custom</span>$`;
   } else if (state.active) {
     const mid = state.playlist[state.stepIdx];
-    promptLbl.innerHTML = `<span class="c-green bold">NORMAL</span> <span class="c-cyan bold">buf-${String(mid).padStart(2, '0')}</span> ❯`;
+    const modeBadge = state.mode === "BLITZ" ? `<span class="c-red bold">BLITZ</span>` : `<span class="c-green bold">NORMAL</span>`;
+    promptLbl.innerHTML = `${modeBadge} <span class="c-cyan bold">buf-${String(mid).padStart(2, '0')}</span> &gt;`;
   } else {
     promptLbl.innerHTML = `<span class="c-cyan bold">${u}@vim-ops</span>:<span class="c-blue bold">~</span>$`;
   }
@@ -1724,8 +1787,11 @@ function loadProfile() {
     if (saved) profile = { ...profile, ...JSON.parse(saved) };
   } catch (e) {}
   if (!setTheme(profile.theme, true)) setTheme("jensen", true);
+  const validFonts = ["'JetBrains Mono', monospace", "'Fira Code', monospace", "'IBM Plex Mono', monospace"];
+  if (!validFonts.includes(profile.fontFamily)) profile.fontFamily = "'JetBrains Mono', monospace";
   setFontFamily(profile.fontFamily, true);
   setFontSize(profile.fontSize, true);
+  applyCursorSkin(profile.cursorSkinId || 1, true);
   updatePromptLabel();
 }
 
@@ -1755,7 +1821,110 @@ function execFromNav(cmd) {
 }
 
 // =============================================================================
-// 6. RENDU DU BUFFER VIM CÔTE À CÔTE & ÉVALUATION DES MISSIONS
+// 6. EASTER EGGS ASYNCHRONES ANIMÉS (rm -rf /*, emacs, nano, :q!)
+// =============================================================================
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function runReaperEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  const steps = [
+    { delay: 400,  html: `<span class="c-red bold">CRITICAL ERROR: UNAUTHORIZED ROOT DELETION ATTEMPT DETECTED.</span>` },
+    { delay: 850,  html: `<span class="c-yellow">&gt;&gt; Escalating threat level...</span>` },
+    { delay: 1100, html: `<span class="c-yellow">&gt;&gt; Escalate to sysadmin: <span class="c-red bold">FAILED</span> (sysadmin locked in Visual Block Mode).</span>` },
+    { delay: 950,  html: `<span class="c-red bold">&gt;&gt; Engaging DEFCON 2 Automated Retaliation Protocol.</span>` },
+    { delay: 1200, html: `<span class="c-cyan">[SYSTEM] Uplinking to secure military subnet (USCYBERCOM)...</span>` },
+    { delay: 1100, html: `<span class="c-green bold">[SECURE-LINK] CONNECTION ESTABLISHED.</span>` },
+    { delay: 800,  html: `<span class="c-magenta">root@pentagon.gov:~#</span> request_kinetic_strike --target=origin_ip` },
+    { delay: 1200, html: `<span class="c-dim">[AUTH] Awaiting POTUS biometric signature...</span>` },
+    { delay: 1300, html: `<span class="c-green">[AUTH] Biometric signature VERIFIED.</span>` },
+    { delay: 900,  html: `<span class="c-green bold">[AUTH] Authorization code: DELTA-TANGO-77 ACCEPTED.</span>` },
+    { delay: 1000, html: `<span class="c-yellow bold">&gt;&gt; UCAV MQ-9 Reaper drone deployment: CONFIRMED.</span>` },
+    { delay: 900,  html: `<span class="c-red bold">&gt;&gt; Target locked on origin IP: 44.152.241.194</span>` }
+  ];
+
+  for (const s of steps) {
+    await sleep(s.delay);
+    printHtml(s.html);
+  }
+
+  await sleep(700);
+  const etaLine = printHtml(`<span class="c-red bold">&gt;&gt; ETA to target impact: 00:04:30.</span>`);
+  for (let sec = 269; sec >= 265; sec--) {
+    await sleep(650);
+    const m = String(Math.floor(sec / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    etaLine.innerHTML = `<span class="c-red bold">&gt;&gt; ETA to target impact: 00:${m}:${s}.</span>`;
+  }
+
+  await sleep(600);
+  printHtml(`<span class="c-yellow bold">Please remain seated and do not leave the building.</span>`);
+  profile.foundEasterEgg = true;
+  checkAndUnlockRewards(null);
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+async function runEmacsEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  const steps = [
+    { delay: 350, html: `<span class="c-yellow">[APT-DAEMON] Initializing GNU/Emacs Meta-Operating System...</span>` },
+    { delay: 750, html: `<span class="c-dim">Unpacking elisp-tetris, elisp-psychotherapist, elisp-coffee-maker (84.7 GB)...</span>` },
+    { delay: 900, html: `<span class="c-red bold">write (28: Aucun espace disponible sur le périphérique)</span>` },
+    { delay: 700, html: `<span class="c-red bold">CRITICAL: Root partition /dev/nvme0n1p2 is 100% FULL (0B free).</span>` },
+    { delay: 850, html: `<span class="c-yellow">[ERGONOMICS ALERT] Ctrl+Meta+Alt+Shift+Cokebottle chord detected: Carpal Tunnel imminent!</span>` },
+    { delay: 900, html: `<span class="c-cyan">[SYSTEMD-OOMD] Terminating bloatware process 'emacs' (PID 666)...</span>` },
+    { delay: 750, html: `<span class="c-green bold">[✓] 84.7 GB reclaimed on /. Pure 2MB modal perfection (Vim) restored.</span>` }
+  ];
+
+  for (const s of steps) {
+    await sleep(s.delay);
+    printHtml(s.html);
+  }
+
+  profile.foundEasterEgg = true;
+  checkAndUnlockRewards(null);
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+async function runNanoEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+
+  const steps = [
+    { delay: 350, html: `<span class="c-yellow bold">[!] ALERTE DIGNITÉ OPÉRATEUR : Invocation de 'nano' détectée.</span>` },
+    { delay: 750, html: `<span class="c-cyan">&gt;&gt; Activation du mode 'Petites Roues de Vélo' (Training Wheels Protocol)...</span>` },
+    { delay: 800, html: `<span class="c-dim">^G Aide  ^O Écrire  ^W Chercher  ^K Couper  ^X Fuir la réalité</span>` },
+    { delay: 900, html: `<span class="c-red">&gt;&gt; Bridage de la vitesse d'édition à 12 frappes/minute (maintien de la touche Flèche Bas...).</span>` },
+    { delay: 850, html: `<span class="c-green bold">[✓] Blague à part : binaire 'nano' mis en quarantaine. Tes doigts sont sur HJKL.</span>` }
+  ];
+
+  for (const s of steps) {
+    await sleep(s.delay);
+    printHtml(s.html);
+  }
+
+  profile.foundEasterEgg = true;
+  checkAndUnlockRewards(null);
+  printText("");
+
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+// =============================================================================
+// 7. RENDU DU BUFFER VIM CÔTE À CÔTE (ALIGNEMENT GÉOMÉTRIQUE STRICT)
 // =============================================================================
 function drawAsciiHeader() {
   const banner = [
@@ -1767,11 +1936,11 @@ function drawAsciiHeader() {
   ].join("\n");
 
   const mult = getMultiplier().toFixed(1);
-  printHtml(`<span class="c-cyan bold">${esc(banner)}</span>`);
+  printBoxLine(`<span class="c-cyan bold">${esc(banner)}</span>`);
   printHtml(`  <span class="c-dim">Simulateur Tactique d'Édition Modale — Des bases HJKL à l'expertise Text-Objects &amp; Ex (40 Missions)</span>`);
-  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
-  printHtml(`  <span class="bold">Rang :</span> <span class="c-magenta bold">${esc(getRankTitle())}</span> │ <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS}</span> │ <span class="bold">Vim-Golf ⛳ :</span> <span class="c-yellow bold">${profile.golfedIds.length}/${TOTAL_MISSIONS}</span> │ <span class="bold">Streak :</span> <span class="c-yellow bold">🔥 ${profile.streak} (x${mult})</span>`);
-  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+  printBoxLine(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+  printHtml(`  <span class="bold">Rang :</span> <span class="c-magenta bold">${esc(getRankTitle())}</span> │ <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS}</span> │ <span class="bold">Vim-Golf :</span> <span class="c-yellow bold">* ${profile.golfedIds.length}/${TOTAL_MISSIONS}</span> │ <span class="bold">Reliques :</span> <span class="c-cyan bold">${profile.relics.length}/${RELICS.length}</span> │ <span class="bold">Streak :</span> <span class="c-yellow bold">${profile.streak} (x${mult})</span>`);
+  printBoxLine(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
 }
 
 function tierName(d) {
@@ -1785,8 +1954,8 @@ function tierName(d) {
 }
 
 function formatLineWithCursor(lineStr, isCursorLine, cursorCol, width) {
-  const padded = lineStr.padEnd(width, " ");
-  if (!isCursorLine) return esc(padded.slice(0, width));
+  const padded = lineStr.padEnd(width, " ").slice(0, width);
+  if (!isCursorLine) return esc(padded);
   const c = Math.min(Math.max(0, cursorCol), width - 1);
   const before = esc(padded.slice(0, c));
   const curChar = esc(padded[c] || " ");
@@ -1798,14 +1967,15 @@ function printMission() {
   const mid = state.playlist[state.stepIdx];
   const m = MISSIONS.find(x => x.id === mid);
   if (!m) {
+    stopBlitzTimer();
     state.active = false;
     state.awaitingNext = false;
     updatePromptLabel();
     printText("");
-    printHtml(`<span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════════╗</span>`);
-    printHtml(`<span class="c-green bold">║  🏆 SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(6)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS} | Golf : ${String(profile.golfedIds.length).padStart(2, '0')}/${TOTAL_MISSIONS} ║</span>`);
-    printHtml(`<span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
-    printHtml(`  Tape <span class="c-cyan bold">badges</span> pour voir tes trophées, <span class="c-cyan bold">submit</span> pour le Leaderboard, ou <span class="c-cyan bold">start</span>.`);
+    printBoxLine(`<span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════════════╗</span>`);
+    printBoxLine(`<span class="c-green bold">║  SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(6)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS} | Golf : ${String(profile.golfedIds.length).padStart(2, '0')}/${TOTAL_MISSIONS}        ║</span>`);
+    printBoxLine(`<span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════════════╝</span>`);
+    printHtml(`  Tape <span class="c-cyan bold">armory</span> pour voir tes Reliques &amp; Curseurs, <span class="c-cyan bold">vimrc</span> pour ta config, ou <span class="c-cyan bold">start</span>.`);
     return;
   }
 
@@ -1815,8 +1985,8 @@ function printMission() {
   state.startTimeMs = Date.now();
   updatePromptLabel();
 
-  const mastTag = profile.masteredIds.includes(m.id) ? ` <span class="c-green bold">[✓ MAÎTRISÉE]</span>` : "";
-  const golfTag = profile.golfedIds.includes(m.id) ? ` <span class="badge-golf">★ VIM-GOLF</span>` : "";
+  const mastTag = profile.masteredIds.includes(m.id) ? ` <span class="c-green bold">[MAÎTRISÉE]</span>` : "";
+  const golfTag = profile.golfedIds.includes(m.id) ? ` <span class="badge-golf">* VIM-GOLF</span>` : "";
 
   const [curR, curC] = m.cursor;
   const curCharUnder = (m.initialLines[curR] || "")[curC] || "EOL";
@@ -1829,10 +1999,15 @@ function printMission() {
   printHtml(`  <span class="c-dim">Position initiale du curseur : Ligne ${curR + 1}, Col ${curC + 1} (sur le caractère <span class="vim-cursor">${esc(curCharUnder)}</span>)</span>`);
   printText("");
 
-  const COL_W = 36;
-  printHtml(`  <span class="c-dim">┌──────────────────────────────────────────┬──────────────────────────────────────────┐</span>`);
-  printHtml(`  <span class="c-dim">│</span> <span class="c-cyan bold">BUFFER INITIAL (Mode NORMAL)</span>             <span class="c-dim">│</span> <span class="c-green bold">BUFFER CIBLE ATTENDU</span>                     <span class="c-dim">│</span>`);
-  printHtml(`  <span class="c-dim">├──────────────────────────────────────────┼──────────────────────────────────────────┤</span>`);
+  const TEXT_W = 38;
+  const CELL_W = 42;
+  const horizBorder = "─".repeat(CELL_W);
+  const leftHeader = " BUFFER INITIAL (Mode NORMAL)".padEnd(CELL_W, " ");
+  const rightHeader = " BUFFER CIBLE ATTENDU".padEnd(CELL_W, " ");
+
+  printBoxLine(`  <span class="c-dim">┌${horizBorder}┬${horizBorder}┐</span>`);
+  printBoxLine(`  <span class="c-dim">│</span><span class="c-cyan bold">${esc(leftHeader)}</span><span class="c-dim">│</span><span class="c-green bold">${esc(rightHeader)}</span><span class="c-dim">│</span>`);
+  printBoxLine(`  <span class="c-dim">├${horizBorder}┼${horizBorder}┤</span>`);
 
   const maxRows = Math.max(m.initialLines.length, m.expectedLines.length, 3);
   for (let i = 0; i < maxRows; i++) {
@@ -1841,18 +2016,18 @@ function printMission() {
 
     const leftNum = hasInit ? `<span class="c-dim">${String(i + 1).padStart(2, ' ')} </span>` : `<span class="c-blue">~  </span>`;
     const leftTxt = hasInit
-      ? formatLineWithCursor(m.initialLines[i], i === curR, curC, COL_W)
-      : `<span class="c-dim">${" ".repeat(COL_W)}</span>`;
+      ? formatLineWithCursor(m.initialLines[i], i === curR, curC, TEXT_W)
+      : `<span class="c-dim">${" ".repeat(TEXT_W)}</span>`;
 
     const rightNum = hasExp ? `<span class="c-dim">${String(i + 1).padStart(2, ' ')} </span>` : `<span class="c-blue">~  </span>`;
     const rightTxt = hasExp
-      ? `<span class="c-green">${esc(m.expectedLines[i].padEnd(COL_W, " ").slice(0, COL_W))}</span>`
-      : `<span class="c-dim">${" ".repeat(COL_W)}</span>`;
+      ? `<span class="c-green">${esc(m.expectedLines[i].padEnd(TEXT_W, " ").slice(0, TEXT_W))}</span>`
+      : `<span class="c-dim">${" ".repeat(TEXT_W)}</span>`;
 
-    printHtml(`  <span class="c-dim">│</span> ${leftNum}${leftTxt} <span class="c-dim">│</span> ${rightNum}${rightTxt} <span class="c-dim">│</span>`);
+    printBoxLine(`  <span class="c-dim">│</span> ${leftNum}${leftTxt} <span class="c-dim">│</span> ${rightNum}${rightTxt} <span class="c-dim">│</span>`);
   }
-  printHtml(`  <span class="c-dim">└──────────────────────────────────────────┴──────────────────────────────────────────┘</span>`);
-  printHtml(`  <span class="c-dim">Commandes : séquence Vim, hint, sol, memo, badges, skip, goto &lt;1-${TOTAL_MISSIONS}&gt;, clear, exit</span>`);
+  printBoxLine(`  <span class="c-dim">└${horizBorder}┴${horizBorder}┘</span>`);
+  printHtml(`  <span class="c-dim">Commandes : séquence Vim, hint, sol, armory, vimrc, memo, skip, goto &lt;1-${TOTAL_MISSIONS}&gt;, exit</span>`);
   printText("");
 }
 
@@ -1905,61 +2080,257 @@ function evaluateVimAttempt(rawSeq) {
     if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < TOTAL_MISSIONS) {
       profile.campaignUnlocked = m.id + 1;
     }
-    saveProfile();
 
+    if (state.mode === "BLITZ") {
+      state.blitzSolved++;
+      if (state.blitzSolved > profile.bestBlitzCount) profile.bestBlitzCount = state.blitzSolved;
+      saveProfile();
+      printHtml(`  <span class="c-green bold">[✓] BLITZ #${state.blitzSolved} VALIDÉ ! (+${totalPts} pts | ${strokes} frappes)</span>`);
+      checkAndUnlockRewards(elapsed);
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+
+    saveProfile();
     state.awaitingNext = true;
+    const bannerInner = ` [OK] BUFFER VALIDÉ ! (+${totalPts} pts | ${elapsed}s | Streak: ${profile.streak} [x${mult.toFixed(1)}])`.padEnd(76, " ");
     printText("");
-    printHtml(`  <span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════════╗</span>`);
-    printHtml(`  <span class="c-green bold">║  [✓] BUFFER VALIDÉ ! (+${totalPts} pts | ⏱ ${elapsed}s | 🔥 Streak: ${profile.streak} [x${mult.toFixed(1)}])</span>`);
-    printHtml(`  <span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+    printBoxLine(`  <span class="c-green bold">╔════════════════════════════════════════════════════════════════════════════╗</span>`);
+    printBoxLine(`  <span class="c-green bold">║${esc(bannerInner)}║</span>`);
+    printBoxLine(`  <span class="c-green bold">╚════════════════════════════════════════════════════════════════════════════╝</span>`);
     const golfMsg = isGolf
-      ? `<span class="badge-golf">★ VIM-GOLF ATTEINT ! (${strokes}/${m.par} frappes, +40 pts)</span>`
+      ? `<span class="badge-golf">* VIM-GOLF ATTEINT ! (${strokes}/${m.par} frappes, +40 pts)</span>`
       : `<span class="c-yellow">${strokes} frappes (Par optimal : ${m.par})</span>`;
     printHtml(`  <span class="bold">Ta séquence       :</span> <span class="c-green bold">${esc(rawSeq)}</span>  ➔  ${golfMsg}`);
     printHtml(`  <span class="bold">Solution optimale :</span> <span class="c-cyan bold">${esc(m.solution)}</span>`);
     printText("");
     printHtml(`  <span class="c-yellow bold">Débriefing Tactique :</span>`);
     printHtml(`  <span class="c-fg">${esc(m.debrief)}</span>`);
-    checkAndUnlockBadges(state.usedHint < 2 ? elapsed : null);
+    checkAndUnlockRewards(state.usedHint < 2 ? elapsed : null);
     printText("");
     printHtml(`  <span class="c-dim">👉 Appuie sur [ENTRÉE] pour passer à la mission suivante...</span>`);
     return;
   }
 
-  // En cas d'échec, afficher le buffer produit pour que l'élève comprenne l'effet de sa commande
   printText("");
   printHtml(`  <span class="c-red bold">[✗] Le buffer produit ne correspond pas à la cible :</span>`);
   res.lines.forEach((ln, idx) => {
     const expLn = m.expectedLines[idx];
     const ok = ln === expLn;
-    const tag = ok ? `<span class="c-green">✓</span>` : `<span class="c-red">✗</span>`;
+    const tag = ok ? `<span class="c-green">[OK]</span>` : `<span class="c-red">[KO]</span>`;
     const rendered = formatLineWithCursor(ln, idx === res.cursor[0], res.cursor[1], Math.max(ln.length + 1, 20));
-    printHtml(`    ${tag} <span class="c-dim">L${idx + 1}:</span> ${rendered}`);
+    printBoxLine(`    ${tag} <span class="c-dim">L${idx + 1}:</span> ${rendered}`);
   });
-  printHtml(`  <span class="c-dim">💡 N'oublie pas &lt;Esc&gt; après une insertion (ex: ci"prod&lt;Esc&gt;) ou &lt;CR&gt; après une commande Ex.</span>`);
+  printHtml(`  <span class="c-dim">Astuce : n'oublie pas &lt;Esc&gt; après une insertion (ex: ci"prod&lt;Esc&gt;) ou &lt;CR&gt; après une commande Ex.</span>`);
 }
 
 // =============================================================================
-// 7. AFFICHAGE DES BADGES, MÉMO VIM COMPLET & LEADERBOARD
+// 8. MODE BLITZ 60 SECONDES
 // =============================================================================
-function showBadges() {
+function stopBlitzTimer() {
+  if (state.blitzTimerId) {
+    clearInterval(state.blitzTimerId);
+    state.blitzTimerId = null;
+  }
+  footerBlitzEl.style.display = "none";
+}
+
+function startBlitzMode() {
+  stopBlitzTimer();
+  const pool = MISSIONS.filter(m => m.par <= 14).map(m => m.id);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const r = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[r]] = [pool[r], pool[i]];
+  }
+  state.mode = "BLITZ";
+  state.playlist = pool;
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.blitzSolved = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  state.blitzEndMs = Date.now() + 60000;
+
+  footerBlitzEl.style.display = "inline-block";
+  footerBlitzEl.textContent = "⏱ 60s";
+
   printText("");
-  printHtml(`  <span class="c-yellow bold">╔══════════════════════ SALLE DES TROPHÉES &amp; RANGS VIM-OPS ══════════════════════╗</span>`);
-  printHtml(`  <span class="bold">Opérateur :</span> <span class="c-cyan bold">${esc(profile.pseudo)}</span>   │   <span class="bold">Rang actuel :</span> <span class="c-magenta bold">${esc(getRankTitle())}</span>   │   <span class="bold">Record Streak :</span> <span class="c-yellow bold">🔥 ${profile.bestStreak}</span>`);
+  printBoxLine(`  <span class="c-red bold">╔════════════════════════════════════════════════════════════════════════════╗</span>`);
+  printBoxLine(`  <span class="c-red bold">║  ALERTE INTRUSION : MODE BLITZ 60 SECONDES ACTIVÉ !                        ║</span>`);
+  printBoxLine(`  <span class="c-red bold">║  Valide un maximum de buffers avant la fin du compte à rebours (4 = Loot)  ║</span>`);
+  printBoxLine(`  <span class="c-red bold">╚════════════════════════════════════════════════════════════════════════════╝</span>`);
+
+  state.blitzTimerId = setInterval(() => {
+    const rem = Math.max(0, Math.ceil((state.blitzEndMs - Date.now()) / 1000));
+    footerBlitzEl.textContent = `⏱ ${rem}s`;
+    if (rem <= 0) {
+      stopBlitzTimer();
+      state.active = false;
+      state.awaitingNext = false;
+      updatePromptLabel();
+      printText("");
+      printBoxLine(`  <span class="c-yellow bold">╔════════════════════════════════════════════════════════════════════════════╗</span>`);
+      printBoxLine(`  <span class="c-yellow bold">║  FIN DU BLITZ 60s ! Buffers validés : ${String(state.blitzSolved).padEnd(2)} | Score : ${String(state.sessionScore).padEnd(6)} pts            ║</span>`);
+      printBoxLine(`  <span class="c-yellow bold">╚════════════════════════════════════════════════════════════════════════════╝</span>`);
+      checkAndUnlockRewards(null);
+      printHtml(`  Tape <span class="c-cyan bold">blitz</span> pour retenter ta chance ou <span class="c-cyan bold">armory</span> pour voir tes récompenses.`);
+    }
+  }, 250);
+
+  printMission();
+}
+
+// =============================================================================
+// 9. ARMURERIE (RELIQUES & CURSEURS) + FORGE .VIMRC TÉLÉCHARGEABLE
+// =============================================================================
+function showArmory() {
   printText("");
-  BADGES.forEach(b => {
-    const unlocked = profile.badges.includes(b.id);
-    const icon = unlocked ? `<span class="c-green bold">[🏅 DÉBLOQUÉ]</span>` : `<span class="c-dim">[🔒 VERROUILLÉ]</span>`;
-    const titleCls = unlocked ? "c-yellow bold" : "c-dim";
-    printHtml(`    ${icon} <span class="${titleCls}">${esc(b.name.padEnd(28))}</span> <span class="c-fg">${esc(b.desc)}</span>`);
+  printBoxLine(`  <span class="c-magenta bold">╔══════════════════════════ ARMURERIE &amp; RELIQUES CYBER ══════════════════════════╗</span>`);
+  printHtml(`  <span class="bold">1. STYLES DE CURSEURS ÉQUIPABLES</span> <span class="c-dim">(Tape <span class="c-cyan bold">cursor &lt;1-6&gt;</span> pour changer l'apparence du curseur)</span>`);
+  CURSOR_SKINS.forEach(sk => {
+    const unl = profile.masteredIds.length >= sk.reqMastered && profile.golfedIds.length >= sk.reqGolf;
+    const eq = profile.cursorSkinId === sk.id ? ` <span class="c-green bold">[ÉQUIPÉ]</span>` : "";
+    const status = unl ? `<span class="c-cyan bold">[#${sk.id} DISPO]</span>` : `<span class="c-dim">[#${sk.id} VERROUILLÉ : ${sk.reqMastered} Maîtrises, ${sk.reqGolf} Golf]</span>`;
+    printHtml(`    ${status} <span class="${unl ? 'c-fg bold' : 'c-dim'}">${esc(sk.name)}</span>${eq}`);
   });
-  printHtml(`  <span class="c-yellow bold">╚════════════════════════════════════════════════════════════════════════════════╝</span>`);
+
   printText("");
+  printHtml(`  <span class="bold">2. COLLECTION DE RELIQUES LÉGENDAIRES (${profile.relics.length}/${RELICS.length})</span>`);
+  RELICS.forEach(rel => {
+    let unl = profile.relics.includes(rel.id);
+    if (!unl) {
+      if (rel.reqSecret) unl = !!profile.foundEasterEgg;
+      else unl = profile.masteredIds.length >= rel.reqM && profile.golfedIds.length >= rel.reqG && (!rel.reqBlitz || profile.bestBlitzCount >= rel.reqBlitz) && (profile.masteredIds.length > 0 || profile.golfedIds.length > 0);
+    }
+    if (unl && !profile.relics.includes(rel.id)) {
+      profile.relics.push(rel.id);
+      saveProfile();
+    }
+    if (unl) {
+      printHtml(`    <span class="c-yellow bold">[★ DÉBLOQUÉ]</span> <span class="c-cyan bold">${esc(rel.name)}</span>`);
+      printHtml(`                 <span class="c-dim">└─ ${esc(rel.lore)}</span>`);
+    } else {
+      const cond = rel.reqSecret ? "Easter Egg Secret" : (rel.reqBlitz ? `Blitz >= ${rel.reqBlitz} buffers` : (rel.reqG > 0 ? `${rel.reqG} étoiles Vim-Golf` : `${rel.reqM} missions maîtrisées`));
+      printHtml(`    <span class="c-dim">[VERROUILLÉ : ${esc(cond.padEnd(21))}] ████████████████████████████</span>`);
+    }
+  });
+
+  printText("");
+  printHtml(`  <span class="bold">3. HAUTS-FAITS OPÉRATEUR (${profile.badges.length}/${BADGES.length})</span>`);
+  BADGES.forEach(b => {
+    const unl = profile.badges.includes(b.id);
+    const tag = unl ? `<span class="c-green bold">[OK]</span>` : `<span class="c-dim">[--]</span>`;
+    printHtml(`    ${tag} <span class="${unl ? 'c-yellow bold' : 'c-dim'}">${esc(b.name.padEnd(26))}</span> <span class="c-dim">${esc(b.desc)}</span>`);
+  });
+  printBoxLine(`  <span class="c-magenta bold">╚════════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
+function buildDynamicVimrc() {
+  const mCount = profile.masteredIds.length;
+  const gCount = profile.golfedIds.length;
+  const lines = [
+    `" ============================================================================`,
+    `" FICHIER .vimrc FORGÉ SUR VIM-OPS PAR : ${profile.pseudo.toUpperCase()}`,
+    `" Rang : ${getRankTitle()} | Maîtrise : ${mCount}/${TOTAL_MISSIONS} | Vim-Golf : ${gCount}/${TOTAL_MISSIONS}`,
+    `" ============================================================================`,
+    `set nocompatible`,
+    `syntax on`,
+    `filetype plugin indent on`,
+    `set encoding=utf-8`,
+    ``,
+    `" --- [PALIER 1 : SURVIE & AFFICHAGE TACTIQUE (Débloqué)] ---`,
+    `set number                  " Affiche le numéro de la ligne courante`,
+    `set relativenumber          " Numéros relatifs pour calculer instantanément 5j / 3dd`,
+    `set cursorline              " Surligne la ligne active du curseur`,
+    `set showcmd                 " Affiche les opérateurs en attente (ex: ci, d3) en bas à droite`,
+    `set scrolloff=8             " Garde toujours 8 lignes de visibilité autour du curseur`
+  ];
+
+  if (mCount >= 8) {
+    lines.push(
+      ``,
+      `" --- [PALIER 2 : INDENTATION & RECHERCHE INTELLIGENTE (Débloqué à 8 missions)] ---`,
+      `set expandtab               " Convertit les tabulations en espaces propres`,
+      `set shiftwidth=2            " Indentation de 2 espaces pour > et <`,
+      `set tabstop=2 softtabstop=2`,
+      `set ignorecase smartcase    " Recherche insensible à la casse sauf si une MAJUSCULE est tapée`,
+      `set incsearch hlsearch      " Surlignage temps réel des motifs /pattern`
+    );
+  } else {
+    lines.push(``, `" [VERROUILLÉ] Maîtrise 8 missions pour débloquer le bloc Recherche & Indentation Pro.`);
+  }
+
+  if (mCount >= 16) {
+    lines.push(
+      ``,
+      `" --- [PALIER 3 : FLUIDITÉ SYSTÈME & PERSISTANCE (Débloqué à 16 missions)] ---`,
+      `set hidden                  " Permet de changer de buffer sans sauvegarder immédiatement`,
+      `set undofile                " Historique d'annulation (u) persistant même après fermeture !`,
+      `set clipboard=unnamedplus   " Synchronise le registre Vim avec le presse-papier Linux (Pop!_OS)`,
+      `set splitbelow splitright   " Ouvre les splits naturellement en bas et à droite`
+    );
+  } else {
+    lines.push(`" [VERROUILLÉ] Maîtrise 16 missions pour débloquer le bloc Undo Persistant & Presse-Papier Linux.`);
+  }
+
+  if (mCount >= 24) {
+    lines.push(
+      ``,
+      `" --- [PALIER 4 : RACCOURCIS LEADER & VITESSE PURE (Débloqué à 24 missions)] ---`,
+      `let mapleader = " "         " Espace comme touche Leader ultra-accessible`,
+      `nnoremap <leader>w :w<CR>   " Sauvegarde éclair avec Espace + w`,
+      `nnoremap <leader>q :q<CR>   " Fermeture rapide avec Espace + q`,
+      `nnoremap <Esc><Esc> :nohlsearch<CR> " Double Échap pour éteindre le surlignage de recherche`,
+      `nnoremap Y y$               " Aligne Y sur le comportement logique de D et C`
+    );
+  } else {
+    lines.push(`" [VERROUILLÉ] Maîtrise 24 missions pour débloquer les Keymaps Leader (Espace).`);
+  }
+
+  if (mCount >= 32) {
+    lines.push(
+      ``,
+      `" --- [PALIER 5 : AUTOMATISATION SYSADMIN & SECOPS (Débloqué à 32 missions)] ---`,
+      `" Supprime automatiquement les espaces parasites en fin de ligne à chaque sauvegarde :`,
+      `autocmd BufWritePre * :%s/\\s\\+$//e`,
+      `" Recharge la position exacte du curseur à la réouverture d'un fichier :`,
+      `autocmd BufReadPost * if line("'\\"") > 1 && line("'\\"") <= line("$") | exe "normal! g'\\"" | endif`
+    );
+  } else {
+    lines.push(`" [VERROUILLÉ] Maîtrise 32 missions pour débloquer les Autocommands SysAdmin.`);
+  }
+
+  return lines.join("\n");
+}
+
+function showVimrcForge(download = false) {
+  const content = buildDynamicVimrc();
+  printText("");
+  printBoxLine(`  <span class="c-cyan bold">╔══════════════════════════ FORGE .VIMRC PROGRESSIVE ══════════════════════════╗</span>`);
+  printBoxLine(`<span class="c-green">${esc(content)}</span>`);
+  printBoxLine(`  <span class="c-cyan bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printHtml(`  Tape <span class="c-yellow bold">export</span> pour télécharger ce fichier <span class="c-cyan">.vimrc</span> sur ta machine.`);
+  printText("");
+
+  if (download) {
+    const blob = new Blob([content + "\n"], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = ".vimrc";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    printHtml(`  <span class="c-green bold">[✓] Fichier '.vimrc' généré et téléchargé avec succès !</span>`);
+  }
 }
 
 function showMemo() {
   printText("");
-  printHtml(`  <span class="c-magenta bold">╔═══════════════════════════ MÉMO TACTIQUE VIM &amp; EX ═══════════════════════════╗</span>`);
+  printBoxLine(`  <span class="c-magenta bold">╔═══════════════════════════ MÉMO TACTIQUE VIM &amp; EX ═══════════════════════════╗</span>`);
   printHtml(`  <span class="c-cyan bold">1. Mouvements &amp; Sauts Horizontaux / Verticaux :</span>`);
   printHtml(`    <span class="c-yellow bold">h j k l</span>        Gauche, Bas, Haut, Droite     <span class="c-yellow bold">w / b / e</span>      Mot suivant / début / fin`);
   printHtml(`    <span class="c-yellow bold">0 / ^ / $</span>      Col 0 / 1er non-blanc / Fin   <span class="c-yellow bold">W / B / E</span>      MOT séparé par espaces`);
@@ -1981,11 +2352,11 @@ function showMemo() {
   printHtml(`    <span class="c-yellow bold">.</span> (Point)      Répète la dernière modification complète     <span class="c-yellow bold">* / n</span>   Cherche mot sous curseur / Suivant`);
   printHtml(`    <span class="c-yellow bold">:%s/a/b/g&lt;CR&gt;</span>  Remplace 'a' par 'b' dans tout le fichier    <span class="c-yellow bold">:s#a#b#</span> Délimiteur '#' (pour les chemins)`);
   printHtml(`    <span class="c-yellow bold">:g/re/d&lt;CR&gt;</span>    Supprime les lignes matchant 're'            <span class="c-yellow bold">:v/re/d</span> Supprime celles ne matchant PAS`);
-  printHtml(`  <span class="c-magenta bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printBoxLine(`  <span class="c-magenta bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
   printText("");
 }
 
-async function showLeaderboard() {
+function showLeaderboard() {
   const list = [...profile.localBoard];
   const myBest = Math.max(profile.bestScore, profile.totalScore);
   const ex = list.find(x => x.pseudo === profile.pseudo);
@@ -2000,23 +2371,24 @@ async function showLeaderboard() {
 
   printText("");
   printHtml(`  <span class="c-cyan bold">=== LEADERBOARD OPÉRATEURS VIM-OPS ===</span>`);
-  printHtml(`  <span class="c-dim">RANG   PSEUDO               SCORE        MAÎTRISE   VIM-GOLF</span>`);
-  printHtml(`  <span class="c-dim">────   ──────────────────   ──────────   ────────   ────────</span>`);
+  printBoxLine(`  <span class="c-dim">RANG   PSEUDO               SCORE        MAÎTRISE   VIM-GOLF</span>`);
+  printBoxLine(`  <span class="c-dim">────   ──────────────────   ──────────   ────────   ────────</span>`);
   list.slice(0, 10).forEach((r, idx) => {
     const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(7);
     const ps = String(r.pseudo).slice(0, 18).padEnd(21);
     const sc = `${r.score} pts`.padEnd(13);
     const ma = `${r.mastered}/${TOTAL_MISSIONS}`.padEnd(11);
-    const gf = `★ ${r.golfed || 0}/${TOTAL_MISSIONS}`;
-    printHtml(`  <span class="c-yellow bold">${esc(rk)}</span><span class="c-fg">${esc(ps)}</span><span class="c-green bold">${esc(sc)}</span><span class="c-cyan">${esc(ma)}</span><span class="c-yellow">${esc(gf)}</span>`);
+    const gf = `* ${r.golfed || 0}/${TOTAL_MISSIONS}`;
+    printBoxLine(`  <span class="c-yellow bold">${esc(rk)}</span><span class="c-fg">${esc(ps)}</span><span class="c-green bold">${esc(sc)}</span><span class="c-cyan">${esc(ma)}</span><span class="c-yellow">${esc(gf)}</span>`);
   });
   printText("");
 }
 
 // =============================================================================
-// 8. INTERPRÉTEUR DE COMMANDES SHELL & BOUCLE PRINCIPALE
+// 10. INTERPRÉTEUR DE COMMANDES SHELL & BOUCLE PRINCIPALE
 // =============================================================================
 function startCampaign(startAt) {
+  stopBlitzTimer();
   const s = startAt || profile.campaignUnlocked || 1;
   state.playlist = [];
   for (let i = s; i <= TOTAL_MISSIONS; i++) state.playlist.push(i);
@@ -2059,9 +2431,29 @@ function handleInput(rawInput) {
   const base = parts[0].toLowerCase();
   const arg = parts.slice(1).join(" ");
 
-  // Easter Egg si le joueur tente de quitter Vim avec :q, :wq ou :q! hors mission
-  if ((cmd === ":q" || cmd === ":q!" || cmd === ":wq") && !state.active) {
-    printHtml(`  <span class="c-yellow bold">[!] Personne ne quitte vraiment Vim. Tape 'start' pour retourner au combat.</span>`);
+  // --- EASTER EGGS ---
+  if (cmd === "rm -rf" || cmd === ":!rm -rf") {
+    printHtml(`<span class="c-red">rm: permission denied (try harder)</span>`);
+    return;
+  }
+  if (cmd.startsWith("rm -rf /") || cmd.startsWith(":!rm -rf /") || cmd.startsWith("sudo rm -rf /")) {
+    runReaperEasterEgg();
+    return;
+  }
+  if (base === "emacs" || cmd.startsWith(":!emacs")) {
+    runEmacsEasterEgg();
+    return;
+  }
+  if (base === "nano" || base === "pico" || cmd.startsWith(":!nano")) {
+    runNanoEasterEgg();
+    return;
+  }
+  if ((cmd === ":q" || cmd === ":q!" || cmd === ":wq" || cmd === ":qa!") && !state.active) {
+    const randExit = Array.from({ length: 8 }, () => "hjkl:;!~@#$%^&*"[Math.floor(Math.random() * 15)]).join("");
+    printHtml(`  <span class="c-red bold">E37: No write since last change (Quantum Modal Trap active).</span>`);
+    printHtml(`  <span class="c-yellow">Pour quitter Vim, veuillez saisir la séquence de libération : <span class="c-cyan bold">${esc(randExit)}</span> (ou tape 'start').</span>`);
+    profile.foundEasterEgg = true;
+    checkAndUnlockRewards(null);
     return;
   }
 
@@ -2069,14 +2461,14 @@ function handleInput(rawInput) {
     printText("");
     printHtml(`  <span class="c-cyan bold">COMMANDES DU SIMULATEUR VIM-OPS :</span>`);
     printHtml(`    <span class="c-green bold">start</span> / <span class="c-green bold">camp</span>       : Lancer la campagne au niveau débloqué (${profile.campaignUnlocked}/${TOTAL_MISSIONS})`);
+    printHtml(`    <span class="c-green bold">blitz</span>              : Lancer le mode Contre-la-Montre (60 secondes, relique dédiée)`);
     printHtml(`    <span class="c-green bold">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>        : Aller directement à une mission précise`);
     printHtml(`    <span class="c-green bold">custom</span>             : Configurer un entraînement sur-mesure (Palier N1..N5, Thème)`);
-    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">profil</span>     : Voir ta progression, ton Rang, ton Streak et les 5 paliers`);
-    printHtml(`    <span class="c-green bold">badges</span>             : Afficher tes Hauts-Faits et trophées Vim-Golf`);
-    printHtml(`    <span class="c-green bold">board</span> / <span class="c-green bold">submit</span>     : Voir le Leaderboard des opérateurs`);
-    printHtml(`    <span class="c-green bold">nick &lt;pseudo&gt;</span>      : Changer ton pseudo (actuel : <span class="c-cyan">${esc(profile.pseudo)}</span>)`);
+    printHtml(`    <span class="c-green bold">armory</span> / <span class="c-green bold">badges</span>    : Ouvrir l'Armurerie (13 Reliques Cyber, 6 Curseurs, 12 Badges)`);
+    printHtml(`    <span class="c-green bold">cursor &lt;1-6&gt;</span>       : Équiper un nouveau style de curseur débloqué`);
+    printHtml(`    <span class="c-green bold">vimrc</span> / <span class="c-green bold">export</span>     : Voir et télécharger ton fichier <span class="c-cyan">.vimrc</span> évolutif`);
+    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">board</span>      : Voir ton profil ou le Leaderboard`);
     printHtml(`    <span class="c-green bold">memo</span>               : Afficher l'aide-mémoire complet Vim (Motions, Text Objects, Ex)`);
-    printHtml(`    <span class="c-green bold">theme &lt;nom&gt;</span>        : Changer de thème (${Object.keys(THEMES).join(', ')})`);
     printHtml(`    <span class="c-green bold">clear</span>              : Nettoyer l'écran`);
     printText("");
     return;
@@ -2096,18 +2488,33 @@ function handleInput(rawInput) {
     return;
   }
 
+  if (base === "cursor") {
+    const cid = parseInt(arg, 10);
+    if (!cid || cid < 1 || cid > CURSOR_SKINS.length) {
+      printHtml(`  Usage : <span class="c-cyan">cursor &lt;1-${CURSOR_SKINS.length}&gt;</span> (tape <span class="c-cyan">armory</span> pour voir la liste)`);
+      return;
+    }
+    applyCursorSkin(cid, false);
+    if (state.active) printMission();
+    return;
+  }
+
   if (base === "memo") { showMemo(); return; }
-  if (base === "badges" || base === "achievements") { showBadges(); return; }
+  if (base === "armory" || base === "badges" || base === "loot") { showArmory(); return; }
+  if (base === "vimrc") { showVimrcForge(false); return; }
+  if (base === "export") { showVimrcForge(true); return; }
   if (base === "board" || base === "leaderboard" || base === "submit") { showLeaderboard(); return; }
+  if (base === "blitz") { startBlitzMode(); return; }
 
   if (base === "stats" || base === "tree" || base === "profil") {
     printText("");
     printHtml(`  <span class="c-cyan bold">Profil Opérateur : ${esc(profile.pseudo)}</span> — <span class="c-magenta bold">${esc(getRankTitle())}</span>`);
     printHtml(`  ├── <span class="bold">Campagne débloquée :</span> Mission ${profile.campaignUnlocked}/${TOTAL_MISSIONS}`);
     printHtml(`  ├── <span class="bold">Missions maîtrisées:</span> <span class="c-green bold">${profile.masteredIds.length}/${TOTAL_MISSIONS}</span>`);
-    printHtml(`  ├── <span class="bold">Insignes Vim-Golf  :</span> <span class="c-yellow bold">★ ${profile.golfedIds.length}/${TOTAL_MISSIONS}</span>`);
-    printHtml(`  ├── <span class="bold">Série actuelle     :</span> <span class="c-yellow bold">🔥 ${profile.streak}</span> (Record : ${profile.bestStreak})`);
-    printHtml(`  ├── <span class="bold">Badges débloqués   :</span> <span class="c-cyan bold">${profile.badges.length}/${BADGES.length}</span> (tape 'badges')`);
+    printHtml(`  ├── <span class="bold">Insignes Vim-Golf  :</span> <span class="c-yellow bold">* ${profile.golfedIds.length}/${TOTAL_MISSIONS}</span>`);
+    printHtml(`  ├── <span class="bold">Reliques Cyber     :</span> <span class="c-cyan bold">${profile.relics.length}/${RELICS.length}</span> (tape 'armory')`);
+    printHtml(`  ├── <span class="bold">Record Blitz 60s   :</span> <span class="c-red bold">${profile.bestBlitzCount} buffers</span>`);
+    printHtml(`  ├── <span class="bold">Série actuelle     :</span> <span class="c-yellow bold">${profile.streak}</span> (Record : ${profile.bestStreak})`);
     printHtml(`  └── <span class="bold">Architecture des 5 Paliers :</span>`);
     printHtml(`      ├── <span class="c-cyan">[01..08]</span> Tier 1 : Survie &amp; Navigation Rapide (x, r, I, A, w, f, dd, J)`);
     printHtml(`      ├── <span class="c-cyan">[09..16]</span> Tier 2 : Opérateurs &amp; Compteurs (D, C, dt, 3dd, O, G, ~, d3w)`);
@@ -2142,11 +2549,12 @@ function handleInput(rawInput) {
   }
 
   if (base === "custom") {
+    stopBlitzTimer();
     state.active = false;
     state.wizardStep = 1;
     updatePromptLabel();
     printText("");
-    printHtml(`  <span class="c-cyan bold">⚙️ CONFIGURATION D'ENTRAÎNEMENT VIM SUR-MESURE</span>`);
+    printHtml(`  <span class="c-cyan bold">CONFIGURATION D'ENTRAÎNEMENT VIM SUR-MESURE</span>`);
     printHtml(`  Étape 1/3 — Palier [<span class="c-yellow">1</span>=Survie, <span class="c-yellow">2</span>=Opérateurs, <span class="c-yellow">3</span>=TextObjects, <span class="c-yellow">4</span>=Vitesse, <span class="c-yellow">5</span>=Ex/Regex, <span class="c-yellow">ALL</span>=Mixte] :`);
     return;
   }
@@ -2154,6 +2562,7 @@ function handleInput(rawInput) {
   if (state.active) {
     const m = MISSIONS.find(x => x.id === state.playlist[state.stepIdx]);
     if (base === "exit" || base === "quit") {
+      stopBlitzTimer();
       state.active = false;
       state.awaitingNext = false;
       updatePromptLabel();
@@ -2162,12 +2571,12 @@ function handleInput(rawInput) {
     }
     if (base === "hint" || base === "indice") {
       if (state.usedHint === 0) state.usedHint = 1;
-      printHtml(`  <span class="c-yellow bold">💡 [INDICE TACTIQUE] :</span> ${esc(m.hint)} <span class="c-dim">(Le Streak sera réinitialisé sur cette mission)</span>`);
+      printHtml(`  <span class="c-yellow bold">[INDICE TACTIQUE] :</span> ${esc(m.hint)} <span class="c-dim">(Le Streak sera réinitialisé sur cette mission)</span>`);
       return;
     }
     if (base === "sol" || base === "solution") {
       state.usedHint = 2;
-      printHtml(`  <span class="c-magenta bold">🔑 [SOLUTION OPTIMALE (${m.par} frappes)] :</span> <span class="bold">${esc(m.solution)}</span>`);
+      printHtml(`  <span class="c-magenta bold">[SOLUTION OPTIMALE (${m.par} frappes)] :</span> <span class="bold">${esc(m.solution)}</span>`);
       return;
     }
     if (base === "skip" || base === "next") {
@@ -2184,7 +2593,7 @@ function handleInput(rawInput) {
     return;
   }
 
-  printHtml(`  <span class="c-red">vim-ops: ${esc(base)}: commande inconnue.</span> Tape <span class="c-cyan bold">start</span> ou <span class="c-cyan bold">help</span>.`);
+  printHtml(`  <span class="c-red">vim-ops: ${esc(base)}: commande inconnue.</span> Tape <span class="c-cyan bold">start</span>, <span class="c-cyan bold">blitz</span>, <span class="c-cyan bold">armory</span> ou <span class="c-cyan bold">help</span>.`);
 }
 
 function handleCustomWizard(input) {
@@ -2229,7 +2638,6 @@ function handleCustomWizard(input) {
   }
 }
 
-// Gestion du clavier : Flèches Haut/Bas pour l'historique & Touche Escape pour insérer <Esc>
 inpEl.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     e.preventDefault();
@@ -2259,9 +2667,9 @@ inpEl.addEventListener('keydown', (e) => {
 loadProfile();
 drawAsciiHeader();
 printText("");
-printHtml(`  Bienvenue sur <span class="c-cyan bold">VIM-OPS</span>. Tape tes séquences de touches comme en Mode Normal (ex: <span class="c-green">ci"prod&lt;Esc&gt;</span> ou <span class="c-green">:%s/old/new/g&lt;CR&gt;</span>).`);
-printHtml(`  • Appuie directement sur la touche <span class="c-yellow bold">[Échap]</span> de ton clavier pour insérer <span class="c-cyan">&lt;Esc&gt;</span> dans ta séquence.`);
-printHtml(`  • Tape <span class="c-cyan bold">start</span> (ou clique sur <span class="c-cyan">[1:Campagne]</span>) pour lancer la Mission #${String(profile.campaignUnlocked).padStart(2, '0')}/${TOTAL_MISSIONS}, ou <span class="c-cyan bold">memo</span> pour le guide.`);
+printHtml(`  Bienvenue sur <span class="c-cyan bold">VIM-OPS v2.1</span>. Tape tes séquences de touches comme en Mode Normal (ex: <span class="c-green">ci"prod&lt;Esc&gt;</span> ou <span class="c-green">:%s/old/new/g&lt;CR&gt;</span>).`);
+printHtml(`  • <span class="c-yellow bold">Nouveau :</span> Collectionne les 13 Reliques &amp; les 6 Curseurs (<span class="c-cyan bold">armory</span>), forge ton <span class="c-cyan bold">vimrc</span>, ou tente le sprint <span class="c-red bold">blitz</span> 60s !`);
+printHtml(`  • Tape <span class="c-cyan bold">start</span> (ou clique sur <span class="c-cyan">[1:Campagne]</span>) pour lancer la Mission #${String(profile.campaignUnlocked).padStart(2, '0')}/${TOTAL_MISSIONS}.`);
 printText("");
 </script>
 </body>
