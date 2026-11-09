@@ -1,0 +1,2268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIM-OPS // Modal Tactical Editor Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Inconsolata:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&family=Source+Code+Pro:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #0f1419;
+      --c-bar-bg: #090c10;
+      --c-bar-fg: #e6edf3;
+      --c-bar-dim: #7d8590;
+      --c-fg: #e6edf3;
+      --c-dim: #7d8590;
+      --c-border: #30363d;
+      --c-cyan: #39c5cf;
+      --c-green: #3fb950;
+      --c-red: #ff7b72;
+      --c-yellow: #d29922;
+      --c-magenta: #bc8cff;
+      --c-blue: #58a6ff;
+      --term-font: 'Fira Code', monospace;
+      --term-size: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--c-bg);
+      color: var(--c-fg);
+      font-family: var(--term-font);
+      font-size: var(--term-size);
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .terminal-viewport {
+      flex: 1;
+      width: 100%;
+      overflow-y: auto;
+      padding: 20px 20px 32px 20px;
+      cursor: text;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .terminal-inner {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    #term-output {
+      white-space: pre-wrap;
+      word-break: break-word;
+      width: 100%;
+    }
+
+    .log-line { margin-bottom: 1px; }
+
+    /* Classes de coloration sémantique ANSI */
+    .c-fg { color: var(--c-fg); }
+    .c-dim { color: var(--c-dim); }
+    .c-cyan { color: var(--c-cyan); }
+    .c-green { color: var(--c-green); }
+    .c-red { color: var(--c-red); }
+    .c-yellow { color: var(--c-yellow); }
+    .c-magenta { color: var(--c-magenta); }
+    .c-blue { color: var(--c-blue); }
+    .bold { font-weight: bold; }
+
+    .vim-cursor {
+      background-color: var(--c-cyan);
+      color: var(--c-bg);
+      font-weight: bold;
+      border-radius: 1px;
+    }
+
+    .badge-tier {
+      background-color: var(--c-blue);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-theme {
+      background-color: var(--c-magenta);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-golf {
+      background-color: var(--c-yellow);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-unlock {
+      background-color: var(--c-green);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+
+    /* Barre de touches rapides pour séquences Vim (<Esc>, <CR>, <C-a>) */
+    .vim-helper-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--c-border);
+      font-size: 12px;
+      user-select: none;
+    }
+
+    .key-pill {
+      background: var(--c-bar-bg);
+      color: var(--c-cyan);
+      border: 1px solid var(--c-border);
+      border-radius: 3px;
+      padding: 1px 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      transition: border-color 0.12s, transform 0.08s;
+    }
+    .key-pill:hover {
+      border-color: var(--c-cyan);
+      color: var(--c-fg);
+    }
+    .key-pill:active {
+      transform: translateY(1px);
+    }
+
+    /* Ligne de prompt active */
+    .prompt-line {
+      display: flex;
+      align-items: center;
+      margin-top: 6px;
+      width: 100%;
+    }
+
+    .prompt-prefix {
+      white-space: nowrap;
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    #cmd-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--c-fg);
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      caret-color: var(--c-cyan);
+    }
+
+    /* Pied de page minimaliste style barre de statut tmux */
+    .status-footer {
+      height: 38px;
+      background-color: var(--c-bar-bg);
+      color: var(--c-bar-fg);
+      border-top: 1px solid var(--c-border);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 14px;
+      font-size: 12px;
+      user-select: none;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .footer-inner {
+      width: 100%;
+      max-width: 1180px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .footer-left, .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .tmux-tag {
+      background: var(--c-green);
+      color: #000000;
+      font-weight: bold;
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
+
+    .streak-pill {
+      background: var(--c-bar-bg);
+      border: 1px solid var(--c-yellow);
+      color: var(--c-yellow);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+
+    .nav-cmd {
+      color: var(--c-bar-dim);
+      cursor: pointer;
+      padding: 2px 3px;
+      transition: opacity 0.12s;
+    }
+    .nav-cmd:hover {
+      color: var(--c-bar-fg);
+      text-decoration: underline;
+    }
+    .nav-cmd b { color: var(--c-bar-fg); }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--c-bar-dim);
+    }
+
+    .term-select {
+      background: var(--c-bg);
+      color: var(--c-fg);
+      border: 1px solid var(--c-border);
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      outline: none;
+    }
+    .term-select:hover, .term-select:focus {
+      border-color: var(--c-cyan);
+    }
+
+    .terminal-viewport::-webkit-scrollbar { width: 8px; }
+    .terminal-viewport::-webkit-scrollbar-track { background: var(--c-bg); }
+    .terminal-viewport::-webkit-scrollbar-thumb {
+      background: var(--c-border);
+      border-radius: 4px;
+    }
+    .terminal-viewport::-webkit-scrollbar-thumb:hover { background: var(--c-dim); }
+  </style>
+</head>
+<body>
+
+  <!-- ESPACE TERMINAL CENTRÉ -->
+  <main class="terminal-viewport" id="term-box" onclick="focusPrompt()">
+    <div class="terminal-inner">
+      <div id="term-output"></div>
+
+      <form class="prompt-line" id="prompt-form" onsubmit="onPromptSubmit(event)" autocomplete="off">
+        <span class="prompt-prefix" id="prompt-label"></span>
+        <input type="text" id="cmd-input" autofocus spellcheck="false" placeholder="Séquence Vim (ex: ci&quot;prod<Esc> ou :%s/a/b/g<CR>) ou 'help'..." />
+      </form>
+
+      <!-- BARRE D'INSERTION DE TOUCHES SPÉCIALES VIM -->
+      <div class="vim-helper-bar" id="vim-helper">
+        <span class="c-dim">Insérer touche :</span>
+        <button type="button" class="key-pill" onclick="insertToken('<Esc>')" title="Raccourci : touche Escape">&lt;Esc&gt;</button>
+        <button type="button" class="key-pill" onclick="insertToken('<CR>')" title="Validation commande :s ou /search">&lt;CR&gt;</button>
+        <button type="button" class="key-pill" onclick="insertToken('<C-a>')" title="Ctrl+A : Incrémenter nombre">&lt;C-a&gt;</button>
+        <button type="button" class="key-pill" onclick="insertToken('<C-x>')" title="Ctrl+X : Décrémenter nombre">&lt;C-x&gt;</button>
+        <span class="c-dim" style="margin-left:auto;">Astuce : appuie sur [Échap] dans le champ pour insérer <span class="c-cyan">&lt;Esc&gt;</span></span>
+      </div>
+    </div>
+  </main>
+
+  <!-- PIED DE PAGE STYLE TMUX -->
+  <footer class="status-footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="tmux-tag">0:vim-ops*</span>
+        <span class="streak-pill" id="footer-streak" title="Série de victoires sans indice (Multiplicateur de score)">🔥 0 (x1.0)</span>
+        <span class="nav-cmd" onclick="execFromNav('start')">[<b>1</b>:Campagne]</span>
+        <span class="nav-cmd" onclick="execFromNav('custom')">[<b>2</b>:Custom]</span>
+        <span class="nav-cmd" onclick="execFromNav('stats')">[<b>3</b>:Profil]</span>
+        <span class="nav-cmd" onclick="execFromNav('badges')">[<b>4</b>:Badges]</span>
+        <span class="nav-cmd" onclick="execFromNav('board')">[<b>5</b>:Board]</span>
+        <span class="nav-cmd" onclick="execFromNav('memo')">[<b>6</b>:Mémo]</span>
+        <span class="nav-cmd" onclick="execFromNav('hint')">[<b>7</b>:Indice]</span>
+        <span class="nav-cmd" onclick="execFromNav('clear')">[<b>8</b>:Clear]</span>
+        <span class="nav-cmd" onclick="window.location.href='../'">[<b>↩</b>:Portail]</span>
+      </div>
+
+      <div class="footer-right">
+        <div class="ctrl-group">
+          <span>Thème:</span>
+          <select id="theme-select" class="term-select" onchange="setTheme(this.value)">
+            <optgroup label="Standards Modernes">
+              <option value="bash-classic">Bash / Pop!_OS (Défaut)</option>
+              <option value="dracula">Dracula</option>
+              <option value="catppuccin">Catppuccin Mocha</option>
+              <option value="tokyo-night">Tokyo Night</option>
+              <option value="gruvbox">Gruvbox Dark</option>
+              <option value="nord">Nord Polar</option>
+              <option value="solarized">Solarized Dark</option>
+            </optgroup>
+            <optgroup label="Univers Sci-Fi & Cyber">
+              <option value="jensen">Jensen (Sarif Amber)</option>
+              <option value="case">Case (Chiba City Matrix)</option>
+              <option value="smith">Smith (MegaCity CRT)</option>
+              <option value="cyberdyne">Cyberdyne (Skynet HUD)</option>
+              <option value="hill-valley">Hill Valley (1985 Time Circuits)</option>
+              <option value="encom">Encom (MCP Grid)</option>
+              <option value="tyrell">Tyrell (Los Angeles 2019)</option>
+              <option value="nostromo">Nostromo (MU-TH-UR 6000)</option>
+              <option value="discovery">Discovery (HAL 9000 Logic)</option>
+              <option value="black-mesa">Black Mesa (HEV Mk IV)</option>
+              <option value="arrakis">Arrakis (Mental Calcul)</option>
+            </optgroup>
+            <optgroup label="Machines Historiques">
+              <option value="vt100">DEC VT100 (PDP-11 P1)</option>
+              <option value="ibm3270">IBM 3270 (Mainframe)</option>
+              <option value="c64">Commodore 64 (PETSCII)</option>
+              <option value="amiga">Amiga Workbench 1.3</option>
+              <option value="apple2">Apple IIe (Monitor II)</option>
+              <option value="win98">Windows 98 (MS-DOS)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Police:</span>
+          <select id="font-select" class="term-select" onchange="setFontFamily(this.value)">
+            <option value="'Fira Code', monospace">Fira Code</option>
+            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
+            <option value="'Source Code Pro', monospace">Source Code Pro</option>
+            <option value="'Ubuntu Mono', monospace">Ubuntu Mono</option>
+            <option value="'Inconsolata', monospace">Inconsolata</option>
+            <option value="'Share Tech Mono', monospace">Share Tech Mono (CRT)</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Taille:</span>
+          <select id="size-select" class="term-select" onchange="setFontSize(this.value)">
+            <option value="12px">12px</option>
+            <option value="13px">13px</option>
+            <option value="14px">14px</option>
+            <option value="15px">15px</option>
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+            <option value="20px">20px</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+<script>
+// =============================================================================
+// CONFIGURATION OPTIONNELLE DU LEADERBOARD PUBLIC (SUPABASE REST API)
+// =============================================================================
+const SUPABASE_URL = "";
+const SUPABASE_KEY = "";
+
+// =============================================================================
+// 1. PALETTES DE THÈMES (STANDARDS, SCI-FI ICONIQUES & MACHINES HISTORIQUES)
+// =============================================================================
+const THEMES = {
+  "bash-classic": {
+    bg: "#0f1419", bar: "#090c10", fg: "#e6edf3", dim: "#7d8590", border: "#30363d",
+    cyan: "#39c5cf", green: "#3fb950", red: "#ff7b72", yellow: "#d29922", magenta: "#bc8cff", blue: "#58a6ff"
+  },
+  "dracula": {
+    bg: "#282a36", bar: "#191a21", fg: "#f8f8f2", dim: "#6272a4", border: "#44475a",
+    cyan: "#8be9fd", green: "#50fa7b", red: "#ff5555", yellow: "#f1fa8c", magenta: "#ff79c6", blue: "#bd93f9"
+  },
+  "catppuccin": {
+    bg: "#1e1e2e", bar: "#11111b", fg: "#cdd6f4", dim: "#6c7086", border: "#313244",
+    cyan: "#89dceb", green: "#a6e3a1", red: "#f38ba8", yellow: "#f9e2af", magenta: "#cba6f7", blue: "#89b4fa"
+  },
+  "tokyo-night": {
+    bg: "#1a1b26", bar: "#13141c", fg: "#c0caf5", dim: "#565f89", border: "#292e42",
+    cyan: "#7dcfff", green: "#9ece6a", red: "#f7768e", yellow: "#e0af68", magenta: "#bb9af7", blue: "#7aa2f7"
+  },
+  "gruvbox": {
+    bg: "#282828", bar: "#1d2021", fg: "#ebdbb2", dim: "#928374", border: "#3c3836",
+    cyan: "#8ec07c", green: "#b8bb26", red: "#fb4934", yellow: "#fabd2f", magenta: "#d3869b", blue: "#83a598"
+  },
+  "nord": {
+    bg: "#2e3440", bar: "#242933", fg: "#eceff4", dim: "#81a1c1", border: "#3b4252",
+    cyan: "#88c0d0", green: "#a3be8c", red: "#bf616a", yellow: "#ebcb8b", magenta: "#b48ead", blue: "#5e81ac"
+  },
+  "solarized": {
+    bg: "#002b36", bar: "#001f27", fg: "#93a1a1", dim: "#586e75", border: "#073642",
+    cyan: "#2aa198", green: "#859900", red: "#dc322f", yellow: "#b58900", magenta: "#d33682", blue: "#268bd2"
+  },
+  // --- Univers Sci-Fi & Cyber (Noms de lieux/entités/personnages uniquement) ---
+  "jensen": {
+    bg: "#120f0a", bar: "#090704", fg: "#ffb000", dim: "#996900", border: "#4d3600",
+    cyan: "#ffd875", green: "#a6e22e", red: "#ff5533", yellow: "#ffe066", magenta: "#ff8c00", blue: "#e69500"
+  },
+  "case": {
+    bg: "#0b001a", bar: "#05000d", fg: "#e0fbfc", dim: "#8a6bbd", border: "#ff0055",
+    cyan: "#00f0ff", green: "#00ff9f", red: "#ff0055", yellow: "#fcee09", magenta: "#ff00a0", blue: "#b86bff"
+  },
+  "smith": {
+    bg: "#050d05", bar: "#020602", fg: "#70ff70", dim: "#267326", border: "#144514",
+    cyan: "#a8ffa8", green: "#00ff41", red: "#ff5555", yellow: "#d4ff00", magenta: "#50fa7b", blue: "#00cc33"
+  },
+  "cyberdyne": {
+    bg: "#140404", bar: "#0a0101", fg: "#ff3b30", dim: "#99221b", border: "#5c0f0a",
+    cyan: "#ff9f0a", green: "#ffd60a", red: "#ff453a", yellow: "#ff9f0a", magenta: "#ff2d55", blue: "#ff6961"
+  },
+  "hill-valley": {
+    bg: "#0c0f14", bar: "#06080b", fg: "#ffd60a", dim: "#7c8594", border: "#ff4500",
+    cyan: "#00e5ff", green: "#32d74b", red: "#ff3b30", yellow: "#ffd60a", magenta: "#ff9500", blue: "#5ac8fa"
+  },
+  "encom": {
+    bg: "#020813", bar: "#01040a", fg: "#d6f6ff", dim: "#3b7ea1", border: "#00d9ff",
+    cyan: "#00f0ff", green: "#00ffaa", red: "#ff3366", yellow: "#ffaa00", magenta: "#b86bff", blue: "#0099ff"
+  },
+  "tyrell": {
+    bg: "#0b0e17", bar: "#06080d", fg: "#f4d06f", dim: "#6c7a9c", border: "#2b3a55",
+    cyan: "#4ea8de", green: "#52b788", red: "#e63946", yellow: "#ffb703", magenta: "#f72585", blue: "#3a86ff"
+  },
+  "nostromo": {
+    bg: "#041108", bar: "#020904", fg: "#4aff85", dim: "#1e7a3d", border: "#134e26",
+    cyan: "#99ffbb", green: "#33ff77", red: "#ff5533", yellow: "#e6ff44", magenta: "#44ffaa", blue: "#22cc66"
+  },
+  "discovery": {
+    bg: "#0a0a0c", bar: "#050507", fg: "#e5e5ea", dim: "#8e8e93", border: "#48484a",
+    cyan: "#ff453a", green: "#30d158", red: "#ff3b30", yellow: "#ffd60a", magenta: "#ff6961", blue: "#64d2ff"
+  },
+  "black-mesa": {
+    bg: "#14110e", bar: "#0b0907", fg: "#ff9500", dim: "#8c6228", border: "#4a3312",
+    cyan: "#ffc857", green: "#66cc66", red: "#ff3b30", yellow: "#ffdd57", magenta: "#ff7f11", blue: "#e09f3e"
+  },
+  "arrakis": {
+    bg: "#16100b", bar: "#0d0906", fg: "#f3d5b5", dim: "#9c7a54", border: "#523a24",
+    cyan: "#38a3a5", green: "#80ed99", red: "#e05a47", yellow: "#ff9f1c", magenta: "#d4a373", blue: "#4ea8de"
+  },
+  // --- Machines Historiques ---
+  "vt100": {
+    bg: "#061006", bar: "#030803", fg: "#33ff33", dim: "#1f991f", border: "#145214",
+    cyan: "#80ff80", green: "#33ff33", red: "#ff6644", yellow: "#ccff33", magenta: "#66ff99", blue: "#29cc29"
+  },
+  "ibm3270": {
+    bg: "#000000", bar: "#0d0d0d", fg: "#44ff44", dim: "#2b9348", border: "#0077b6",
+    cyan: "#00e5ff", green: "#44ff44", red: "#ff4444", yellow: "#ffff44", magenta: "#ff66ff", blue: "#48cae4"
+  },
+  "c64": {
+    bg: "#40318d", bar: "#352879", fg: "#7869c4", dim: "#a093e0", border: "#7869c4",
+    barFg: "#ffffff", barDim: "#bfce72",
+    cyan: "#6abfc6", green: "#9ae29b", red: "#ff8a7a", yellow: "#bfce72", magenta: "#d084bd", blue: "#ffffff"
+  },
+  "amiga": {
+    bg: "#0055aa", bar: "#ffffff", fg: "#ffffff", dim: "#aaccff", border: "#ff8800",
+    barFg: "#0055aa", barDim: "#002244",
+    cyan: "#00ffff", green: "#55ff55", red: "#ffaa88", yellow: "#ff8800", magenta: "#ffcc00", blue: "#ffffff"
+  },
+  "apple2": {
+    bg: "#0a0f0a", bar: "#141c14", fg: "#48ff48", dim: "#2e8b2e", border: "#225522",
+    cyan: "#00bfff", green: "#48ff48", red: "#ff6b35", yellow: "#ffd166", magenta: "#d040ff", blue: "#48cae4"
+  },
+  "win98": {
+    bg: "#000080", bar: "#c0c0c0", fg: "#ffffff", dim: "#b8c4ff", border: "#ffffff",
+    barFg: "#000000", barDim: "#2b2b2b",
+    cyan: "#00ffff", green: "#55ff55", red: "#ff5555", yellow: "#ffff55", magenta: "#ff55ff", blue: "#80bfff"
+  }
+};
+
+// =============================================================================
+// 2. SYSTÈME DE RANGS ET DE HAUTS-FAITS (ACHIEVEMENTS)
+// =============================================================================
+const RANKS = [
+  { min: 0,  title: "Prisonnier du Mode Insert" },
+  { min: 4,  title: "Évadé de :wq!" },
+  { min: 10, title: "Éclaireur HJKL" },
+  { min: 18, title: "Chirurgien Text-Object" },
+  { min: 27, title: "Maître des Registres" },
+  { min: 34, title: "Sorcier Ex & Regex" },
+  { min: 40, title: "Architecte Modal Suprême" }
+];
+
+const BADGES = [
+  { id: "first_blood",  name: "Survivant Modal",       desc: "Accomplir ta toute première mission sous Vim." },
+  { id: "streak_3",     name: "Flux Cognitif (🔥 3)",  desc: "Enchaîner 3 missions d'affilée sans indice." },
+  { id: "streak_7",     name: "Mémoire Musculaire (🔥 7)", desc: "Enchaîner 7 missions d'affilée sans indice." },
+  { id: "streak_15",    name: "Cyber-Cerveau (🔥 15)", desc: "Enchaîner 15 missions d'affilée sans indice." },
+  { id: "golf_1",       name: "Économe en Frappes",    desc: "Réussir une mission avec un nombre de frappes <= au Par (Vim-Golf)." },
+  { id: "golf_10",      name: "Grand Maître Vim-Golf", desc: "Obtenir l'insigne Vim-Golf sur 10 missions distinctes." },
+  { id: "speed_demon",  name: "Réflexe Éclair",        desc: "Résoudre une mission en moins de 5 secondes." },
+  { id: "text_surgeon", name: "Chirurgien Syntaxique", desc: "Maîtriser toutes les missions du Palier 3 (Text Objects ci\", da(, dit...)." },
+  { id: "ex_alchemist", name: "Alchimiste Ex",         desc: "Maîtriser toutes les missions du Palier 5 (:s, \\1, :g/re/d)." },
+  { id: "grandmaster",  name: "Légende d'Ubik",        desc: "Maîtriser l'intégralité des 40 missions du simulateur." }
+];
+
+// =============================================================================
+// 3. BASE DE DONNÉES DES 40 MISSIONS VIM (5 PALIERS PROGRESSIFS)
+// =============================================================================
+const MISSIONS = [
+  // --- TIER 1 : SURVIE & NAVIGATION RAPIDE (Motions & Éditions atomiques) ---
+  { id: 1, diff: 1, theme: "SYS", title: "Frappe chirurgicale (x)",
+    scenario: "Une faute de frappe s'est glissée dans 'sshd_config'. Le curseur est déjà positionné sur le 'z' parasite. Supprime uniquement ce caractère en mode Normal.",
+    initialLines: ["PermitRootLzogin no"], cursor: [0, 11],
+    expectedLines: ["PermitRootLogin no"],
+    par: 1, solution: "x",
+    hint: "En mode Normal, 'x' supprime le caractère directement sous le curseur.",
+    debrief: "'x' équivaut à 'dl' (delete letter). Inutile de passer en mode Insert avec 'i' + Retour Arrière !" },
+
+  { id: 2, diff: 1, theme: "NET", title: "Correction de sous-réseau (r)",
+    scenario: "Ce masque /24 est erroné : le dernier octet doit être '0' et non '9'. Le curseur est sur le '9'. Remplace ce seul caractère sans entrer en mode Insert.",
+    initialLines: ["iface eth0 inet static", "  netmask 255.255.255.9"], cursor: [1, 22],
+    expectedLines: ["iface eth0 inet static", "  netmask 255.255.255.0"],
+    par: 2, solution: "r0",
+    hint: "Tape 'r' suivi du nouveau caractère ('0').",
+    debrief: "'r<char>' remplace un caractère unique et te laisse immédiatement en mode Normal." },
+
+  { id: 3, diff: 1, theme: "SEC", title: "Ouverture de port en fin de ligne (A)",
+    scenario: "Il manque le point-virgule ';' à la fin de cette directive Nginx. Le curseur est au début de la ligne. Ajoute ';' tout à la fin.",
+    initialLines: ["listen 443 ssl http2"], cursor: [0, 0],
+    expectedLines: ["listen 443 ssl http2;"],
+    par: 3, solution: "A;<Esc>",
+    hint: "'A' (Append at end of line) place le curseur en fin de ligne en mode Insert. Termine par <Esc>.",
+    debrief: "'A' économise le déplacement '$' suivi de 'a'. C'est l'un des raccourcis les plus rentables de Vim." },
+
+  { id: 4, diff: 1, theme: "SYS", title: "Commentaire d'urgence en tête de ligne (I)",
+    scenario: "Désactive ce montage NFS critique en ajoutant '# ' au tout début de la ligne, bien que ton curseur soit au milieu du chemin.",
+    initialLines: ["10.0.0.5:/srv/nfs /mnt/data nfs defaults 0 0"], cursor: [0, 20],
+    expectedLines: ["# 10.0.0.5:/srv/nfs /mnt/data nfs defaults 0 0"],
+    par: 4, solution: "I# <Esc>",
+    hint: "'I' (Insert at beginning) saute au premier caractère non-blanc de la ligne et passe en mode Insert.",
+    debrief: "Le duo 'I' (début de ligne) et 'A' (fin de ligne) élimine 90% des déplacements horizontaux." },
+
+  { id: 5, diff: 1, theme: "NET", title: "Saut par mot et purge (w + dw)",
+    scenario: "Le mot 'debug ' a été laissé par erreur après 'allow'. Le curseur est au début de la ligne. Saute au mot 'debug' et supprime-le (espace inclus).",
+    initialLines: ["allow debug 192.168.1.0/24;"], cursor: [0, 0],
+    expectedLines: ["allow 192.168.1.0/24;"],
+    par: 3, solution: "wdw",
+    hint: "'w' avance au mot suivant, puis 'dw' (delete word) supprime le mot jusqu'au suivant.",
+    debrief: "'dw' supprime depuis le curseur jusqu'au début du mot suivant (incluant donc l'espace qui suit)." },
+
+  { id: 6, diff: 1, theme: "SEC", title: "Chasse au caractère précis sur la ligne (f + x)",
+    scenario: "Un caractère '!' parasite corrompt l'empreinte SHA256. Le curseur est en début de ligne : saute directement sur '!' et supprime-le.",
+    initialLines: ["sha256:9f86d081884c!7d659a2feaa0c55ad015"], cursor: [0, 0],
+    expectedLines: ["sha256:9f86d081884c7d659a2feaa0c55ad015"],
+    par: 3, solution: "f!x",
+    hint: "'f!' (find '!') déplace le curseur directement sur le prochain '!', puis 'x' le supprime.",
+    debrief: "'f<char>' est le téléporteur horizontal de Vim. Utilise ';' pour répéter le saut sur la même ligne." },
+
+  { id: 7, diff: 1, theme: "SYS", title: "Purge de ligne obsolète (dd)",
+    scenario: "Le démon Telnet ne doit jamais être lancé. Supprime intégralement la ligne 2 où se trouve ton curseur.",
+    initialLines: ["sshd: ALL", "in.telnetd: ALL", "vsftpd: 10.0.0.0/8"], cursor: [1, 4],
+    expectedLines: ["sshd: ALL", "vsftpd: 10.0.0.0/8"],
+    par: 2, solution: "dd",
+    hint: "Double 'd' ('dd') supprime la ligne entière quelle que soit la colonne du curseur.",
+    debrief: "En Vim, doubler un opérateur ('dd', 'cc', 'yy') l'applique toujours à la ligne courante entière." },
+
+  { id: 8, diff: 1, theme: "NET", title: "Raboutage de lignes (J)",
+    scenario: "Cette règle iptables a été coupée en deux lignes. Fusionne la ligne 1 et la ligne 2 en les séparant par un espace standard.",
+    initialLines: ["iptables -A INPUT -p tcp", "--dport 22 -j ACCEPT"], cursor: [0, 5],
+    expectedLines: ["iptables -A INPUT -p tcp --dport 22 -j ACCEPT"],
+    par: 1, solution: "J",
+    hint: "La touche majuscule 'J' (Join) rattache la ligne du dessous à la ligne courante.",
+    debrief: "'J' supprime le saut de ligne, retire l'indentation de la ligne suivante et insère proprement un espace." },
+
+  // --- TIER 2 : OPÉRATEURS, COMPTEURS & MOTIONS COMPOSÉES ---
+  { id: 9, diff: 2, theme: "SEC", title: "Troncature de fin de ligne (D)",
+    scenario: "Supprime le commentaire '# TODO: remove password' en fin de ligne. Le curseur est déjà placé sur le '#'.",
+    initialLines: ["DB_HOST=10.20.0.5 # TODO: remove password"], cursor: [0, 18],
+    expectedLines: ["DB_HOST=10.20.0.5 "],
+    par: 1, solution: "D",
+    hint: "'D' majuscule équivaut à 'd$' (supprimer du curseur jusqu'à la fin de la ligne).",
+    debrief: "Retiens la convention Vim : 'D' = 'd$' et 'C' = 'c$'. Un seul caractère au lieu de deux !" },
+
+  { id: 10, diff: 2, theme: "SYS", title: "Réécriture de valeur de clé (C)",
+    scenario: "Le curseur est sur le 'p' de 'permissive'. Remplace toute la fin de la ligne par 'enforcing'.",
+    initialLines: ["SELINUX=permissive"], cursor: [0, 8],
+    expectedLines: ["SELINUX=enforcing"],
+    par: 11, solution: "Cenforcing<Esc>",
+    hint: "Utilise 'C' (Change to end of line), tape 'enforcing' puis <Esc>.",
+    debrief: "'C' supprime jusqu'à la fin de la ligne et t'entre immédiatement en mode Insert." },
+
+  { id: 11, diff: 2, theme: "NET", title: "Suppression jusqu'au délimiteur (dt)",
+    scenario: "Dans cette URL, le curseur est sur le 'u' de 'user:secret@'. Supprime 'user:secret' MAIS conserve le '@' et la suite.",
+    initialLines: ["proxy=http://user:secret@10.0.0.1:8080"], cursor: [0, 13],
+    expectedLines: ["proxy=http://@10.0.0.1:8080"],
+    par: 3, solution: "dt@",
+    hint: "Combine l'opérateur 'd' avec la motion 't@' (till '@', juste avant le caractère).",
+    debrief: "Différence cruciale : 'df@' supprime JUSQU'AU '@' inclus, tandis que 'dt@' s'arrête juste AVANT '@'." },
+
+  { id: 12, diff: 2, theme: "SEC", title: "Purge de bloc par compteur (3dd)",
+    scenario: "Trois règles de debug temporaires polluent le pare-feu à partir de la ligne du curseur. Supprime ces 3 lignes d'une seule commande.",
+    initialLines: ["allow 10.0.0.0/8", "allow any # debug1", "allow any # debug2", "allow any # debug3", "deny all"], cursor: [1, 0],
+    expectedLines: ["allow 10.0.0.0/8", "deny all"],
+    par: 3, solution: "3dd",
+    hint: "Précède 'dd' du compteur '3' : '3dd'.",
+    debrief: "La grammaire [Nombre][Opérateur][Motion] permet d'agir sur N lignes ou N mots sans répétition manuelle." },
+
+  { id: 13, diff: 2, theme: "SYS", title: "Insertion d'une directive au-dessus (O)",
+    scenario: "Le curseur est sur la ligne 'set -u'. Insère la ligne 'set -e' juste AU-DESSUS d'elle.",
+    initialLines: ["#!/bin/bash", "set -u"], cursor: [1, 0],
+    expectedLines: ["#!/bin/bash", "set -e", "set -u"],
+    par: 8, solution: "Oset -e<Esc>",
+    hint: "'o' ouvre une ligne en dessous, 'O' (majuscule) ouvre une ligne AU-DESSUS en mode Insert.",
+    debrief: "'O' et 'o' créent une nouvelle ligne et activent le mode Insert en une seule frappe." },
+
+  { id: 14, diff: 2, theme: "NET", title: "Saut au bas du fichier et suppression (G + dd)",
+    scenario: "Une route par défaut malveillante a été ajoutée tout en bas du fichier. Le curseur est en ligne 1 : saute à la dernière ligne et supprime-la.",
+    initialLines: ["10.0.0.0/24 dev eth0", "172.16.0.0/16 dev eth1", "192.168.1.0/24 dev wlan0", "0.0.0.0/0 via 66.66.66.1"], cursor: [0, 0],
+    expectedLines: ["10.0.0.0/24 dev eth0", "172.16.0.0/16 dev eth1", "192.168.1.0/24 dev wlan0"],
+    par: 3, solution: "Gdd",
+    hint: "'G' saute directement à la dernière ligne du buffer, puis 'dd' la supprime.",
+    debrief: "'gg' t'amène à la première ligne, 'G' à la dernière, et '<N>G' directement à la ligne N." },
+
+  { id: 15, diff: 2, theme: "SEC", title: "Inversion de casse rapide (~)",
+    scenario: "Les 3 premières lettres 'tcp' doivent être mises en majuscules ('TCP'). Le curseur est en colonne 0.",
+    initialLines: ["tcp 0 0 0.0.0.0:22 0.0.0.0:* LISTEN"], cursor: [0, 0],
+    expectedLines: ["TCP 0 0 0.0.0.0:22 0.0.0.0:* LISTEN"],
+    par: 2, solution: "3~",
+    hint: "Utilise un compteur avec l'opérateur tilde : '3~' (ou '~~~').",
+    debrief: "'~' inverse la casse sous le curseur et avance d'une colonne. Avec un compteur ('3~'), c'est instantané." },
+
+  { id: 16, diff: 2, theme: "SYS", title: "Suppression multi-mots (d3w)",
+    scenario: "Supprime les 3 mots 'experimental', 'unsafe' et 'legacy' (ainsi que leurs espaces) à partir de la position du curseur.",
+    initialLines: ["FLAGS=experimental unsafe legacy production"], cursor: [0, 6],
+    expectedLines: ["FLAGS=production"],
+    par: 3, solution: "d3w",
+    hint: "Combine l'opérateur 'd' avec le compteur '3' et la motion 'w' : 'd3w'.",
+    debrief: "'d3w' (ou '3dw') supprime exactement 3 mots consécutifs d'un coup." },
+
+  // --- TIER 3 : TEXT OBJECTS & CHIRURGIE SYNTAXIQUE (iw, ci", da(, dit...) ---
+  { id: 17, diff: 3, theme: "SYS", title: "Remplacement de chaîne entre guillemets (ci\")",
+    scenario: "Le curseur est au milieu de \"development\". Change le contenu entre les guillemets doubles par \"production\" sans toucher aux guillemets.",
+    initialLines: ["APP_ENV=\"development\""], cursor: [0, 13],
+    expectedLines: ["APP_ENV=\"production\""],
+    par: 14, solution: "ci\"production<Esc>",
+    hint: "Utilise le Text Object 'ci\"' (change inside quotes), tape 'production' puis <Esc>.",
+    debrief: "'ci\"' fonctionne même si ton curseur est au milieu de la chaîne : Vim cherche les guillemets englobants tout seul !" },
+
+  { id: 18, diff: 3, theme: "NET", title: "Vidage d'arguments entre parenthèses (di()",
+    scenario: "Vide tous les paramètres à l'intérieur des parenthèses de 'drop_packet(...)' en gardant 'drop_packet()'. Le curseur est au milieu des parenthèses.",
+    initialLines: ["action = drop_packet(src_ip, dst_port, proto);"], cursor: [0, 26],
+    expectedLines: ["action = drop_packet();"],
+    par: 3, solution: "di(",
+    hint: "Utilise 'di(' ou 'dib' (delete inside parentheses/block).",
+    debrief: "Les Text Objects 'i(' (inner) et 'a(' (around) comprennent les paires de parenthèses indépendamment de la position du curseur." },
+
+  { id: 19, diff: 3, theme: "SEC", title: "Éradication complète de liste crochets inclus (da[)",
+    scenario: "Supprime la liste '[\"admin\", \"root\"]' Y COMPRIS ses crochets '[' et ']'. Le curseur est à l'intérieur.",
+    initialLines: ["allowed_users = [\"admin\", \"root\"]"], cursor: [0, 20],
+    expectedLines: ["allowed_users = "],
+    par: 3, solution: "da[",
+    hint: "Utilise 'da[' (delete around brackets) pour supprimer le contenu ET les crochets.",
+    debrief: "'i' (inner) préserve les délimiteurs, tandis que 'a' (around) les englobe dans la suppression." },
+
+  { id: 20, diff: 3, theme: "SYS", title: "Remplacement du mot sous le curseur (ciw)",
+    scenario: "Ton curseur est au MILIEU du mot 'eth0' (sur le 't'). Remplace tout le mot 'eth0' par 'enp3s0'.",
+    initialLines: ["auto eth0"], cursor: [0, 6],
+    expectedLines: ["auto enp3s0"],
+    par: 10, solution: "ciwenp3s0<Esc>",
+    hint: "Pas besoin de revenir au début du mot avec 'b' ! Utilise 'ciw' (change inner word).",
+    debrief: "'ciw' cible le mot entier sous le curseur, même si tu es sur sa 3e lettre. Gain de vitesse massif." },
+
+  { id: 21, diff: 3, theme: "SEC", title: "Modification de balise XML/HTML (cit)",
+    scenario: "Dans cette règle Wazuh/OSSEC, le curseur est entre les balises <level>3</level>. Change le niveau '3' en '12'.",
+    initialLines: ["<rule id=\"1002\"><level>3</level></rule>"], cursor: [0, 23],
+    expectedLines: ["<rule id=\"1002\"><level>12</level></rule>"],
+    par: 6, solution: "cit12<Esc>",
+    hint: "Utilise le Text Object 'cit' (change inner tag) puis tape '12<Esc>'.",
+    debrief: "'cit' et 'dit' ciblent l'intérieur de n'importe quelle paire de balises XML/HTML '<tag>...</tag>'." },
+
+  { id: 22, diff: 3, theme: "NET", title: "Purge de bloc d'accolades JSON (di{)",
+    scenario: "Vide l'intérieur des accolades '{ \"debug\": true, \"verbose\": 9 }' pour laisser '{}'. Le curseur est au centre.",
+    initialLines: ["config = { \"debug\": true, \"verbose\": 9 }"], cursor: [0, 20],
+    expectedLines: ["config = {}"],
+    par: 3, solution: "di{",
+    hint: "Utilise 'di{' ou 'diB' (delete inner Curly Brace).",
+    debrief: "'di{' (ou 'diB') nettoie instantanément le corps d'une fonction C/JS, d'un bloc Nginx ou d'un objet JSON." },
+
+  { id: 23, diff: 3, theme: "SYS", title: "Substitution d'une clé entre apostrophes (ci')",
+    scenario: "Le curseur est au tout début de la ligne (hors des apostrophes !). Change le texte entre apostrophes 'weak_pass' en 'vault_key'.",
+    initialLines: ["export SECRET='weak_pass'"], cursor: [0, 0],
+    expectedLines: ["export SECRET='vault_key'"],
+    par: 13, solution: "ci'vault_key<Esc>",
+    hint: "Tape directement 'ci'' : Vim cherche automatiquement la première paire d'apostrophes sur la ligne !",
+    debrief: "Astuce pro : si le curseur est AVANT des guillemets/apostrophes sur la ligne, 'ci\"' ou 'ci'' saute automatiquement dedans !" },
+
+  { id: 24, diff: 3, theme: "SEC", title: "Mots simples vs MOTS séparés par espaces (daW)",
+    scenario: "Le curseur est au milieu de l'adresse IP '192.168.1.254:8080'. Supprime toute l'adresse IP:port (et l'espace qui suit) d'un seul coup.",
+    initialLines: ["block 192.168.1.254:8080 immediately"], cursor: [0, 12],
+    expectedLines: ["block immediately"],
+    par: 3, solution: "daW",
+    hint: "Utilise 'W' majuscule (WORD délimité uniquement par les espaces) : 'daW'.",
+    debrief: "'w' s'arrête sur la ponctuation ('.', ':'), alors que 'W' considère '192.168.1.254:8080' comme un seul grand MOT !" },
+
+  // --- TIER 4 : VITESSE PURE, COMMANDE POINT (.), RECHERCHE & REGISTRES ---
+  { id: 25, diff: 4, theme: "NET", title: "Incrémentation atomique de numéro de port (<C-a>)",
+    scenario: "Le port 8079 doit passer à 8080. Le curseur est en début de ligne : incrémente le nombre de +1 sans passer en mode Insert.",
+    initialLines: ["listen_port = 8079"], cursor: [0, 0],
+    expectedLines: ["listen_port = 8080"],
+    par: 1, solution: "<C-a>",
+    hint: "Utilise '<C-a>' (Ctrl+A). En Vim, il cherche le prochain nombre sur la ligne et l'incrémente !",
+    debrief: "'<C-a>' incrémente et '<C-x>' décrémente le nombre sous (ou après) le curseur. Supporte les compteurs : '10<C-a>' !" },
+
+  { id: 26, diff: 4, theme: "SYS", title: "Augmentation de compteur de rétention (5<C-a>)",
+    scenario: "Passe la rétention des logs de '7' à '12' jours (+5) directement depuis le début de la ligne.",
+    initialLines: ["rotate 7"], cursor: [0, 0],
+    expectedLines: ["rotate 12"],
+    par: 2, solution: "5<C-a>",
+    hint: "Précède '<C-a>' du compteur '5' : '5<C-a>'.",
+    debrief: "Combiner un compteur avec '<C-a>' ou '<C-x>' permet d'ajuster des octets IP, des VLANs ou des tailles de pools sans erreurs de frappe." },
+
+  { id: 27, diff: 4, theme: "SEC", title: "La formule magique de duplication (yyp)",
+    scenario: "Duplique la ligne 'allow 10.0.0.1' juste en dessous d'elle-même.",
+    initialLines: ["allow 10.0.0.1"], cursor: [0, 0],
+    expectedLines: ["allow 10.0.0.1", "allow 10.0.0.1"],
+    par: 3, solution: "yyp",
+    hint: "'yy' copie (yank) la ligne courante, et 'p' (put) la colle en dessous.",
+    debrief: "'yyp' est le réflexe universel pour cloner une ligne de configuration avant de la modifier." },
+
+  { id: 28, diff: 4, theme: "SYS", title: "Réordonnancement de priorités (ddp)",
+    scenario: "Inverse l'ordre des deux lignes pour que '10-security.conf' passe au-dessus de '20-network.conf'. Le curseur est en ligne 1.",
+    initialLines: ["20-network.conf", "10-security.conf"], cursor: [0, 0],
+    expectedLines: ["10-security.conf", "20-network.conf"],
+    par: 3, solution: "ddp",
+    hint: "'dd' coupe la ligne 1 dans le registre par défaut, et 'p' la recolle sous la nouvelle ligne 1.",
+    debrief: "En Vim, 'delete' ('d') est en réalité un 'couper'. 'ddp' échange deux lignes, et 'xp' échange deux caractères !" },
+
+  { id: 29, diff: 4, theme: "NET", title: "Le secret des maîtres : la commande Point (.)",
+    scenario: "Les 3 lignes doivent être supprimées... non, attends : ajoute ';' à la fin de la ligne 1, puis répète l'opération sur la ligne 2 avec '.'.",
+    initialLines: ["nameserver 1.1.1.1", "nameserver 9.9.9.9"], cursor: [0, 0],
+    expectedLines: ["nameserver 1.1.1.1;", "nameserver 9.9.9.9;"],
+    par: 5, solution: "A;<Esc>j.",
+    hint: "Fais 'A;<Esc>' sur la première ligne, descends avec 'j', puis tape '.' pour rejouer toute la modification !",
+    debrief: "La touche '.' répète la dernière modification complète (du passage en Insert jusqu'à <Esc>)." },
+
+  { id: 30, diff: 4, theme: "SEC", title: "Recherche du mot sous le curseur (*) + Point (.)",
+    scenario: "Le curseur est sur la première occurrence de 'http'. Remplace les deux 'http' par 'https' en utilisant '*' et '.'.",
+    initialLines: ["url1 = http://api.internal", "url2 = http://auth.internal"], cursor: [0, 7],
+    expectedLines: ["url1 = https://api.internal", "url2 = https://auth.internal"],
+    par: 8, solution: "*ciwhttps<Esc>n.",
+    hint: "Ou plus court : 'ea s<Esc>j.' ou 'ciwhttps<Esc>*.' ! Essaie 'ciwhttps<Esc>n.' ou '/http<CR>'.",
+    debrief: "Combiner une recherche ('*' ou 'n') avec '.' (n.n.n.) permet de refactoriser un fichier en gardant un contrôle visuel total." },
+
+  { id: 31, diff: 4, theme: "NET", title: "Saut à la parenthèse fermante correspondante (%)",
+    scenario: "Ce bloc d'options sur une ligne a un caractère ';' manquant ou plutôt : supprime tout le bloc '(...)' en sautant avec 'd%'. Le curseur est sur '('.",
+    initialLines: ["route_map (permit 10, metric 50) active"], cursor: [0, 10],
+    expectedLines: ["route_map  active"],
+    par: 2, solution: "d%",
+    hint: "Le curseur est sur '('. L'opérateur 'd' combiné au saut de paire '%' ('d%') supprime jusqu'à ')' inclus !",
+    debrief: "'%' saute entre '(', ')', '[', ']', '{', '}'. Combiné à 'd' ('d%'), il supprime tout le bloc apparié." },
+
+  { id: 32, diff: 4, theme: "SYS", title: "Indentation propre de bloc (>G)",
+    scenario: "Les lignes 2 et 3 d'une condition Bash ne sont pas indentées. Le curseur est en ligne 2 : indente de la ligne 2 jusqu'à la fin du fichier.",
+    initialLines: ["if [ -f /etc/passwd ]; then", "echo ok", "exit 0"], cursor: [1, 0],
+    expectedLines: ["if [ -f /etc/passwd ]; then", "  echo ok", "  exit 0"],
+    par: 2, solution: ">G",
+    hint: "Utilise l'opérateur d'indentation '>' combiné à la motion de fin de fichier 'G' ('>G') ou '2>>'.",
+    debrief: "'>' est un opérateur standard : '>>' indente la ligne courante, '2>>' indente 2 lignes, et '>G' indente jusqu'en bas." },
+
+  // --- TIER 5 : MAÎTRE EX, SUBSTITUTIONS REGEX (:s) & COMMANDES GLOBALES (:g) ---
+  { id: 33, diff: 5, theme: "SEC", title: "Substitution globale dans tout le buffer (:%s)",
+    scenario: "Remplace toutes les occurrences de 'PermitRootLogin yes' ou plutôt de 'yes' par 'no' sur toutes les lignes du fichier.",
+    initialLines: ["PermitRootLogin yes", "PasswordAuthentication yes", "ChallengeResponseAuthentication yes"], cursor: [0, 0],
+    expectedLines: ["PermitRootLogin no", "PasswordAuthentication no", "ChallengeResponseAuthentication no"],
+    par: 12, solution: ":%s/yes/no/g<CR>",
+    hint: "Utilise la plage globale '%' : ':%s/yes/no/g<CR>'.",
+    debrief: "Dans ':%s/ancien/nouveau/g', '%' cible toutes les lignes du fichier et le drapeau 'g' cible toutes les occurrences par ligne." },
+
+  { id: 34, diff: 5, theme: "NET", title: "Substitution de chemins sans 'Picket Fence' (:%s#...#)",
+    scenario: "Remplace le chemin '/var/log/old' par '/srv/logs' sur la ligne courante sans avoir à échapper les slashs '/'.",
+    initialLines: ["logfile = /var/log/old/access.log"], cursor: [0, 0],
+    expectedLines: ["logfile = /srv/logs/access.log"],
+    par: 26, solution: ":s#/var/log/old#/srv/logs#<CR>",
+    hint: "Utilise '#' (ou ':') comme séparateur dans ':s#/var/log/old#/srv/logs#<CR>'.",
+    debrief: "Vim accepte n'importe quel symbole de ponctuation comme délimiteur de ':s' ('#', '|', ':'), évitant l'enfer des '\\/'." },
+
+  { id: 35, diff: 5, theme: "SYS", title: "Purge de lignes par motif (:g/pattern/d)",
+    scenario: "Supprime en une seule commande Ex toutes les lignes contenant le tag 'DEBUG' dans ce journal applicatif.",
+    initialLines: ["INFO Server started", "DEBUG Socket raw dump", "WARN High memory", "DEBUG Key cache hit", "INFO Listening on 443"], cursor: [0, 0],
+    expectedLines: ["INFO Server started", "WARN High memory", "INFO Listening on 443"],
+    par: 11, solution: ":g/DEBUG/d<CR>",
+    hint: "Utilise la commande globale Ex ':g/DEBUG/d<CR>'.",
+    debrief: "':g/re/d' (Global regular expression delete) parcourt tout le buffer et exécute 'd' (delete) sur chaque ligne qui matche." },
+
+  { id: 36, diff: 5, theme: "SEC", title: "Extraction forensic par négation (:v/pattern/d)",
+    scenario: "Un journal contient du bruit. Garde UNIQUEMENT les lignes contenant 'CRITICAL' et supprime toutes les autres en une seule commande.",
+    initialLines: ["INFO Heartbeat OK", "CRITICAL Rootkit detected", "INFO User login", "CRITICAL Unauthorized SSH key"], cursor: [0, 0],
+    expectedLines: ["CRITICAL Rootkit detected", "CRITICAL Unauthorized SSH key"],
+    par: 14, solution: ":v/CRITICAL/d<CR>",
+    hint: "Utilise ':v/CRITICAL/d<CR>' (ou ':g!/CRITICAL/d<CR>') pour supprimer les lignes qui NE matchent PAS.",
+    debrief: "':v/re/d' (inVerse global) est l'équivalent de 'grep -v' mais directement destructif dans ton buffer." },
+
+  { id: 37, diff: 5, theme: "NET", title: "Substitution bornée par plage de lignes (:2,3s)",
+    scenario: "Remplace 'ACCEPT' par 'DROP' UNIQUEMENT sur les lignes 2 et 3 (ne touche ni à la ligne 1 ni à la ligne 4 !).",
+    initialLines: ["Chain Lo: ACCEPT", "Chain WAN_IN: ACCEPT", "ChainGUEST: ACCEPT", "Chain LAN_OUT: ACCEPT"], cursor: [0, 0],
+    expectedLines: ["Chain Lo: ACCEPT", "Chain WAN_IN: DROP", "ChainGUEST: DROP", "Chain LAN_OUT: ACCEPT"],
+    par: 18, solution: ":2,3s/ACCEPT/DROP/<CR>",
+    hint: "Spécifie la plage '2,3' avant 's' : ':2,3s/ACCEPT/DROP/<CR>'.",
+    debrief: "Les plages Ex (':2,3s', ':.,$s' de la ligne courante à la fin) permettent de cibler chirurgicalement une zone du fichier." },
+
+  { id: 38, diff: 5, theme: "SYS", title: "Réécriture avec l'esperluette de correspondance (&)",
+    scenario: "Entoure chaque numéro de port ('80' et '443') de crochets ('[80]' et '[443]') sur la ligne courante grâce au métacaractère '&'.",
+    initialLines: ["ports = 80, 443"], cursor: [0, 0],
+    expectedLines: ["ports = [80], [443]"],
+    par: 17, solution: ":s/[0-9]\\+/[&]/g<CR>",
+    hint: "Dans la partie remplacement de ':s', '&' représente tout le motif capturé : ':s/[0-9]\\+/[&]/g<CR>'.",
+    debrief: "'&' évite de devoir créer un groupe de capture '\\(...\\)' quand tu veux simplement préfixer ou suffixer le match entier." },
+
+  { id: 39, diff: 5, theme: "SEC", title: "Inversion de colonnes par groupes de capture (\\1 \\2)",
+    scenario: "Inverse 'SRC_IP' et 'DST_IP' séparés par ' -> ' sur toutes les lignes pour obtenir 'DST_IP -> SRC_IP'.",
+    initialLines: ["10.0.0.1 -> 192.168.1.5", "10.0.0.2 -> 172.16.0.9"], cursor: [0, 0],
+    expectedLines: ["192.168.1.5 -> 10.0.0.1", "172.16.0.9 -> 10.0.0.2"],
+    par: 27, solution: ":%s/\\(.*\\) -> \\(.*\\)/\\2 -> \\1/<CR>",
+    hint: "En Vim standard, les groupes s'écrivent '\\(...\\)' et se rappellent avec '\\1' et '\\2'.",
+    debrief: "Les backreferences '\\1' et '\\2' transforment Vim en un véritable moteur awk/sed interactif." },
+
+  { id: 40, diff: 5, theme: "SYS", title: "ULTIMATE BOSS — Nettoyage & Normalisation multi-passes",
+    scenario: "1) Supprime toutes les lignes commençant par '#' (:g/^#/d) PUIS 2) remplace tous les 'http://' par 'https://' (separe les 2 commandes ou fais-les en chaîne).",
+    initialLines: ["# Legacy endpoints", "api = http://10.0.0.1/v1", "# Deprecated node", "auth = http://10.0.0.2/login"], cursor: [0, 0],
+    expectedLines: ["api = https://10.0.0.1/v1", "auth = https://10.0.0.2/login"],
+    par: 27, solution: ":g/^#/d<CR>:%s#http://#https://#g<CR>",
+    hint: "Enchaîne ':g/^#/d<CR>' suivi de ':%s#http://#https://#g<CR>' (ou ':%s/http:/https:/g<CR>').",
+    debrief: "Félicitations ! Tu maîtrises la chaîne complète de Vim : navigation modale, Text Objects, commande Point et pipelines Ex." }
+];
+
+const TOTAL_MISSIONS = MISSIONS.length;
+
+// =============================================================================
+// 4. MOTEUR D'EXÉCUTION VIM DÉTERMINISTE (BUFFER 2D, MOTIONS, TEXT OBJECTS, EX)
+// =============================================================================
+function tokenizeVimInput(str) {
+  const tokens = [];
+  let i = 0;
+  while (i < str.length) {
+    if (str[i] === '<') {
+      const close = str.indexOf('>', i);
+      if (close !== -1) {
+        const rawTag = str.slice(i + 1, close).toLowerCase();
+        if (rawTag === 'esc' || rawTag === 'escape') { tokens.push('<Esc>'); i = close + 1; continue; }
+        if (rawTag === 'cr' || rawTag === 'enter' || rawTag === 'return') { tokens.push('<CR>'); i = close + 1; continue; }
+        if (rawTag === 'c-a' || rawTag === 'ctrl-a') { tokens.push('<C-a>'); i = close + 1; continue; }
+        if (rawTag === 'c-x' || rawTag === 'ctrl-x') { tokens.push('<C-x>'); i = close + 1; continue; }
+        if (rawTag === 'bs' || rawTag === 'backspace') { tokens.push('<BS>'); i = close + 1; continue; }
+      }
+    }
+    tokens.push(str[i]);
+    i++;
+  }
+  return tokens;
+}
+
+function isWordChar(ch, bigWord = false) {
+  if (!ch) return false;
+  if (bigWord) return !/\s/.test(ch);
+  return /[a-zA-Z0-9_]/.test(ch);
+}
+
+function clampCol(lines, r, c, insertMode = false) {
+  const len = (lines[r] || "").length;
+  if (len === 0) return 0;
+  return Math.max(0, Math.min(c, insertMode ? len : len - 1));
+}
+
+// Résout la position de fin d'une motion sur la ligne courante
+function findWordMotionCol(line, col, type, count) {
+  let c = col;
+  const len = line.length;
+  const big = (type === 'W' || type === 'B' || type === 'E');
+  const base = type.toLowerCase();
+
+  for (let step = 0; step < count; step++) {
+    if (base === 'w') {
+      if (c < len && isWordChar(line[c], big)) {
+        while (c < len && isWordChar(line[c], big)) c++;
+      } else if (c < len && !/\s/.test(line[c])) {
+        while (c < len && !isWordChar(line[c], big) && !/\s/.test(line[c])) c++;
+      }
+      while (c < len && /\s/.test(line[c])) c++;
+    } else if (base === 'e') {
+      if (c + 1 < len) c++;
+      while (c < len && /\s/.test(line[c])) c++;
+      if (c < len && isWordChar(line[c], big)) {
+        while (c + 1 < len && isWordChar(line[c + 1], big)) c++;
+      } else {
+        while (c + 1 < len && !isWordChar(line[c + 1], big) && !/\s/.test(line[c + 1])) c++;
+      }
+    } else if (base === 'b') {
+      if (c > 0) c--;
+      while (c > 0 && /\s/.test(line[c])) c--;
+      if (isWordChar(line[c], big)) {
+        while (c > 0 && isWordChar(line[c - 1], big)) c--;
+      } else {
+        while (c > 0 && !isWordChar(line[c - 1], big) && !/\s/.test(line[c - 1])) c--;
+      }
+    }
+  }
+  return c;
+}
+
+// Trouve l'intervalle [start, endExcl] d'un Text Object sur la ligne courante
+function findTextObjectSpan(line, col, inner, objChar) {
+  if (objChar === 'w' || objChar === 'W') {
+    const big = (objChar === 'W');
+    let s = col, e = col;
+    if (isWordChar(line[col], big)) {
+      while (s > 0 && isWordChar(line[s - 1], big)) s--;
+      while (e < line.length && isWordChar(line[e], big)) e++;
+    } else {
+      while (s > 0 && !isWordChar(line[s - 1], big) && !/\s/.test(line[s - 1])) s--;
+      while (e < line.length && !isWordChar(line[e], big) && !/\s/.test(line[e])) e++;
+    }
+    if (!inner) {
+      while (e < line.length && /\s/.test(line[e])) e++;
+    }
+    return [s, e];
+  }
+
+  if (objChar === '"' || objChar === "'" || objChar === '`') {
+    const q = objChar;
+    const indices = [];
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === q) indices.push(i);
+    }
+    for (let k = 0; k + 1 < indices.length; k += 2) {
+      const open = indices[k], close = indices[k + 1];
+      if (col <= close) {
+        return inner ? [open + 1, close] : [open, close + 1];
+      }
+    }
+    return null;
+  }
+
+  if (objChar === 't') {
+    // <tag>...</tag>
+    const openEnd = line.indexOf('>', col >= 0 ? 0 : 0);
+    // Cherche la balise englobante autour ou après col
+    const regex = /<([a-zA-Z0-9_-]+)[^>]*>(.*?)<\/\1>/g;
+    let m;
+    while ((m = regex.exec(line)) !== null) {
+      const fullStart = m.index;
+      const fullEnd = m.index + m[0].length;
+      const openTagLen = m[0].indexOf('>') + 1;
+      const closeTagStart = fullEnd - (`</${m[1]}>`).length;
+      if (col <= fullEnd) {
+        return inner ? [fullStart + openTagLen, closeTagStart] : [fullStart, fullEnd];
+      }
+    }
+    return null;
+  }
+
+  const pairs = {
+    '(': ['(', ')'], ')': ['(', ')'], 'b': ['(', ')'],
+    '[': ['[', ']'], ']': ['[', ']'],
+    '{': ['{', '}'], '}': ['{', '}'], 'B': ['{', '}'],
+    '<': ['<', '>'], '>': ['<', '>']
+  };
+  if (pairs[objChar]) {
+    const [op, cl] = pairs[objChar];
+    let openIdx = -1;
+    let depth = 0;
+    for (let i = col; i >= 0; i--) {
+      if (line[i] === cl && i !== col) depth++;
+      if (line[i] === op) {
+        if (depth === 0) { openIdx = i; break; }
+        depth--;
+      }
+    }
+    if (openIdx === -1) openIdx = line.indexOf(op, col);
+    if (openIdx === -1) return null;
+    depth = 0;
+    for (let i = openIdx; i < line.length; i++) {
+      if (line[i] === op) depth++;
+      if (line[i] === cl) {
+        depth--;
+        if (depth === 0) {
+          return inner ? [openIdx + 1, i] : [openIdx, i + 1];
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// Convertit une regex Vim (:s) en RegExp JS
+function vimRegexToJS(vimPat, flags) {
+  let jsPat = "";
+  for (let i = 0; i < vimPat.length; i++) {
+    if (vimPat[i] === '\\' && i + 1 < vimPat.length) {
+      const nxt = vimPat[i + 1];
+      if (nxt === '(' || nxt === ')' || nxt === '+' || nxt === '?' || nxt === '|') {
+        jsPat += nxt; // En Vim magic, \( \+ \? \| sont les métacaractères
+        i++;
+        continue;
+      }
+      jsPat += '\\' + nxt;
+      i++;
+    } else if (vimPat[i] === '(' || vimPat[i] === ')' || vimPat[i] === '+') {
+      jsPat += '\\' + vimPat[i];
+    } else {
+      jsPat += vimPat[i];
+    }
+  }
+  return new RegExp(jsPat, flags);
+}
+
+function executeExCommand(cmdStr, stateObj) {
+  let s = cmdStr.trim();
+  if (!s) return;
+
+  // Support des commandes chaînées par '|'
+  if (s.includes('|') && !s.includes('\\|')) {
+    const subCmds = s.split('|');
+    subCmds.forEach(sc => executeExCommand(sc, stateObj));
+    return;
+  }
+
+  let { lines, r } = stateObj;
+
+  // :g/pattern/d ou :v/pattern/d ou :g!/pattern/d
+  const gMatch = s.match(/^(?:%|1,\$)?\s*(g!?|v)\/([^/]+)\/d$/);
+  if (gMatch) {
+    const mode = gMatch[1];
+    const re = vimRegexToJS(gMatch[2], "");
+    const invert = (mode === 'v' || mode === 'g!');
+    stateObj.lines = lines.filter(ln => invert ? !re.test(ln) : !re.test(ln) ? true : false);
+    // Clarification explicite :
+    stateObj.lines = lines.filter(ln => {
+      const matched = re.test(ln);
+      return invert ? matched : !matched;
+    });
+    if (stateObj.lines.length === 0) stateObj.lines = [""];
+    stateObj.r = Math.min(r, stateObj.lines.length - 1);
+    stateObj.c = clampCol(stateObj.lines, stateObj.r, stateObj.c);
+    return;
+  }
+
+  // Plage + substitution : [range]s<delim>pat<delim>rep[<delim>[flags]]
+  const rangeMatch = s.match(/^([0-9.,$%]+)?\s*s([^\w\s])(.*)$/);
+  if (rangeMatch) {
+    const rangeSpec = rangeMatch[1] || ".";
+    const delim = rangeMatch[2];
+    const rest = rangeMatch[3];
+
+    // Découpage selon delim (en respectant \delim)
+    const parts = [];
+    let cur = "";
+    for (let i = 0; i < rest.length; i++) {
+      if (rest[i] === '\\' && i + 1 < rest.length) {
+        cur += rest[i] + rest[i + 1];
+        i++;
+      } else if (rest[i] === delim) {
+        parts.push(cur);
+        cur = "";
+      } else {
+        cur += rest[i];
+      }
+    }
+    parts.push(cur);
+
+    const pat = parts[0] || "";
+    const rep = parts[1] !== undefined ? parts[1] : "";
+    const flags = parts[2] || "";
+
+    let startLine = r, endLine = r;
+    if (rangeSpec === "%" || rangeSpec === "1,$") {
+      startLine = 0; endLine = lines.length - 1;
+    } else if (rangeSpec.includes(",")) {
+      const [a, b] = rangeSpec.split(",");
+      startLine = a === "." ? r : Math.max(0, parseInt(a, 10) - 1);
+      endLine = b === "$" ? lines.length - 1 : (b === "." ? r : Math.min(lines.length - 1, parseInt(b, 10) - 1));
+    } else if (/^\d+$/.test(rangeSpec)) {
+      startLine = endLine = Math.max(0, parseInt(rangeSpec, 10) - 1);
+    }
+
+    const reFlags = (flags.includes('g') ? 'g' : '') + (flags.includes('i') ? 'i' : '');
+    const regex = vimRegexToJS(pat, reFlags);
+    const jsRep = rep.replace(/&/g, "$&").replace(/\\([1-9])/g, "$$$1");
+
+    for (let lnIdx = startLine; lnIdx <= endLine; lnIdx++) {
+      if (lines[lnIdx] !== undefined) {
+        lines[lnIdx] = lines[lnIdx].replace(regex, jsRep);
+      }
+    }
+    stateObj.c = clampCol(lines, stateObj.r, stateObj.c);
+    return;
+  }
+
+  // :d ou :<N>d
+  if (s === "d") {
+    lines.splice(r, 1);
+    if (lines.length === 0) lines.push("");
+    stateObj.r = Math.min(r, lines.length - 1);
+    return;
+  }
+}
+
+function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
+  const tokens = tokenizeVimInput(rawKeystrokes);
+  const st = {
+    lines: [...initialLines],
+    r: initialCursor[0],
+    c: initialCursor[1],
+    reg: "",
+    regLinewise: false,
+    lastSearch: "",
+    lastFind: null
+  };
+
+  // Enregistrement de la dernière action d'édition pour la commande '.'
+  let lastChangeTokens = [];
+  let recordingChange = false;
+  let currentChangeStart = 0;
+
+  function runTokenStream(tkList, isReplay = false) {
+    let idx = 0;
+    let mode = "NORMAL";
+
+    while (idx < tkList.length) {
+      if (mode === "INSERT") {
+        const tk = tkList[idx++];
+        if (tk === '<Esc>') {
+          mode = "NORMAL";
+          st.c = Math.max(0, st.c - 1);
+          if (recordingChange && !isReplay) {
+            lastChangeTokens = tkList.slice(currentChangeStart, idx);
+            recordingChange = false;
+          }
+        } else if (tk === '<BS>') {
+          if (st.c > 0) {
+            const ln = st.lines[st.r];
+            st.lines[st.r] = ln.slice(0, st.c - 1) + ln.slice(st.c);
+            st.c--;
+          }
+        } else if (tk === '<CR>') {
+          const ln = st.lines[st.r];
+          const before = ln.slice(0, st.c);
+          const after = ln.slice(st.c);
+          st.lines.splice(st.r, 1, before, after);
+          st.r++;
+          st.c = 0;
+        } else if (tk.length === 1) {
+          const ln = st.lines[st.r];
+          st.lines[st.r] = ln.slice(0, st.c) + tk + ln.slice(st.c);
+          st.c++;
+        }
+        continue;
+      }
+
+      // MODE NORMAL
+      let cmdStartIdx = idx;
+      let countStr = "";
+      while (idx < tkList.length && /^[0-9]$/.test(tkList[idx]) && !(countStr === "" && tkList[idx] === "0")) {
+        countStr += tkList[idx++];
+      }
+      const count = countStr ? parseInt(countStr, 10) : 1;
+      if (idx >= tkList.length) break;
+
+      const tk = tkList[idx++];
+
+      // Ignorer un <Esc> surnuméraire en mode Normal
+      if (tk === '<Esc>') continue;
+
+      // Répétition '.'
+      if (tk === '.') {
+        if (lastChangeTokens.length > 0) {
+          for (let k = 0; k < count; k++) {
+            runTokenStream(lastChangeTokens, true);
+          }
+        }
+        continue;
+      }
+
+      // Commandes Ex ':'
+      if (tk === ':') {
+        let exCmd = "";
+        while (idx < tkList.length && tkList[idx] !== '<CR>' && tkList[idx] !== '<Esc>') {
+          exCmd += tkList[idx++];
+        }
+        if (idx < tkList.length && (tkList[idx] === '<CR>' || tkList[idx] === '<Esc>')) idx++;
+        executeExCommand(exCmd, st);
+        continue;
+      }
+
+      // Recherche '/pattern<CR>'
+      if (tk === '/') {
+        let pat = "";
+        while (idx < tkList.length && tkList[idx] !== '<CR>' && tkList[idx] !== '<Esc>') {
+          pat += tkList[idx++];
+        }
+        if (idx < tkList.length) idx++;
+        st.lastSearch = pat;
+        jumpToSearchMatch(st, pat, 1);
+        continue;
+      }
+
+      // '*' : recherche du mot sous le curseur
+      if (tk === '*') {
+        const ln = st.lines[st.r];
+        const span = findTextObjectSpan(ln, st.c, true, 'w');
+        if (span) {
+          st.lastSearch = ln.slice(span[0], span[1]);
+          jumpToSearchMatch(st, st.lastSearch, 1);
+        }
+        continue;
+      }
+
+      // 'n' : occurrence suivante
+      if (tk === 'n') {
+        if (st.lastSearch) jumpToSearchMatch(st, st.lastSearch, count);
+        continue;
+      }
+
+      // Motions simples en Mode Normal
+      if (tk === 'h') { st.c = clampCol(st.lines, st.r, st.c - count); continue; }
+      if (tk === 'l' || tk === ' ') { st.c = clampCol(st.lines, st.r, st.c + count); continue; }
+      if (tk === 'j') { st.r = Math.min(st.lines.length - 1, st.r + count); st.c = clampCol(st.lines, st.r, st.c); continue; }
+      if (tk === 'k') { st.r = Math.max(0, st.r - count); st.c = clampCol(st.lines, st.r, st.c); continue; }
+      if (tk === '0') { st.c = 0; continue; }
+      if (tk === '^') {
+        const m = st.lines[st.r].match(/\S/);
+        st.c = m ? m.index : 0;
+        continue;
+      }
+      if (tk === '$') { st.c = clampCol(st.lines, st.r, st.lines[st.r].length - 1); continue; }
+      if ('wWbBeE'.includes(tk)) {
+        st.c = clampCol(st.lines, st.r, findWordMotionCol(st.lines[st.r], st.c, tk, count));
+        continue;
+      }
+      if (tk === 'G') {
+        st.r = countStr ? Math.min(st.lines.length - 1, Math.max(0, count - 1)) : st.lines.length - 1;
+        st.c = clampCol(st.lines, st.r, st.c);
+        continue;
+      }
+      if (tk === 'g' && idx < tkList.length && tkList[idx] === 'g') {
+        idx++;
+        st.r = countStr ? Math.min(st.lines.length - 1, Math.max(0, count - 1)) : 0;
+        st.c = 0;
+        continue;
+      }
+      if (tk === '%') {
+        const pos = findMatchingPairCol(st.lines[st.r], st.c);
+        if (pos !== -1) st.c = pos;
+        continue;
+      }
+      if ((tk === 'f' || tk === 't' || tk === 'F' || tk === 'T') && idx < tkList.length) {
+        const target = tkList[idx++];
+        st.lastFind = { dir: tk, target };
+        const newCol = findCharOnLine(st.lines[st.r], st.c, tk, target, count);
+        if (newCol !== -1) st.c = newCol;
+        continue;
+      }
+      if (tk === ';' && st.lastFind) {
+        const newCol = findCharOnLine(st.lines[st.r], st.c, st.lastFind.dir, st.lastFind.target, count);
+        if (newCol !== -1) st.c = newCol;
+        continue;
+      }
+
+      // Entrées en Mode Insert (enregistrées pour '.')
+      if (['i', 'a', 'I', 'A', 'o', 'O', 's', 'S', 'C'].includes(tk)) {
+        if (!isReplay) { recordingChange = true; currentChangeStart = cmdStartIdx; }
+        const ln = st.lines[st.r];
+        if (tk === 'i') { mode = "INSERT"; }
+        else if (tk === 'a') { st.c = Math.min(ln.length, st.c + 1); mode = "INSERT"; }
+        else if (tk === 'I') { const m = ln.match(/\S/); st.c = m ? m.index : 0; mode = "INSERT"; }
+        else if (tk === 'A') { st.c = ln.length; mode = "INSERT"; }
+        else if (tk === 'o') { st.lines.splice(st.r + 1, 0, ""); st.r++; st.c = 0; mode = "INSERT"; }
+        else if (tk === 'O') { st.lines.splice(st.r, 0, ""); st.c = 0; mode = "INSERT"; }
+        else if (tk === 's') { st.lines[st.r] = ln.slice(0, st.c) + ln.slice(st.c + count); mode = "INSERT"; }
+        else if (tk === 'S') { st.lines[st.r] = ""; st.c = 0; mode = "INSERT"; }
+        else if (tk === 'C') { st.lines[st.r] = ln.slice(0, st.c); mode = "INSERT"; }
+        continue;
+      }
+
+      // Éditions atomiques immédiates
+      if (tk === 'x') {
+        const ln = st.lines[st.r];
+        st.reg = ln.slice(st.c, st.c + count);
+        st.regLinewise = false;
+        st.lines[st.r] = ln.slice(0, st.c) + ln.slice(st.c + count);
+        st.c = clampCol(st.lines, st.r, st.c);
+        if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+        continue;
+      }
+      if (tk === 'D') {
+        const ln = st.lines[st.r];
+        st.reg = ln.slice(st.c);
+        st.regLinewise = false;
+        st.lines[st.r] = ln.slice(0, st.c);
+        st.c = clampCol(st.lines, st.r, st.c);
+        if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+        continue;
+      }
+      if (tk === 'r' && idx < tkList.length) {
+        const repCh = tkList[idx++];
+        const ln = st.lines[st.r];
+        if (st.c < ln.length) {
+          st.lines[st.r] = ln.slice(0, st.c) + repCh.repeat(Math.min(count, ln.length - st.c)) + ln.slice(st.c + count);
+        }
+        if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+        continue;
+      }
+      if (tk === '~') {
+        let ln = st.lines[st.r];
+        for (let k = 0; k < count && st.c < ln.length; k++) {
+          const ch = ln[st.c];
+          const toggled = ch === ch.toUpperCase() ? ch.toLowerCase() : ch.toUpperCase();
+          ln = ln.slice(0, st.c) + toggled + ln.slice(st.c + 1);
+          st.c++;
+        }
+        st.lines[st.r] = ln;
+        st.c = clampCol(st.lines, st.r, st.c);
+        if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+        continue;
+      }
+      if (tk === 'J') {
+        for (let k = 0; k < count && st.r + 1 < st.lines.length; k++) {
+          const nextLn = st.lines[st.r + 1].replace(/^\s+/, "");
+          st.lines[st.r] = st.lines[st.r].replace(/\s+$/, "") + (nextLn ? " " + nextLn : "");
+          st.lines.splice(st.r + 1, 1);
+        }
+        if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+        continue;
+      }
+      if (tk === '<C-a>' || tk === '<C-x>') {
+        const delta = (tk === '<C-a>' ? 1 : -1) * count;
+        const ln = st.lines[st.r];
+        // Cherche un nombre couvrant ou après st.c
+        const numRegex = /-?\d+/g;
+        let m;
+        while ((m = numRegex.exec(ln)) !== null) {
+          const nStart = m.index;
+          const nEnd = m.index + m[0].length;
+          if (nEnd > st.c) {
+            const newVal = String(parseInt(m[0], 10) + delta);
+            st.lines[st.r] = ln.slice(0, nStart) + newVal + ln.slice(nEnd);
+            st.c = nStart + newVal.length - 1;
+            break;
+          }
+        }
+        if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+        continue;
+      }
+      if (tk === 'p' || tk === 'P') {
+        if (st.regLinewise) {
+          const insertAt = tk === 'p' ? st.r + 1 : st.r;
+          const regLines = st.reg.split("\n");
+          st.lines.splice(insertAt, 0, ...regLines);
+          st.r = insertAt;
+          st.c = 0;
+        } else if (st.reg) {
+          const ln = st.lines[st.r];
+          const pos = tk === 'p' ? Math.min(ln.length, st.c + 1) : st.c;
+          st.lines[st.r] = ln.slice(0, pos) + st.reg + ln.slice(pos);
+          st.c = pos + st.reg.length - 1;
+        }
+        if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+        continue;
+      }
+
+      // Opérateurs composés : d, c, y, >, <
+      if (['d', 'c', 'y', '>', '<'].includes(tk) && idx < tkList.length) {
+        const op = tk;
+        let subCountStr = "";
+        while (idx < tkList.length && /^[0-9]$/.test(tkList[idx]) && !(subCountStr === "" && tkList[idx] === "0")) {
+          subCountStr += tkList[idx++];
+        }
+        const totalCount = count * (subCountStr ? parseInt(subCountStr, 10) : 1);
+        if (idx >= tkList.length) break;
+        const mTk = tkList[idx++];
+
+        // Cas Linewise (dd, cc, yy, >>, <<, dG, >G)
+        if (mTk === op || mTk === 'G') {
+          let startR = st.r;
+          let endR = mTk === 'G' ? (subCountStr ? parseInt(subCountStr, 10) - 1 : st.lines.length - 1) : Math.min(st.lines.length - 1, st.r + totalCount - 1);
+          if (startR > endR) [startR, endR] = [endR, startR];
+          const numLines = endR - startR + 1;
+
+          if (op === 'y') {
+            st.reg = st.lines.slice(startR, endR + 1).join("\n");
+            st.regLinewise = true;
+          } else if (op === 'd') {
+            st.reg = st.lines.slice(startR, endR + 1).join("\n");
+            st.regLinewise = true;
+            st.lines.splice(startR, numLines);
+            if (st.lines.length === 0) st.lines.push("");
+            st.r = Math.min(startR, st.lines.length - 1);
+            st.c = clampCol(st.lines, st.r, st.c);
+            if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+          } else if (op === 'c') {
+            if (!isReplay) { recordingChange = true; currentChangeStart = cmdStartIdx; }
+            st.lines.splice(startR, numLines, "");
+            st.r = startR;
+            st.c = 0;
+            mode = "INSERT";
+          } else if (op === '>' || op === '<') {
+            for (let rIdx = startR; rIdx <= endR; rIdx++) {
+              if (op === '>') st.lines[rIdx] = "  " + st.lines[rIdx];
+              else st.lines[rIdx] = st.lines[rIdx].replace(/^ {1,2}/, "");
+            }
+            if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+          }
+          continue;
+        }
+
+        // Cas Text Objects : i/a + caractère (ciw, di", da[, cit...)
+        let span = null;
+        const ln = st.lines[st.r];
+        if ((mTk === 'i' || mTk === 'a') && idx < tkList.length) {
+          const objCh = tkList[idx++];
+          span = findTextObjectSpan(ln, st.c, mTk === 'i', objCh);
+        } else if (mTk === '$') {
+          span = [st.c, ln.length];
+        } else if (mTk === '0') {
+          span = [0, st.c];
+        } else if ('wWbBeE'.includes(mTk)) {
+          let targetCol = findWordMotionCol(ln, st.c, mTk, totalCount);
+          if (op === 'c' && (mTk === 'w' || mTk === 'W')) {
+            // En Vim, 'cw' se comporte comme 'ce' (ne mange pas l'espace après le mot)
+            targetCol = findWordMotionCol(ln, st.c, mTk === 'w' ? 'e' : 'E', totalCount) + 1;
+          } else if (mTk === 'e' || mTk === 'E') {
+            targetCol++;
+          }
+          span = [Math.min(st.c, targetCol), Math.max(st.c, targetCol)];
+        } else if ((mTk === 'f' || mTk === 't') && idx < tkList.length) {
+          const targetCh = tkList[idx++];
+          const found = findCharOnLine(ln, st.c, mTk, targetCh, totalCount);
+          if (found !== -1) span = [st.c, found + 1];
+        } else if (mTk === '%') {
+          const matchCol = findMatchingPairCol(ln, st.c);
+          if (matchCol !== -1) {
+            span = [Math.min(st.c, matchCol), Math.max(st.c, matchCol) + 1];
+          }
+        }
+
+        if (span) {
+          const [sCol, eCol] = span;
+          st.reg = ln.slice(sCol, eCol);
+          st.regLinewise = false;
+          if (op === 'd') {
+            st.lines[st.r] = ln.slice(0, sCol) + ln.slice(eCol);
+            st.c = clampCol(st.lines, st.r, sCol);
+            if (!isReplay) lastChangeTokens = tkList.slice(cmdStartIdx, idx);
+          } else if (op === 'c') {
+            if (!isReplay) { recordingChange = true; currentChangeStart = cmdStartIdx; }
+            st.lines[st.r] = ln.slice(0, sCol) + ln.slice(eCol);
+            st.c = sCol;
+            mode = "INSERT";
+          }
+        }
+      }
+    }
+  }
+
+  runTokenStream(tokens, false);
+  return { lines: st.lines, cursor: [st.r, st.c], keystrokeCount: tokens.length };
+}
+
+function findCharOnLine(line, col, dir, target, count) {
+  let c = col;
+  for (let k = 0; k < count; k++) {
+    if (dir === 'f' || dir === 't') {
+      const start = (dir === 't' && k > 0) ? c + 2 : c + 1;
+      const idx = line.indexOf(target, start);
+      if (idx === -1) return -1;
+      c = dir === 'f' ? idx : idx - 1;
+    } else {
+      const idx = line.lastIndexOf(target, c - 1);
+      if (idx === -1) return -1;
+      c = dir === 'F' ? idx : idx + 1;
+    }
+  }
+  return c;
+}
+
+function findMatchingPairCol(line, col) {
+  const openChars = "([{";
+  const closeChars = ")]}";
+  let pIdx = col;
+  while (pIdx < line.length && !openChars.includes(line[pIdx]) && !closeChars.includes(line[pIdx])) pIdx++;
+  if (pIdx >= line.length) return -1;
+  const ch = line[pIdx];
+  if (openChars.includes(ch)) {
+    const cl = closeChars[openChars.indexOf(ch)];
+    let depth = 0;
+    for (let i = pIdx; i < line.length; i++) {
+      if (line[i] === ch) depth++;
+      else if (line[i] === cl && --depth === 0) return i;
+    }
+  } else {
+    const op = openChars[closeChars.indexOf(ch)];
+    let depth = 0;
+    for (let i = pIdx; i >= 0; i--) {
+      if (line[i] === ch) depth++;
+      else if (line[i] === op && --depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function jumpToSearchMatch(st, pat, count) {
+  if (!pat) return;
+  const totalLines = st.lines.length;
+  for (let step = 0; step < count; step++) {
+    // Cherche d'abord sur la même ligne après st.c
+    const curLn = st.lines[st.r];
+    const sameIdx = curLn.indexOf(pat, st.c + 1);
+    if (sameIdx !== -1) {
+      st.c = sameIdx;
+      continue;
+    }
+    for (let offset = 1; offset <= totalLines; offset++) {
+      const rIdx = (st.r + offset) % totalLines;
+      const found = st.lines[rIdx].indexOf(pat);
+      if (found !== -1) {
+        st.r = rIdx;
+        st.c = found;
+        break;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// 5. GESTION DU PROFIL, STREAK, BADGES, THÈMES & POLICES
+// =============================================================================
+const STORAGE_KEY = "vim_ops_v1_terminal";
+
+let profile = {
+  pseudo: "adrien",
+  theme: "jensen",
+  fontFamily: "'Fira Code', monospace",
+  fontSize: "14px",
+  campaignUnlocked: 1,
+  bestScore: 0,
+  totalScore: 0,
+  streak: 0,
+  bestStreak: 0,
+  masteredIds: [],
+  golfedIds: [],
+  badges: [],
+  localBoard: [
+    { pseudo: "bram_m", score: 8940, mastered: 40, golfed: 38 },
+    { pseudo: "root_soc", score: 5420, mastered: 32, golfed: 21 },
+    { pseudo: "tssr_guest", score: 1850, mastered: 14, golfed: 6 }
+  ]
+};
+
+let state = {
+  busy: false,
+  active: false,
+  awaitingNext: false,
+  wizardStep: 0,
+  wizardData: {},
+  mode: "CAMPAIGN",
+  playlist: [],
+  stepIdx: 0,
+  sessionScore: 0,
+  attempts: 0,
+  usedHint: 0,
+  startTimeMs: 0
+};
+
+let cmdHistory = [];
+let histIdx = -1;
+
+const outEl = document.getElementById('term-output');
+const inpEl = document.getElementById('cmd-input');
+const boxEl = document.getElementById('term-box');
+const promptLbl = document.getElementById('prompt-label');
+const promptForm = document.getElementById('prompt-form');
+const footerStreakEl = document.getElementById('footer-streak');
+
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+}
+
+function printHtml(html = "", cls = "") {
+  const div = document.createElement('div');
+  div.className = "log-line" + (cls ? " " + cls : "");
+  div.innerHTML = html;
+  outEl.appendChild(div);
+  boxEl.scrollTop = boxEl.scrollHeight;
+  return div;
+}
+
+function printText(text = "", cls = "") {
+  printHtml(esc(text), cls);
+}
+
+function getMultiplier() {
+  if (profile.streak >= 10) return 3.0;
+  if (profile.streak >= 6) return 2.5;
+  if (profile.streak >= 4) return 2.0;
+  if (profile.streak >= 2) return 1.5;
+  return 1.0;
+}
+
+function getRankTitle() {
+  const n = profile.masteredIds.length;
+  let title = RANKS[0].title;
+  for (const r of RANKS) {
+    if (n >= r.min) title = r.title;
+  }
+  return title;
+}
+
+function updateStreakDisplay() {
+  const mult = getMultiplier().toFixed(1);
+  footerStreakEl.textContent = `🔥 ${profile.streak} (x${mult})`;
+}
+
+function checkAndUnlockBadges(elapsedSec) {
+  const newlyUnlocked = [];
+  function grant(id) {
+    if (!profile.badges.includes(id)) {
+      profile.badges.push(id);
+      const b = BADGES.find(x => x.id === id);
+      if (b) newlyUnlocked.push(b);
+    }
+  }
+
+  if (profile.masteredIds.length >= 1) grant("first_blood");
+  if (profile.streak >= 3) grant("streak_3");
+  if (profile.streak >= 7) grant("streak_7");
+  if (profile.streak >= 15) grant("streak_15");
+  if (profile.golfedIds.length >= 1) grant("golf_1");
+  if (profile.golfedIds.length >= 10) grant("golf_10");
+  if (elapsedSec !== null && elapsedSec <= 5) grant("speed_demon");
+
+  // Vérification maîtrise Palier 3 (missions 17..24)
+  const tier3Ids = [17, 18, 19, 20, 21, 22, 23, 24];
+  if (tier3Ids.every(id => profile.masteredIds.includes(id))) grant("text_surgeon");
+
+  // Vérification maîtrise Palier 5 (missions 33..40)
+  const tier5Ids = [33, 34, 35, 36, 37, 38, 39, 40];
+  if (tier5Ids.every(id => profile.masteredIds.includes(id))) grant("ex_alchemist");
+
+  if (profile.masteredIds.length >= TOTAL_MISSIONS) grant("grandmaster");
+
+  if (newlyUnlocked.length > 0) {
+    saveProfile();
+    newlyUnlocked.forEach(b => {
+      printHtml(`  <span class="badge-unlock"> 🏅 HAUT-FAIT DÉBLOQUÉ </span> <span class="c-yellow bold">${esc(b.name)}</span> — <span class="c-fg">${esc(b.desc)}</span>`);
+    });
+  }
+}
+
+function setTheme(themeKey, silent = false) {
+  if (!THEMES[themeKey]) return false;
+  profile.theme = themeKey;
+  const t = THEMES[themeKey];
+  const r = document.documentElement.style;
+  r.setProperty('--c-bg', t.bg);
+  r.setProperty('--c-bar-bg', t.bar);
+  r.setProperty('--c-bar-fg', t.barFg || t.fg);
+  r.setProperty('--c-bar-dim', t.barDim || t.dim);
+  r.setProperty('--c-fg', t.fg);
+  r.setProperty('--c-dim', t.dim);
+  r.setProperty('--c-border', t.border);
+  r.setProperty('--c-cyan', t.cyan);
+  r.setProperty('--c-green', t.green);
+  r.setProperty('--c-red', t.red);
+  r.setProperty('--c-yellow', t.yellow);
+  r.setProperty('--c-magenta', t.magenta);
+  r.setProperty('--c-blue', t.blue);
+  document.getElementById('theme-select').value = themeKey;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Thème appliqué : <span class="c-cyan bold">${esc(themeKey)}</span>`);
+  return true;
+}
+
+function setFontFamily(fontVal, silent = false) {
+  profile.fontFamily = fontVal;
+  document.documentElement.style.setProperty('--term-font', fontVal);
+  document.getElementById('font-select').value = fontVal;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Police modifiée : <span class="c-cyan bold">${esc(fontVal.split(',')[0])}</span>`);
+}
+
+function setFontSize(sizeVal, silent = false) {
+  const normalized = String(sizeVal).endsWith('px') ? sizeVal : `${sizeVal}px`;
+  profile.fontSize = normalized;
+  document.documentElement.style.setProperty('--term-size', normalized);
+  document.getElementById('size-select').value = normalized;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Taille de police : <span class="c-cyan bold">${esc(normalized)}</span>`);
+}
+
+function updatePromptLabel() {
+  const u = esc(profile.pseudo || "op");
+  if (state.wizardStep > 0) {
+    promptLbl.innerHTML = `<span class="c-cyan bold">${u}@vim-ops</span>:<span class="c-blue bold">~/custom</span>$`;
+  } else if (state.active) {
+    const mid = state.playlist[state.stepIdx];
+    promptLbl.innerHTML = `<span class="c-green bold">NORMAL</span> <span class="c-cyan bold">buf-${String(mid).padStart(2, '0')}</span> ❯`;
+  } else {
+    promptLbl.innerHTML = `<span class="c-cyan bold">${u}@vim-ops</span>:<span class="c-blue bold">~</span>$`;
+  }
+  updateStreakDisplay();
+}
+
+function loadProfile() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) profile = { ...profile, ...JSON.parse(saved) };
+  } catch (e) {}
+  if (!setTheme(profile.theme, true)) setTheme("jensen", true);
+  setFontFamily(profile.fontFamily, true);
+  setFontSize(profile.fontSize, true);
+  updatePromptLabel();
+}
+
+function saveProfile() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch (e) {}
+  updatePromptLabel();
+}
+
+function focusPrompt() {
+  if (!state.busy && window.getSelection().toString() === "") inpEl.focus();
+}
+
+function insertToken(tk) {
+  const start = inpEl.selectionStart || inpEl.value.length;
+  const end = inpEl.selectionEnd || inpEl.value.length;
+  inpEl.value = inpEl.value.slice(0, start) + tk + inpEl.value.slice(end);
+  inpEl.focus();
+  inpEl.setSelectionRange(start + tk.length, start + tk.length);
+}
+
+function execFromNav(cmd) {
+  if (state.busy) return;
+  inpEl.value = cmd;
+  handleInput(cmd);
+  inpEl.value = "";
+  inpEl.focus();
+}
+
+// =============================================================================
+// 6. RENDU DU BUFFER VIM CÔTE À CÔTE & ÉVALUATION DES MISSIONS
+// =============================================================================
+function drawAsciiHeader() {
+  const banner = [
+    " _    __ ____ __  ___         ____   ____   _____",
+    "| |  / //  _//  |/  /        / __ \\ / __ \\ / ___/",
+    "| | / / / / / /|_/ / ______ / / / // /_/ / \\__ \\ ",
+    "| |/ /_/ / / /  / / /_____// /_/ // ____/ ___/ / ",
+    "|___//___//_/  /_/         \\____//_/     /____/  "
+  ].join("\n");
+
+  const mult = getMultiplier().toFixed(1);
+  printHtml(`<span class="c-cyan bold">${esc(banner)}</span>`);
+  printHtml(`  <span class="c-dim">Simulateur Tactique d'Édition Modale — Des bases HJKL à l'expertise Text-Objects &amp; Ex (40 Missions)</span>`);
+  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+  printHtml(`  <span class="bold">Rang :</span> <span class="c-magenta bold">${esc(getRankTitle())}</span> │ <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS}</span> │ <span class="bold">Vim-Golf ⛳ :</span> <span class="c-yellow bold">${profile.golfedIds.length}/${TOTAL_MISSIONS}</span> │ <span class="bold">Streak :</span> <span class="c-yellow bold">🔥 ${profile.streak} (x${mult})</span>`);
+  printHtml(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+}
+
+function tierName(d) {
+  return {
+    1: "TIER 1 : SURVIE & NAVIGATION RAPIDE (x, r, I, A, w, f, dd, J)",
+    2: "TIER 2 : OPÉRATEURS & COMPTEURS (D, C, dt, 3dd, O, G, ~, d3w)",
+    3: "TIER 3 : CHIRURGIE TEXT OBJECTS (ci\", di(, da[, ciw, cit, di{, daW)",
+    4: "TIER 4 : VITESSE PURE, COMMANDE POINT & REGISTRES (<C-a>, yyp, ddp, ., *, %)",
+    5: "TIER 5 : MAÎTRE EX, REGEX & GLOBAL (:s, :g/re/d, :v/re/d, &, \\1)"
+  }[d] || "MODE MIXTE";
+}
+
+function formatLineWithCursor(lineStr, isCursorLine, cursorCol, width) {
+  const padded = lineStr.padEnd(width, " ");
+  if (!isCursorLine) return esc(padded.slice(0, width));
+  const c = Math.min(Math.max(0, cursorCol), width - 1);
+  const before = esc(padded.slice(0, c));
+  const curChar = esc(padded[c] || " ");
+  const after = esc(padded.slice(c + 1, width));
+  return `${before}<span class="vim-cursor">${curChar}</span>${after}`;
+}
+
+function printMission() {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+  if (!m) {
+    state.active = false;
+    state.awaitingNext = false;
+    updatePromptLabel();
+    printText("");
+    printHtml(`<span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════════╗</span>`);
+    printHtml(`<span class="c-green bold">║  🏆 SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(6)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(2, '0')}/${TOTAL_MISSIONS} | Golf : ${String(profile.golfedIds.length).padStart(2, '0')}/${TOTAL_MISSIONS} ║</span>`);
+    printHtml(`<span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+    printHtml(`  Tape <span class="c-cyan bold">badges</span> pour voir tes trophées, <span class="c-cyan bold">submit</span> pour le Leaderboard, ou <span class="c-cyan bold">start</span>.`);
+    return;
+  }
+
+  state.attempts = 0;
+  state.usedHint = 0;
+  state.awaitingNext = false;
+  state.startTimeMs = Date.now();
+  updatePromptLabel();
+
+  const mastTag = profile.masteredIds.includes(m.id) ? ` <span class="c-green bold">[✓ MAÎTRISÉE]</span>` : "";
+  const golfTag = profile.golfedIds.includes(m.id) ? ` <span class="badge-golf">★ VIM-GOLF</span>` : "";
+
+  const [curR, curC] = m.cursor;
+  const curCharUnder = (m.initialLines[curR] || "")[curC] || "EOL";
+
+  printText("");
+  printHtml(`  <span class="badge-tier"> ${esc(tierName(m.diff))} </span>  <span class="badge-theme"> ${esc(m.theme)} </span>${mastTag}${golfTag}`);
+  printHtml(`  <span class="c-cyan bold">Mission #${String(m.id).padStart(2, '0')} — ${esc(m.title)}</span> <span class="c-dim">(Par optimal : <span class="c-yellow bold">${m.par} frappe${m.par > 1 ? 's' : ''}</span>)</span>`);
+  printText("");
+  printHtml(`  <span class="c-fg">${esc(m.scenario)}</span>`);
+  printHtml(`  <span class="c-dim">Position initiale du curseur : Ligne ${curR + 1}, Col ${curC + 1} (sur le caractère <span class="vim-cursor">${esc(curCharUnder)}</span>)</span>`);
+  printText("");
+
+  const COL_W = 36;
+  printHtml(`  <span class="c-dim">┌──────────────────────────────────────────┬──────────────────────────────────────────┐</span>`);
+  printHtml(`  <span class="c-dim">│</span> <span class="c-cyan bold">BUFFER INITIAL (Mode NORMAL)</span>             <span class="c-dim">│</span> <span class="c-green bold">BUFFER CIBLE ATTENDU</span>                     <span class="c-dim">│</span>`);
+  printHtml(`  <span class="c-dim">├──────────────────────────────────────────┼──────────────────────────────────────────┤</span>`);
+
+  const maxRows = Math.max(m.initialLines.length, m.expectedLines.length, 3);
+  for (let i = 0; i < maxRows; i++) {
+    const hasInit = i < m.initialLines.length;
+    const hasExp = i < m.expectedLines.length;
+
+    const leftNum = hasInit ? `<span class="c-dim">${String(i + 1).padStart(2, ' ')} </span>` : `<span class="c-blue">~  </span>`;
+    const leftTxt = hasInit
+      ? formatLineWithCursor(m.initialLines[i], i === curR, curC, COL_W)
+      : `<span class="c-dim">${" ".repeat(COL_W)}</span>`;
+
+    const rightNum = hasExp ? `<span class="c-dim">${String(i + 1).padStart(2, ' ')} </span>` : `<span class="c-blue">~  </span>`;
+    const rightTxt = hasExp
+      ? `<span class="c-green">${esc(m.expectedLines[i].padEnd(COL_W, " ").slice(0, COL_W))}</span>`
+      : `<span class="c-dim">${" ".repeat(COL_W)}</span>`;
+
+    printHtml(`  <span class="c-dim">│</span> ${leftNum}${leftTxt} <span class="c-dim">│</span> ${rightNum}${rightTxt} <span class="c-dim">│</span>`);
+  }
+  printHtml(`  <span class="c-dim">└──────────────────────────────────────────┴──────────────────────────────────────────┘</span>`);
+  printHtml(`  <span class="c-dim">Commandes : séquence Vim, hint, sol, memo, badges, skip, goto &lt;1-${TOTAL_MISSIONS}&gt;, clear, exit</span>`);
+  printText("");
+}
+
+function evaluateVimAttempt(rawSeq) {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+
+  state.attempts++;
+  let res;
+  try {
+    res = simulateVimKeystrokes(m.initialLines, m.cursor, rawSeq);
+  } catch (err) {
+    printHtml(`  <span class="c-red">[✗] Erreur d'exécution : ${esc(err.message)}</span>`);
+    return;
+  }
+
+  const isMatch =
+    res.lines.length === m.expectedLines.length &&
+    res.lines.every((ln, idx) => ln === m.expectedLines[idx]);
+
+  if (isMatch) {
+    const elapsed = Math.max(1, Math.floor((Date.now() - state.startTimeMs) / 1000));
+    const strokes = res.keystrokeCount;
+    const isGolf = strokes <= m.par && state.usedHint < 2;
+
+    if (state.usedHint === 0) {
+      profile.streak++;
+      if (profile.streak > profile.bestStreak) profile.bestStreak = profile.streak;
+    } else {
+      profile.streak = 0;
+    }
+
+    const mult = getMultiplier();
+    let basePts = 100 - (state.attempts - 1) * 15 - (state.usedHint === 1 ? 35 : 0);
+    if (basePts < 25) basePts = 25;
+    let speedBonus = elapsed <= 10 ? 35 : (elapsed <= 25 ? 15 : 0);
+    let golfBonus = isGolf ? 40 : 0;
+
+    let totalPts = Math.round((basePts + speedBonus + golfBonus) * mult);
+    if (state.usedHint === 2) {
+      totalPts = 10;
+    } else {
+      if (!profile.masteredIds.includes(m.id)) profile.masteredIds.push(m.id);
+      if (isGolf && !profile.golfedIds.includes(m.id)) profile.golfedIds.push(m.id);
+    }
+
+    state.sessionScore += totalPts;
+    profile.totalScore += totalPts;
+    if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
+    if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < TOTAL_MISSIONS) {
+      profile.campaignUnlocked = m.id + 1;
+    }
+    saveProfile();
+
+    state.awaitingNext = true;
+    printText("");
+    printHtml(`  <span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════════╗</span>`);
+    printHtml(`  <span class="c-green bold">║  [✓] BUFFER VALIDÉ ! (+${totalPts} pts | ⏱ ${elapsed}s | 🔥 Streak: ${profile.streak} [x${mult.toFixed(1)}])</span>`);
+    printHtml(`  <span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+    const golfMsg = isGolf
+      ? `<span class="badge-golf">★ VIM-GOLF ATTEINT ! (${strokes}/${m.par} frappes, +40 pts)</span>`
+      : `<span class="c-yellow">${strokes} frappes (Par optimal : ${m.par})</span>`;
+    printHtml(`  <span class="bold">Ta séquence       :</span> <span class="c-green bold">${esc(rawSeq)}</span>  ➔  ${golfMsg}`);
+    printHtml(`  <span class="bold">Solution optimale :</span> <span class="c-cyan bold">${esc(m.solution)}</span>`);
+    printText("");
+    printHtml(`  <span class="c-yellow bold">Débriefing Tactique :</span>`);
+    printHtml(`  <span class="c-fg">${esc(m.debrief)}</span>`);
+    checkAndUnlockBadges(state.usedHint < 2 ? elapsed : null);
+    printText("");
+    printHtml(`  <span class="c-dim">👉 Appuie sur [ENTRÉE] pour passer à la mission suivante...</span>`);
+    return;
+  }
+
+  // En cas d'échec, afficher le buffer produit pour que l'élève comprenne l'effet de sa commande
+  printText("");
+  printHtml(`  <span class="c-red bold">[✗] Le buffer produit ne correspond pas à la cible :</span>`);
+  res.lines.forEach((ln, idx) => {
+    const expLn = m.expectedLines[idx];
+    const ok = ln === expLn;
+    const tag = ok ? `<span class="c-green">✓</span>` : `<span class="c-red">✗</span>`;
+    const rendered = formatLineWithCursor(ln, idx === res.cursor[0], res.cursor[1], Math.max(ln.length + 1, 20));
+    printHtml(`    ${tag} <span class="c-dim">L${idx + 1}:</span> ${rendered}`);
+  });
+  printHtml(`  <span class="c-dim">💡 N'oublie pas &lt;Esc&gt; après une insertion (ex: ci"prod&lt;Esc&gt;) ou &lt;CR&gt; après une commande Ex.</span>`);
+}
+
+// =============================================================================
+// 7. AFFICHAGE DES BADGES, MÉMO VIM COMPLET & LEADERBOARD
+// =============================================================================
+function showBadges() {
+  printText("");
+  printHtml(`  <span class="c-yellow bold">╔══════════════════════ SALLE DES TROPHÉES &amp; RANGS VIM-OPS ══════════════════════╗</span>`);
+  printHtml(`  <span class="bold">Opérateur :</span> <span class="c-cyan bold">${esc(profile.pseudo)}</span>   │   <span class="bold">Rang actuel :</span> <span class="c-magenta bold">${esc(getRankTitle())}</span>   │   <span class="bold">Record Streak :</span> <span class="c-yellow bold">🔥 ${profile.bestStreak}</span>`);
+  printText("");
+  BADGES.forEach(b => {
+    const unlocked = profile.badges.includes(b.id);
+    const icon = unlocked ? `<span class="c-green bold">[🏅 DÉBLOQUÉ]</span>` : `<span class="c-dim">[🔒 VERROUILLÉ]</span>`;
+    const titleCls = unlocked ? "c-yellow bold" : "c-dim";
+    printHtml(`    ${icon} <span class="${titleCls}">${esc(b.name.padEnd(28))}</span> <span class="c-fg">${esc(b.desc)}</span>`);
+  });
+  printHtml(`  <span class="c-yellow bold">╚════════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
+function showMemo() {
+  printText("");
+  printHtml(`  <span class="c-magenta bold">╔═══════════════════════════ MÉMO TACTIQUE VIM &amp; EX ═══════════════════════════╗</span>`);
+  printHtml(`  <span class="c-cyan bold">1. Mouvements &amp; Sauts Horizontaux / Verticaux :</span>`);
+  printHtml(`    <span class="c-yellow bold">h j k l</span>        Gauche, Bas, Haut, Droite     <span class="c-yellow bold">w / b / e</span>      Mot suivant / début / fin`);
+  printHtml(`    <span class="c-yellow bold">0 / ^ / $</span>      Col 0 / 1er non-blanc / Fin   <span class="c-yellow bold">W / B / E</span>      MOT séparé par espaces`);
+  printHtml(`    <span class="c-yellow bold">f&lt;c&gt; / t&lt;c&gt;</span>    Saute SUR / AVANT &lt;c&gt;         <span class="c-yellow bold">gg / G / %</span>     Début / Fin fichier / Paire ()`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">2. Entrées en Mode Insert &amp; Éditions Atomiques :</span>`);
+  printHtml(`    <span class="c-yellow bold">i / a</span>          Insérer avant / après         <span class="c-yellow bold">I / A</span>          Insérer début / fin de ligne`);
+  printHtml(`    <span class="c-yellow bold">o / O</span>          Ouvrir ligne dessous / dessus <span class="c-yellow bold">x / r&lt;c&gt; / ~</span>   Suppr char / Remplacer / Casse`);
+  printHtml(`    <span class="c-yellow bold">D / C / J</span>      Suppr fin / Changer fin / Join <span class="c-yellow bold">&lt;C-a&gt; / &lt;C-x&gt;</span>  Incrémenter / Décrémenter nombre`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">3. La Grammaire d'Or : [Opérateur] + [Compteur / Text Object] :</span>`);
+  printHtml(`    Opérateurs : <span class="c-green bold">d</span> (delete/couper), <span class="c-green bold">c</span> (change), <span class="c-green bold">y</span> (yank/copier), <span class="c-green bold">&gt;</span> (indenter)`);
+  printHtml(`    <span class="c-cyan bold">ciw / daw</span>      Changer / Supprimer le mot sous le curseur (même au milieu du mot !)`);
+  printHtml(`    <span class="c-cyan bold">ci" / da"</span>      Intérieur des guillemets (<span class="bold">i</span>nner) / Guillemets inclus (<span class="bold">a</span>round)`);
+  printHtml(`    <span class="c-cyan bold">di( / di{ / da[</span> Intérieur des parenthèses, accolades, ou crochets complets`);
+  printHtml(`    <span class="c-cyan bold">cit / dit</span>      Intérieur d'une paire de balises XML/HTML &lt;tag&gt;...&lt;/tag&gt;`);
+  printText("");
+  printHtml(`  <span class="c-cyan bold">4. Vitesse Pure &amp; Commandes Ex :</span>`);
+  printHtml(`    <span class="c-yellow bold">.</span> (Point)      Répète la dernière modification complète     <span class="c-yellow bold">* / n</span>   Cherche mot sous curseur / Suivant`);
+  printHtml(`    <span class="c-yellow bold">:%s/a/b/g&lt;CR&gt;</span>  Remplace 'a' par 'b' dans tout le fichier    <span class="c-yellow bold">:s#a#b#</span> Délimiteur '#' (pour les chemins)`);
+  printHtml(`    <span class="c-yellow bold">:g/re/d&lt;CR&gt;</span>    Supprime les lignes matchant 're'            <span class="c-yellow bold">:v/re/d</span> Supprime celles ne matchant PAS`);
+  printHtml(`  <span class="c-magenta bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
+async function showLeaderboard() {
+  const list = [...profile.localBoard];
+  const myBest = Math.max(profile.bestScore, profile.totalScore);
+  const ex = list.find(x => x.pseudo === profile.pseudo);
+  if (ex) {
+    ex.score = Math.max(ex.score, myBest);
+    ex.mastered = profile.masteredIds.length;
+    ex.golfed = profile.golfedIds.length;
+  } else {
+    list.push({ pseudo: profile.pseudo, score: myBest, mastered: profile.masteredIds.length, golfed: profile.golfedIds.length });
+  }
+  list.sort((a, b) => b.score - a.score);
+
+  printText("");
+  printHtml(`  <span class="c-cyan bold">=== LEADERBOARD OPÉRATEURS VIM-OPS ===</span>`);
+  printHtml(`  <span class="c-dim">RANG   PSEUDO               SCORE        MAÎTRISE   VIM-GOLF</span>`);
+  printHtml(`  <span class="c-dim">────   ──────────────────   ──────────   ────────   ────────</span>`);
+  list.slice(0, 10).forEach((r, idx) => {
+    const rk = `#${String(idx + 1).padStart(2, '0')}`.padEnd(7);
+    const ps = String(r.pseudo).slice(0, 18).padEnd(21);
+    const sc = `${r.score} pts`.padEnd(13);
+    const ma = `${r.mastered}/${TOTAL_MISSIONS}`.padEnd(11);
+    const gf = `★ ${r.golfed || 0}/${TOTAL_MISSIONS}`;
+    printHtml(`  <span class="c-yellow bold">${esc(rk)}</span><span class="c-fg">${esc(ps)}</span><span class="c-green bold">${esc(sc)}</span><span class="c-cyan">${esc(ma)}</span><span class="c-yellow">${esc(gf)}</span>`);
+  });
+  printText("");
+}
+
+// =============================================================================
+// 8. INTERPRÉTEUR DE COMMANDES SHELL & BOUCLE PRINCIPALE
+// =============================================================================
+function startCampaign(startAt) {
+  const s = startAt || profile.campaignUnlocked || 1;
+  state.playlist = [];
+  for (let i = s; i <= TOTAL_MISSIONS; i++) state.playlist.push(i);
+  state.mode = "CAMPAIGN";
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  printMission();
+}
+
+function onPromptSubmit(e) {
+  e.preventDefault();
+  if (state.busy) return;
+  const raw = inpEl.value;
+  inpEl.value = "";
+  handleInput(raw);
+}
+
+function handleInput(rawInput) {
+  const cmd = rawInput.trim();
+  printHtml(`${promptLbl.innerHTML} ${esc(cmd)}`);
+
+  if (state.awaitingNext && cmd === "") {
+    state.stepIdx++;
+    printMission();
+    return;
+  }
+
+  if (!cmd) return;
+  cmdHistory.unshift(cmd);
+  histIdx = -1;
+
+  if (state.wizardStep > 0) {
+    handleCustomWizard(cmd);
+    return;
+  }
+
+  const parts = cmd.split(/\s+/);
+  const base = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(" ");
+
+  // Easter Egg si le joueur tente de quitter Vim avec :q, :wq ou :q! hors mission
+  if ((cmd === ":q" || cmd === ":q!" || cmd === ":wq") && !state.active) {
+    printHtml(`  <span class="c-yellow bold">[!] Personne ne quitte vraiment Vim. Tape 'start' pour retourner au combat.</span>`);
+    return;
+  }
+
+  if (base === "help" || base === "man") {
+    printText("");
+    printHtml(`  <span class="c-cyan bold">COMMANDES DU SIMULATEUR VIM-OPS :</span>`);
+    printHtml(`    <span class="c-green bold">start</span> / <span class="c-green bold">camp</span>       : Lancer la campagne au niveau débloqué (${profile.campaignUnlocked}/${TOTAL_MISSIONS})`);
+    printHtml(`    <span class="c-green bold">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>        : Aller directement à une mission précise`);
+    printHtml(`    <span class="c-green bold">custom</span>             : Configurer un entraînement sur-mesure (Palier N1..N5, Thème)`);
+    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">profil</span>     : Voir ta progression, ton Rang, ton Streak et les 5 paliers`);
+    printHtml(`    <span class="c-green bold">badges</span>             : Afficher tes Hauts-Faits et trophées Vim-Golf`);
+    printHtml(`    <span class="c-green bold">board</span> / <span class="c-green bold">submit</span>     : Voir le Leaderboard des opérateurs`);
+    printHtml(`    <span class="c-green bold">nick &lt;pseudo&gt;</span>      : Changer ton pseudo (actuel : <span class="c-cyan">${esc(profile.pseudo)}</span>)`);
+    printHtml(`    <span class="c-green bold">memo</span>               : Afficher l'aide-mémoire complet Vim (Motions, Text Objects, Ex)`);
+    printHtml(`    <span class="c-green bold">theme &lt;nom&gt;</span>        : Changer de thème (${Object.keys(THEMES).join(', ')})`);
+    printHtml(`    <span class="c-green bold">clear</span>              : Nettoyer l'écran`);
+    printText("");
+    return;
+  }
+
+  if (base === "clear" || base === "cls") {
+    outEl.innerHTML = "";
+    drawAsciiHeader();
+    if (state.active) printMission();
+    return;
+  }
+
+  if (base === "theme") {
+    if (!arg || !setTheme(arg.toLowerCase())) {
+      printHtml(`  Thèmes disponibles : <span class="c-cyan">${Object.keys(THEMES).join(', ')}</span>`);
+    }
+    return;
+  }
+
+  if (base === "memo") { showMemo(); return; }
+  if (base === "badges" || base === "achievements") { showBadges(); return; }
+  if (base === "board" || base === "leaderboard" || base === "submit") { showLeaderboard(); return; }
+
+  if (base === "stats" || base === "tree" || base === "profil") {
+    printText("");
+    printHtml(`  <span class="c-cyan bold">Profil Opérateur : ${esc(profile.pseudo)}</span> — <span class="c-magenta bold">${esc(getRankTitle())}</span>`);
+    printHtml(`  ├── <span class="bold">Campagne débloquée :</span> Mission ${profile.campaignUnlocked}/${TOTAL_MISSIONS}`);
+    printHtml(`  ├── <span class="bold">Missions maîtrisées:</span> <span class="c-green bold">${profile.masteredIds.length}/${TOTAL_MISSIONS}</span>`);
+    printHtml(`  ├── <span class="bold">Insignes Vim-Golf  :</span> <span class="c-yellow bold">★ ${profile.golfedIds.length}/${TOTAL_MISSIONS}</span>`);
+    printHtml(`  ├── <span class="bold">Série actuelle     :</span> <span class="c-yellow bold">🔥 ${profile.streak}</span> (Record : ${profile.bestStreak})`);
+    printHtml(`  ├── <span class="bold">Badges débloqués   :</span> <span class="c-cyan bold">${profile.badges.length}/${BADGES.length}</span> (tape 'badges')`);
+    printHtml(`  └── <span class="bold">Architecture des 5 Paliers :</span>`);
+    printHtml(`      ├── <span class="c-cyan">[01..08]</span> Tier 1 : Survie &amp; Navigation Rapide (x, r, I, A, w, f, dd, J)`);
+    printHtml(`      ├── <span class="c-cyan">[09..16]</span> Tier 2 : Opérateurs &amp; Compteurs (D, C, dt, 3dd, O, G, ~, d3w)`);
+    printHtml(`      ├── <span class="c-cyan">[17..24]</span> Tier 3 : Chirurgie Text Objects (ci", di(, da[, ciw, cit, di{, daW)`);
+    printHtml(`      ├── <span class="c-cyan">[25..32]</span> Tier 4 : Vitesse Pure, Point &amp; Registres (&lt;C-a&gt;, yyp, ddp, ., *, %)`);
+    printHtml(`      └── <span class="c-cyan">[33..40]</span> Tier 5 : Maître Ex, Regex &amp; Global (:s, :g/re/d, :v/re/d, &amp;, \\1)`);
+    printText("");
+    return;
+  }
+
+  if (base === "nick") {
+    if (!arg) { printHtml(`  Usage : <span class="c-cyan">nick &lt;ton_pseudo&gt;</span>`); return; }
+    profile.pseudo = arg.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "op";
+    saveProfile();
+    printHtml(`  <span class="c-green">[✓]</span> Pseudo défini sur : <span class="c-cyan bold">${esc(profile.pseudo)}</span>`);
+    return;
+  }
+
+  if (base === "start" || base === "camp") {
+    startCampaign(parseInt(arg, 10) || profile.campaignUnlocked);
+    return;
+  }
+
+  if (base === "goto") {
+    const n = parseInt(arg, 10);
+    if (!n || n < 1 || n > TOTAL_MISSIONS) {
+      printHtml(`  Usage : <span class="c-cyan">goto &lt;1-${TOTAL_MISSIONS}&gt;</span>`);
+      return;
+    }
+    startCampaign(n);
+    return;
+  }
+
+  if (base === "custom") {
+    state.active = false;
+    state.wizardStep = 1;
+    updatePromptLabel();
+    printText("");
+    printHtml(`  <span class="c-cyan bold">⚙️ CONFIGURATION D'ENTRAÎNEMENT VIM SUR-MESURE</span>`);
+    printHtml(`  Étape 1/3 — Palier [<span class="c-yellow">1</span>=Survie, <span class="c-yellow">2</span>=Opérateurs, <span class="c-yellow">3</span>=TextObjects, <span class="c-yellow">4</span>=Vitesse, <span class="c-yellow">5</span>=Ex/Regex, <span class="c-yellow">ALL</span>=Mixte] :`);
+    return;
+  }
+
+  if (state.active) {
+    const m = MISSIONS.find(x => x.id === state.playlist[state.stepIdx]);
+    if (base === "exit" || base === "quit") {
+      state.active = false;
+      state.awaitingNext = false;
+      updatePromptLabel();
+      printHtml(`  <span class="c-dim">Session en pause. Tape 'start' pour reprendre.</span>`);
+      return;
+    }
+    if (base === "hint" || base === "indice") {
+      if (state.usedHint === 0) state.usedHint = 1;
+      printHtml(`  <span class="c-yellow bold">💡 [INDICE TACTIQUE] :</span> ${esc(m.hint)} <span class="c-dim">(Le Streak sera réinitialisé sur cette mission)</span>`);
+      return;
+    }
+    if (base === "sol" || base === "solution") {
+      state.usedHint = 2;
+      printHtml(`  <span class="c-magenta bold">🔑 [SOLUTION OPTIMALE (${m.par} frappes)] :</span> <span class="bold">${esc(m.solution)}</span>`);
+      return;
+    }
+    if (base === "skip" || base === "next") {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    if (state.awaitingNext) {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    evaluateVimAttempt(rawInput.trim());
+    return;
+  }
+
+  printHtml(`  <span class="c-red">vim-ops: ${esc(base)}: commande inconnue.</span> Tape <span class="c-cyan bold">start</span> ou <span class="c-cyan bold">help</span>.`);
+}
+
+function handleCustomWizard(input) {
+  const val = input.trim().toUpperCase();
+  if (val === "EXIT" || val === "QUIT") {
+    state.wizardStep = 0;
+    updatePromptLabel();
+    printHtml(`  <span class="c-dim">Configuration annulée.</span>`);
+    return;
+  }
+  if (state.wizardStep === 1) {
+    state.wizardData.diff = ["1", "2", "3", "4", "5"].includes(val) ? Number(val) : "ALL";
+    state.wizardStep = 2;
+    printHtml(`  Étape 2/3 — Contexte [<span class="c-yellow">NET</span>, <span class="c-yellow">SYS</span>, <span class="c-yellow">SEC</span>, <span class="c-yellow">ALL</span>] (défaut: ALL) :`);
+    return;
+  }
+  if (state.wizardStep === 2) {
+    state.wizardData.theme = ["NET", "SYS", "SEC"].includes(val) ? val : "ALL";
+    state.wizardStep = 3;
+    printHtml(`  Étape 3/3 — Nombre de missions [<span class="c-yellow">1-${TOTAL_MISSIONS}</span>] (défaut: 5) :`);
+    return;
+  }
+  if (state.wizardStep === 3) {
+    const count = parseInt(val, 10) || 5;
+    const pool = MISSIONS.filter(m =>
+      (state.wizardData.diff === "ALL" || m.diff === state.wizardData.diff) &&
+      (state.wizardData.theme === "ALL" || m.theme === state.wizardData.theme)
+    ).map(m => m.id);
+
+    for (let i = pool.length - 1; i > 0; i--) {
+      const r = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[r]] = [pool[r], pool[i]];
+    }
+
+    state.wizardStep = 0;
+    state.playlist = pool.slice(0, Math.min(count, pool.length));
+    state.mode = "CUSTOM";
+    state.stepIdx = 0;
+    state.sessionScore = 0;
+    state.active = true;
+    printMission();
+  }
+}
+
+// Gestion du clavier : Flèches Haut/Bas pour l'historique & Touche Escape pour insérer <Esc>
+inpEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    insertToken('<Esc>');
+    return;
+  }
+  if (e.key === 'ArrowUp') {
+    if (histIdx + 1 < cmdHistory.length) {
+      histIdx++;
+      inpEl.value = cmdHistory[histIdx];
+      e.preventDefault();
+    }
+  } else if (e.key === 'ArrowDown') {
+    if (histIdx > 0) {
+      histIdx--;
+      inpEl.value = cmdHistory[histIdx];
+      e.preventDefault();
+    } else if (histIdx === 0) {
+      histIdx = -1;
+      inpEl.value = "";
+      e.preventDefault();
+    }
+  }
+});
+
+// Initialisation
+loadProfile();
+drawAsciiHeader();
+printText("");
+printHtml(`  Bienvenue sur <span class="c-cyan bold">VIM-OPS</span>. Tape tes séquences de touches comme en Mode Normal (ex: <span class="c-green">ci"prod&lt;Esc&gt;</span> ou <span class="c-green">:%s/old/new/g&lt;CR&gt;</span>).`);
+printHtml(`  • Appuie directement sur la touche <span class="c-yellow bold">[Échap]</span> de ton clavier pour insérer <span class="c-cyan">&lt;Esc&gt;</span> dans ta séquence.`);
+printHtml(`  • Tape <span class="c-cyan bold">start</span> (ou clique sur <span class="c-cyan">[1:Campagne]</span>) pour lancer la Mission #${String(profile.campaignUnlocked).padStart(2, '0')}/${TOTAL_MISSIONS}, ou <span class="c-cyan bold">memo</span> pour le guide.`);
+printText("");
+</script>
+</body>
+</html>
