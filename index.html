@@ -39,9 +39,9 @@
 
     .portal-container {
       width: 100%;
-      max-width: 880px;
+      max-width: 900px;
       border: 1px solid var(--font-color);
-      padding: 32px 36px;
+      padding: 30px 34px;
       box-shadow: 0 0 36px rgba(0, 0, 0, 0.45);
       background-color: var(--bar-bg);
     }
@@ -53,7 +53,7 @@
       line-height: 1.1;
       white-space: pre;
       overflow-x: auto;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
       text-align: center;
     }
 
@@ -65,10 +65,10 @@
       align-items: flex-start;
       gap: 16px;
       color: var(--dim-color);
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       font-size: 12.5px;
       border-bottom: 1px dashed var(--border-color);
-      padding-bottom: 16px;
+      padding-bottom: 14px;
     }
 
     .sys-lines {
@@ -110,7 +110,7 @@
       border: 1px solid var(--border-color);
       background-color: var(--bg-color);
       padding: 12px 16px;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -139,13 +139,18 @@
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .menu-item {
       border: 1px solid var(--border-color);
       background-color: var(--bg-color);
       transition: all 0.16s ease;
+    }
+
+    .menu-item.nexus-highlight {
+      border-width: 1px;
+      box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.02);
     }
 
     .menu-item:hover {
@@ -157,7 +162,7 @@
       color: var(--font-color);
       text-decoration: none;
       display: block;
-      padding: 14px 18px;
+      padding: 13px 18px;
     }
 
     .item-header {
@@ -205,8 +210,8 @@
     .menu-desc {
       font-size: 12px;
       color: var(--dim-color);
-      margin-top: 5px;
-      margin-bottom: 12px;
+      margin-top: 4px;
+      margin-bottom: 10px;
     }
 
     /* Zone de progression par jeu */
@@ -248,7 +253,7 @@
     }
 
     .footer-prompt {
-      margin-top: 28px;
+      margin-top: 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -295,7 +300,7 @@
     <!-- BARRE SYSTÈME & SÉLECTEUR DE THÈME UNIFIÉ -->
     <div class="system-bar">
       <div class="sys-lines">
-        <div>[SYS_ID]: <span class="sys-val">TSSR-TRAINING-CENTER-V4.2</span></div>
+        <div>[SYS_ID]: <span class="sys-val">TSSR-TRAINING-CENTER-V5.0</span></div>
         <div>[OPERATOR]: <span class="sys-val" id="op-pseudo">ACCREDITED_OPERATOR</span></div>
         <div>[ACTIVE_THEME]: <span class="sys-val" id="active-theme-label">JENSEN (SARIF AMBER)</span></div>
       </div>
@@ -337,7 +342,7 @@
       </div>
     </div>
 
-    <!-- TÉLÉMÉTRIE GLOBALE DES 4 MODULES -->
+    <!-- TÉLÉMÉTRIE GLOBALE DES 5 MODULES (284 MISSIONS) -->
     <div class="global-telemetry">
       <div class="telemetry-top">
         <div>
@@ -345,7 +350,7 @@
           <span class="global-rank-badge" id="global-rank">ASPIRANT TSSR</span>
         </div>
         <div>
-          <span>MAÎTRISE TOTALE : <b id="global-mastered" style="color:var(--font-color)">0 / 184</b> (<span id="global-pct">0%</span>)</span>
+          <span>MAÎTRISE TOTALE : <b id="global-mastered" style="color:var(--font-color)">0 / 284</b> (<span id="global-pct">0%</span>)</span>
           <span style="margin-left: 12px;">SCORE CUMULÉ : <b id="global-score" style="color:var(--font-color)">0 pts</b></span>
         </div>
       </div>
@@ -354,7 +359,7 @@
       </div>
     </div>
 
-    <!-- LISTE DES 4 SIMULATEURS -->
+    <!-- LISTE DES 5 SIMULATEURS -->
     <ul class="menu-list">
       <!-- 01 : NET-OPS -->
       <li class="menu-item">
@@ -439,17 +444,38 @@
           </div>
         </a>
       </li>
+
+      <!-- 05 : NEXUS-OPS (CONVERGENCE) -->
+      <li class="menu-item nexus-highlight">
+        <a class="menu-link" href="./nexus_ops/">
+          <div class="item-header">
+            <span class="item-title">[ 05 ] NEXUS-OPS // Convergence Tactical Terminal</span>
+            <div class="tag-group">
+              <span class="rank-pill" id="rank-nexus">Non Initialisé</span>
+              <span class="tag">OMEGA_OPS</span>
+            </div>
+          </div>
+          <div class="menu-desc">Synthèse Multi-Moteurs N2➔N5 : Globbing, RegEx, Chirurgie Vi, Routage 3 Domaines &amp; Culture Unix (100 Missions)</div>
+          <div class="prog-section">
+            <div class="prog-stats">
+              <span id="ascii-nexus">[░░░░░░░░░░░░░░░░] 0%</span>
+              <span>Maîtrise : <b id="mast-nexus">0/100</b> │ Campagne : <b id="camp-nexus">Niv. 1</b> │ Reliques : <b id="relic-nexus">0/14</b> │ Record : <b id="score-nexus">0 pts</b></span>
+            </div>
+            <div class="prog-bar-track"><div class="prog-bar-fill" id="bar-nexus"></div></div>
+          </div>
+        </a>
+      </li>
     </ul>
 
     <div class="footer-prompt">
-      <div><span id="prompt-user">root</span>@tssr-center:~$ select training module [1-4]...<span class="cursor"></span></div>
-      <div style="font-size:11.5px;">Raccourcis clavier : touches <b>[1]</b> à <b>[4]</b></div>
+      <div><span id="prompt-user">root</span>@tssr-center:~$ select training module [1-5]...<span class="cursor"></span></div>
+      <div style="font-size:11.5px;">Raccourcis clavier : touches <b>[1]</b> à <b>[5]</b></div>
     </div>
   </div>
 
 <script>
 // =============================================================================
-// 1. DICTIONNAIRE UNIFIÉ DES 23 THÈMES (SYNCHRONISÉ AVEC LES 4 JEUX)
+// 1. DICTIONNAIRE UNIFIÉ DES 23 THÈMES (SYNCHRONISÉ AVEC LES 5 JEUX)
 // =============================================================================
 const THEMES = {
   "jensen":      { bg: "#120f0a", bar: "#090704", fg: "#ffb000", dim: "#996900", border: "#4d3600", hover: "#ffd875", green: "#a6e22e", cyan: "#ffd875" },
@@ -480,7 +506,6 @@ const THEMES = {
 
 const PORTAL_THEME_KEY = "tssr_portal_active_theme";
 
-// Applique visuellement le thème sur le portail
 function applyThemeToPortal(themeKey) {
   const t = THEMES[themeKey] || THEMES["jensen"];
   const r = document.documentElement.style;
@@ -501,15 +526,13 @@ function applyThemeToPortal(themeKey) {
   }
 }
 
-// Lorsque l'utilisateur change le thème sur le portail, on synchronise tous les jeux
 function onPortalThemeChange(newTheme) {
   applyThemeToPortal(newTheme);
   try {
     localStorage.setItem(PORTAL_THEME_KEY, newTheme);
-    // Synchronise aussi le thème dans toutes les sauvegardes de jeux existantes
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && /_ops|netops|regex|glob|vim/i.test(k)) {
+      if (k && /_ops|netops|regex|glob|vim|nexus/i.test(k)) {
         try {
           const obj = JSON.parse(localStorage.getItem(k));
           if (obj && typeof obj === 'object' && 'theme' in obj) {
@@ -534,7 +557,6 @@ function findProfileInStorage(exactKeys, fallbackRegex) {
         if (parsed && typeof parsed === 'object') return parsed;
       }
     }
-    // Recherche heuristique si la clé porte un nom de version différent
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && fallbackRegex.test(key)) {
@@ -548,7 +570,6 @@ function findProfileInStorage(exactKeys, fallbackRegex) {
   return null;
 }
 
-// Échelles de grades par module
 const MODULE_RANKS = {
   net: [
     { min: 0,  title: "Technicien N1 (Couche 1)" },
@@ -582,16 +603,25 @@ const MODULE_RANKS = {
     { min: 27, title: "Maître des Registres" },
     { min: 34, title: "Sorcier Ex & Regex" },
     { min: 40, title: "Architecte Modal Suprême" }
+  ],
+  nexus: [
+    { min: 0,   title: "Recrue du Nexus (N1)" },
+    { min: 10,  title: "Opérateur Shell & Réseau (N2)" },
+    { min: 25,  title: "Analyste Forensics & Vi (N3)" },
+    { min: 45,  title: "Ingénieur Routage & Regex (N3+)" },
+    { min: 65,  title: "Chirurgien SecOps & Extglob (N4)" },
+    { min: 85,  title: "Commandant Cyber-Défense (N5)" },
+    { min: 100, title: "Architecte Suprême du Nexus (100%)" }
   ]
 };
 
 const GLOBAL_RANKS = [
   { min: 0,   title: "STAGIAIRE TSSR // NIVEAU 0" },
-  { min: 15,  title: "TECHNICIEN SUPPORT N1" },
-  { min: 45,  title: "ADMINISTRATEUR SYSTÈMES & RÉSEAUX N2" },
-  { min: 90,  title: "INGÉNIEUR INFRASTRUCTURE & SECOPS N3" },
-  { min: 140, title: "EXPERT CYBERSÉCURITÉ & CLOUD" },
-  { min: 184, title: "MAÎTRE ABSOLU DU TERMINAL (100%)" }
+  { min: 25,  title: "TECHNICIEN SYSTÈMES & RÉSEAUX N1" },
+  { min: 75,  title: "ADMINISTRATEUR INFRASTRUCTURE N2" },
+  { min: 140, title: "INGÉNIEUR SECOPS & AUTOMATISATION N3" },
+  { min: 210, title: "ARCHITECTE CYBERSÉCURITÉ & CLOUD N4" },
+  { min: 284, title: "GRAND MAÎTRE OMNISCIENT DU TERMINAL (284/284)" }
 ];
 
 function computeRank(list, masteredCount) {
@@ -613,12 +643,14 @@ function hydratePortalTelemetry() {
   const globProf  = findProfileInStorage(["glob_ops_v4_terminal", "glob_ops_v3_terminal"], /glob_?ops/i);
   const regexProf = findProfileInStorage(["regex_ops_v4_terminal", "regex_ops_v3_terminal", "regex_terminal"], /regex_?ops/i);
   const vimProf   = findProfileInStorage(["vim_ops_v2_terminal", "vim_ops_v1_terminal"], /vim_?ops/i);
+  const nexusProf = findProfileInStorage(["nexus_ops_v1_terminal"], /nexus_?ops/i);
 
   const modules = [
     { key: "net",   prof: netProf,   total: 48 },
     { key: "glob",  prof: globProf,  total: 48 },
     { key: "regex", prof: regexProf, total: 48 },
-    { key: "vim",   prof: vimProf,   total: 40 }
+    { key: "vim",   prof: vimProf,   total: 40 },
+    { key: "nexus", prof: nexusProf, total: 100 }
   ];
 
   let totalMastered = 0;
@@ -654,10 +686,15 @@ function hydratePortalTelemetry() {
       document.getElementById("golf-vim").textContent = `★ ${golfCount}/40`;
       document.getElementById("relic-vim").textContent = `${relicCount}/13`;
     }
+
+    if (m.key === "nexus") {
+      const relicCount = Array.isArray(p.relics) ? p.relics.length : 0;
+      document.getElementById("relic-nexus").textContent = `${relicCount}/14`;
+    }
   });
 
-  // Mise à jour du bandeau global (sur 184 missions)
-  const grandTotal = 184;
+  // Mise à jour du bandeau global (sur 284 missions)
+  const grandTotal = 284;
   const globalPct = Math.min(100, Math.round((totalMastered / grandTotal) * 100));
   document.getElementById("global-mastered").textContent = `${totalMastered} / ${grandTotal}`;
   document.getElementById("global-pct").textContent = `${globalPct}%`;
@@ -673,13 +710,14 @@ function hydratePortalTelemetry() {
   applyThemeToPortal(detectedTheme || "jensen");
 }
 
-// Navigation rapide au clavier (Touches 1, 2, 3, 4)
+// Navigation rapide au clavier (Touches 1 à 5)
 window.addEventListener("keydown", (e) => {
   if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
   if (e.key === "1") window.location.href = "./netops/";
   else if (e.key === "2") window.location.href = "./terminal/";
   else if (e.key === "3") window.location.href = "./regex/";
   else if (e.key === "4") window.location.href = "./vim_ops/";
+  else if (e.key === "5") window.location.href = "./nexus_ops/";
 });
 
 hydratePortalTelemetry();

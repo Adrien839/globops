@@ -1,0 +1,2836 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS-OPS // Convergence Tactical Terminal (100 Missions)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #120f0a;
+      --c-bar-bg: #090704;
+      --c-bar-fg: #ffb000;
+      --c-bar-dim: #996900;
+      --c-fg: #ffb000;
+      --c-dim: #996900;
+      --c-border: #4d3600;
+      --c-cyan: #ffd875;
+      --c-green: #a6e22e;
+      --c-red: #ff5533;
+      --c-yellow: #ffe066;
+      --c-magenta: #ff8c00;
+      --c-blue: #e69500;
+      --term-font: 'JetBrains Mono', monospace;
+      --term-size: 14px;
+      --cursor-bg: var(--c-cyan);
+      --cursor-fg: var(--c-bg);
+      --cursor-border: none;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--c-bg);
+      color: var(--c-fg);
+      font-family: var(--term-font);
+      font-size: var(--term-size);
+      font-variant-ligatures: none;
+      font-feature-settings: "liga" 0, "calt" 0;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.45;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.15s, color 0.15s;
+    }
+
+    .terminal-viewport {
+      flex: 1;
+      width: 100%;
+      overflow-y: auto;
+      padding: 18px 20px 28px 20px;
+      cursor: text;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .terminal-inner {
+      width: 100%;
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    #term-output {
+      white-space: pre-wrap;
+      word-break: break-word;
+      width: 100%;
+    }
+
+    .log-line { margin-bottom: 1px; }
+    .box-line {
+      white-space: pre;
+      overflow-x: auto;
+      font-variant-ligatures: none;
+    }
+
+    .c-fg { color: var(--c-fg); }
+    .c-dim { color: var(--c-dim); }
+    .c-cyan { color: var(--c-cyan); }
+    .c-green { color: var(--c-green); }
+    .c-red { color: var(--c-red); }
+    .c-yellow { color: var(--c-yellow); }
+    .c-magenta { color: var(--c-magenta); }
+    .c-blue { color: var(--c-blue); }
+    .bold { font-weight: bold; }
+
+    .vim-cursor {
+      background-color: var(--cursor-bg);
+      color: var(--cursor-fg);
+      border-bottom: var(--cursor-border);
+      font-weight: bold;
+    }
+
+    .badge-tier {
+      background-color: var(--c-blue);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-domain {
+      background-color: var(--c-magenta);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-golf {
+      background-color: var(--c-yellow);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+    .badge-unlock {
+      background-color: var(--c-green);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 7px;
+      border-radius: 2px;
+    }
+    .badge-loot {
+      background-color: var(--c-cyan);
+      color: var(--c-bg);
+      font-weight: bold;
+      padding: 1px 7px;
+      border-radius: 2px;
+    }
+
+    .helper-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--c-border);
+      font-size: 12px;
+      user-select: none;
+    }
+
+    .key-pill {
+      background: var(--c-bar-bg);
+      color: var(--c-cyan);
+      border: 1px solid var(--c-border);
+      border-radius: 3px;
+      padding: 1px 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      transition: border-color 0.12s;
+    }
+    .key-pill:hover {
+      border-color: var(--c-cyan);
+      color: var(--c-fg);
+    }
+
+    .prompt-line {
+      display: flex;
+      align-items: center;
+      margin-top: 6px;
+      width: 100%;
+    }
+
+    .prompt-prefix {
+      white-space: nowrap;
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    #cmd-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--c-fg);
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      caret-color: var(--c-cyan);
+    }
+
+    .status-footer {
+      height: 38px;
+      background-color: var(--c-bar-bg);
+      color: var(--c-bar-fg);
+      border-top: 1px solid var(--c-border);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 12px;
+      user-select: none;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .footer-inner {
+      width: 100%;
+      max-width: 1240px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-left, .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .tmux-tag {
+      background: var(--c-green);
+      color: #000000;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    .streak-pill {
+      background: var(--c-bar-bg);
+      border: 1px solid var(--c-yellow);
+      color: var(--c-yellow);
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+
+    .blitz-pill {
+      background: var(--c-red);
+      color: #000000;
+      font-weight: bold;
+      padding: 1px 6px;
+      border-radius: 2px;
+      display: none;
+    }
+
+    .nav-cmd {
+      color: var(--c-bar-dim);
+      cursor: pointer;
+      padding: 2px 3px;
+      transition: opacity 0.12s;
+    }
+    .nav-cmd:hover {
+      color: var(--c-bar-fg);
+      text-decoration: underline;
+    }
+    .nav-cmd b { color: var(--c-bar-fg); }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--c-bar-dim);
+    }
+
+    .term-select {
+      background: var(--c-bg);
+      color: var(--c-fg);
+      border: 1px solid var(--c-border);
+      border-radius: 3px;
+      padding: 2px 5px;
+      font-family: inherit;
+      font-size: 11px;
+      cursor: pointer;
+      outline: none;
+    }
+    .term-select:hover, .term-select:focus {
+      border-color: var(--c-cyan);
+    }
+
+    .terminal-viewport::-webkit-scrollbar { width: 8px; }
+    .terminal-viewport::-webkit-scrollbar-track { background: var(--c-bg); }
+    .terminal-viewport::-webkit-scrollbar-thumb {
+      background: var(--c-border);
+      border-radius: 4px;
+    }
+    .terminal-viewport::-webkit-scrollbar-thumb:hover { background: var(--c-dim); }
+  </style>
+</head>
+<body>
+
+  <!-- ESPACE TERMINAL CENTRÉ -->
+  <main class="terminal-viewport" id="term-box" onclick="focusPrompt()">
+    <div class="terminal-inner">
+      <div id="term-output"></div>
+
+      <form class="prompt-line" id="prompt-form" onsubmit="onPromptSubmit(event)" autocomplete="off">
+        <span class="prompt-prefix" id="prompt-label"></span>
+        <input type="text" id="cmd-input" autofocus spellcheck="false" placeholder="Tape ta réponse (Glob, Regex, Séquence Vim, Route CIDR...) ou 'help'..." />
+      </form>
+
+      <!-- BARRE D'AIDE RAPIDE MULTI-MOTEURS -->
+      <div class="helper-bar" id="helper-bar">
+        <span class="c-dim">Insertion rapide :</span>
+        <button type="button" class="key-pill" onclick="insertToken('<Esc>')" title="Touche Escape (Vim)">&lt;Esc&gt;</button>
+        <button type="button" class="key-pill" onclick="insertToken('<CR>')" title="Validation Ex/Search (Vim)">&lt;CR&gt;</button>
+        <button type="button" class="key-pill" onclick="insertToken('[[:xdigit:]]')" title="Classe POSIX Hexadécimale">[[:xdigit:]]</button>
+        <button type="button" class="key-pill" onclick="insertToken('\\(\\w\\+\\)')" title="Groupe de capture Vim/BRE">\(\w\+\)</button>
+        <button type="button" class="key-pill" onclick="execFromNav('topo')" title="Afficher la topologie des 3 domaines A, B, C">🖧 Topologie ABC</button>
+        <button type="button" class="key-pill" onclick="execFromNav('armory')" title="Reliques, Curseurs & Badges">🎁 Armurerie</button>
+        <button type="button" class="key-pill" onclick="execFromNav('codex')" title="Exporter le Codex TSSR Obsidian">📘 Codex .md</button>
+        <span class="c-dim" style="margin-left:auto;">[Échap] insère <span class="c-cyan">&lt;Esc&gt;</span></span>
+      </div>
+    </div>
+  </main>
+
+  <!-- PIED DE PAGE STYLE TMUX -->
+  <footer class="status-footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="tmux-tag">0:nexus-ops*</span>
+        <span class="streak-pill" id="footer-streak" title="Série sans indice (Multiplicateur)">🔥 0 (x1.0)</span>
+        <span class="blitz-pill" id="footer-blitz">⏱ 90s</span>
+        <span class="nav-cmd" onclick="execFromNav('start')">[<b>1</b>:Campagne]</span>
+        <span class="nav-cmd" onclick="execFromNav('blitz')">[<b>2</b>:Blitz 90s]</span>
+        <span class="nav-cmd" onclick="execFromNav('custom')">[<b>3</b>:Custom]</span>
+        <span class="nav-cmd" onclick="execFromNav('stats')">[<b>4</b>:Profil]</span>
+        <span class="nav-cmd" onclick="execFromNav('armory')">[<b>5</b>:Armurerie]</span>
+        <span class="nav-cmd" onclick="execFromNav('codex')">[<b>6</b>:Codex]</span>
+        <span class="nav-cmd" onclick="execFromNav('memo')">[<b>7</b>:Mémo]</span>
+        <span class="nav-cmd" onclick="execFromNav('hint')">[<b>8</b>:Indice]</span>
+        <span class="nav-cmd" onclick="window.location.href='../'">[<b>↩</b>:Portail]</span>
+      </div>
+
+      <div class="footer-right">
+        <div class="ctrl-group">
+          <span>Thème:</span>
+          <select id="theme-select" class="term-select" onchange="setTheme(this.value)">
+            <optgroup label="Univers Sci-Fi & Cyber">
+              <option value="jensen">Jensen (Sarif Amber)</option>
+              <option value="case">Case (Chiba Matrix)</option>
+              <option value="smith">Smith (MegaCity CRT)</option>
+              <option value="cyberdyne">Cyberdyne (Skynet HUD)</option>
+              <option value="hill-valley">Hill Valley (1985 LED)</option>
+              <option value="encom">Encom (MCP Grid)</option>
+              <option value="tyrell">Tyrell (LA 2019)</option>
+              <option value="nostromo">Nostromo (MU-TH-UR)</option>
+              <option value="discovery">Discovery (HAL 9000)</option>
+              <option value="black-mesa">Black Mesa (Sector C)</option>
+              <option value="arrakis">Arrakis (Spice Melange)</option>
+            </optgroup>
+            <optgroup label="Standards Modernes">
+              <option value="bash-classic">Bash / Pop!_OS</option>
+              <option value="dracula">Dracula</option>
+              <option value="catppuccin">Catppuccin Mocha</option>
+              <option value="tokyo-night">Tokyo Night</option>
+              <option value="gruvbox">Gruvbox Dark</option>
+              <option value="nord">Nord Polar</option>
+              <option value="solarized">Solarized Dark</option>
+            </optgroup>
+            <optgroup label="Machines Historiques">
+              <option value="vt100">DEC VT100 (PDP-11)</option>
+              <option value="ibm3270">IBM 3270 (Mainframe)</option>
+              <option value="c64">Commodore 64</option>
+              <option value="amiga">Amiga Workbench 1.3</option>
+              <option value="apple2">Apple IIe</option>
+              <option value="win98">Windows 98 (MS-DOS)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Police:</span>
+          <select id="font-select" class="term-select" onchange="setFontFamily(this.value)">
+            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+            <option value="'Fira Code', monospace">Fira Code</option>
+            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <span>Taille:</span>
+          <select id="size-select" class="term-select" onchange="setFontSize(this.value)">
+            <option value="12px">12px</option>
+            <option value="13px">13px</option>
+            <option value="14px">14px</option>
+            <option value="15px">15px</option>
+            <option value="16px">16px</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+<script>
+// =============================================================================
+// 1. PALETTES DE THÈMES (SYNCHRONISÉES AVEC LE PORTAIL TSSR)
+// =============================================================================
+const THEMES = {
+  "jensen":      { bg: "#120f0a", bar: "#090704", fg: "#ffb000", dim: "#996900", border: "#4d3600", cyan: "#ffd875", green: "#a6e22e", red: "#ff5533", yellow: "#ffe066", magenta: "#ff8c00", blue: "#e69500" },
+  "case":        { bg: "#0b001a", bar: "#05000d", fg: "#e0fbfc", dim: "#8a6bbd", border: "#ff0055", cyan: "#00f0ff", green: "#00ff9f", red: "#ff0055", yellow: "#fcee09", magenta: "#ff00a0", blue: "#b86bff" },
+  "smith":       { bg: "#050d05", bar: "#020602", fg: "#70ff70", dim: "#267326", border: "#144514", cyan: "#a8ffa8", green: "#00ff41", red: "#ff5555", yellow: "#d4ff00", magenta: "#50fa7b", blue: "#00cc33" },
+  "cyberdyne":   { bg: "#140404", bar: "#0a0101", fg: "#ff3b30", dim: "#99221b", border: "#5c0f0a", cyan: "#ff9f0a", green: "#ffd60a", red: "#ff453a", yellow: "#ff9f0a", magenta: "#ff2d55", blue: "#ff6961" },
+  "hill-valley": { bg: "#0c0f14", bar: "#06080b", fg: "#ffd60a", dim: "#7c8594", border: "#ff4500", cyan: "#00e5ff", green: "#32d74b", red: "#ff3b30", yellow: "#ffd60a", magenta: "#ff9500", blue: "#5ac8fa" },
+  "encom":       { bg: "#020813", bar: "#01040a", fg: "#d6f6ff", dim: "#3b7ea1", border: "#00d9ff", cyan: "#00f0ff", green: "#00ffaa", red: "#ff3366", yellow: "#ffaa00", magenta: "#b86bff", blue: "#0099ff" },
+  "tyrell":      { bg: "#0b0e17", bar: "#06080d", fg: "#f4d06f", dim: "#6c7a9c", border: "#2b3a55", cyan: "#4ea8de", green: "#52b788", red: "#e63946", yellow: "#ffb703", magenta: "#f72585", blue: "#3a86ff" },
+  "nostromo":    { bg: "#041108", bar: "#020904", fg: "#4aff85", dim: "#1e7a3d", border: "#134e26", cyan: "#99ffbb", green: "#33ff77", red: "#ff5533", yellow: "#e6ff44", magenta: "#44ffaa", blue: "#22cc66" },
+  "discovery":   { bg: "#0a0a0c", bar: "#050507", fg: "#e5e5ea", dim: "#8e8e93", border: "#48484a", cyan: "#ff453a", green: "#30d158", red: "#ff3b30", yellow: "#ffd60a", magenta: "#ff6961", blue: "#64d2ff" },
+  "black-mesa":  { bg: "#14110e", bar: "#0b0907", fg: "#ff9500", dim: "#8c6228", border: "#4a3312", cyan: "#ffc857", green: "#66cc66", red: "#ff3b30", yellow: "#ffdd57", magenta: "#ff7f11", blue: "#e09f3e" },
+  "arrakis":     { bg: "#16100b", bar: "#0d0906", fg: "#f3d5b5", dim: "#9c7a54", border: "#523a24", cyan: "#38a3a5", green: "#80ed99", red: "#e05a47", yellow: "#ff9f1c", magenta: "#d4a373", blue: "#4ea8de" },
+  "bash-classic":{ bg: "#0f1419", bar: "#090c10", fg: "#e6edf3", dim: "#7d8590", border: "#30363d", cyan: "#39c5cf", green: "#3fb950", red: "#ff7b72", yellow: "#d29922", magenta: "#bc8cff", blue: "#58a6ff" },
+  "dracula":     { bg: "#282a36", bar: "#191a21", fg: "#f8f8f2", dim: "#6272a4", border: "#44475a", cyan: "#8be9fd", green: "#50fa7b", red: "#ff5555", yellow: "#f1fa8c", magenta: "#ff79c6", blue: "#bd93f9" },
+  "catppuccin":  { bg: "#1e1e2e", bar: "#11111b", fg: "#cdd6f4", dim: "#6c7086", border: "#313244", cyan: "#89dceb", green: "#a6e3a1", red: "#f38ba8", yellow: "#f9e2af", magenta: "#cba6f7", blue: "#89b4fa" },
+  "tokyo-night": { bg: "#1a1b26", bar: "#13141c", fg: "#c0caf5", dim: "#565f89", border: "#292e42", cyan: "#7dcfff", green: "#9ece6a", red: "#f7768e", yellow: "#e0af68", magenta: "#bb9af7", blue: "#7aa2f7" },
+  "gruvbox":     { bg: "#282828", bar: "#1d2021", fg: "#ebdbb2", dim: "#928374", border: "#3c3836", cyan: "#8ec07c", green: "#b8bb26", red: "#fb4934", yellow: "#fabd2f", magenta: "#d3869b", blue: "#83a598" },
+  "nord":        { bg: "#2e3440", bar: "#242933", fg: "#eceff4", dim: "#81a1c1", border: "#3b4252", cyan: "#88c0d0", green: "#a3be8c", red: "#bf616a", yellow: "#ebcb8b", magenta: "#b48ead", blue: "#5e81ac" },
+  "solarized":   { bg: "#002b36", bar: "#001f27", fg: "#93a1a1", dim: "#586e75", border: "#073642", cyan: "#2aa198", green: "#859900", red: "#dc322f", yellow: "#b58900", magenta: "#d33682", blue: "#268bd2" },
+  "vt100":       { bg: "#061006", bar: "#030803", fg: "#33ff33", dim: "#1f991f", border: "#145214", cyan: "#80ff80", green: "#33ff33", red: "#ff6644", yellow: "#ccff33", magenta: "#66ff99", blue: "#29cc29" },
+  "ibm3270":     { bg: "#000000", bar: "#0d0d0d", fg: "#44ff44", dim: "#2b9348", border: "#0077b6", cyan: "#00e5ff", green: "#44ff44", red: "#ff4444", yellow: "#ffff44", magenta: "#ff66ff", blue: "#48cae4" },
+  "c64":         { bg: "#40318d", bar: "#352879", fg: "#7869c4", dim: "#a093e0", border: "#7869c4", barFg: "#ffffff", barDim: "#bfce72", cyan: "#6abfc6", green: "#9ae29b", red: "#ff8a7a", yellow: "#bfce72", magenta: "#d084bd", blue: "#ffffff" },
+  "amiga":       { bg: "#0055aa", bar: "#ffffff", fg: "#ffffff", dim: "#aaccff", border: "#ff8800", barFg: "#0055aa", barDim: "#002244", cyan: "#00ffff", green: "#55ff55", red: "#ffaa88", yellow: "#ff8800", magenta: "#ffcc00", blue: "#ffffff" },
+  "apple2":      { bg: "#0a0f0a", bar: "#141c14", fg: "#48ff48", dim: "#2e8b2e", border: "#225522", cyan: "#00bfff", green: "#48ff48", red: "#ff6b35", yellow: "#ffd166", magenta: "#d040ff", blue: "#48cae4" },
+  "win98":       { bg: "#000080", bar: "#c0c0c0", fg: "#ffffff", dim: "#b8c4ff", border: "#ffffff", barFg: "#000000", barDim: "#2b2b2b", cyan: "#00ffff", green: "#55ff55", red: "#ff5555", yellow: "#ffff55", magenta: "#ff55ff", blue: "#80bfff" }
+};
+
+// =============================================================================
+// 2. RANGS, CURSEURS, RELIQUES CYBER & BADGES (SUR 100 MISSIONS)
+// =============================================================================
+const RANKS = [
+  { min: 0,   title: "Recrue du Nexus (N1)" },
+  { min: 10,  title: "Opérateur Shell & Réseau (N2)" },
+  { min: 25,  title: "Analyste Forensics & Vi (N3)" },
+  { min: 45,  title: "Ingénieur Routage & Regex (N3+)" },
+  { min: 65,  title: "Chirurgien SecOps & Extglob (N4)" },
+  { min: 85,  title: "Commandant Cyber-Défense (N5)" },
+  { min: 100, title: "Architecte Suprême du Nexus (100%)" }
+];
+
+const CURSOR_SKINS = [
+  { id: 1, name: "Standard Cyan Block",   reqM: 0,  bg: "var(--c-cyan)", fg: "var(--c-bg)", border: "none" },
+  { id: 2, name: "Phosphore Vert ADM-3A", reqM: 10, bg: "#00ff41",       fg: "#000000",     border: "none" },
+  { id: 3, name: "Sarif Gold Underline",  reqM: 25, bg: "transparent",   fg: "#ffb000",     border: "2px solid #ffb000" },
+  { id: 4, name: "Laser Rouge Cyberdyne", reqM: 45, bg: "#ff2d55",       fg: "#ffffff",     border: "none" },
+  { id: 5, name: "Néon Violet Chiba",     reqM: 70, bg: "#bc8cff",       fg: "#000000",     border: "none" },
+  { id: 6, name: "Or Pur Nexus-Master",   reqM: 90, bg: "#ffd700",       fg: "#000000",     border: "2px solid #ffffff" }
+];
+
+const RELICS = [
+  { id: "r_adm3a",    reqM: 1,   name: "Clavier Lear Siegler ADM-3A (1976)",     lore: "Le terminal originel sur lequel Bill Joy a codé vi à Berkeley." },
+  { id: "r_inode",    reqM: 8,   name: "Table d'Inodes Gravée sur Silicium",      lore: "Stocke l'UID, le GID, les permissions et les pointeurs de blocs — jamais le nom du fichier." },
+  { id: "r_rfc791",   reqM: 15,  name: "Manuscrit Original RFC 791 (Jon Postel)", lore: "Définit le protocole IPv4, le TTL et la fragmentation des datagrammes." },
+  { id: "r_extglob",  reqM: 25,  name: "Cartouche Bash 'shopt -s extglob'",      lore: "Déverrouille la puissance des opérateurs algébriques ?(), *(), +(), @() et !()." },
+  { id: "r_thompson", reqM: 35,  name: "Bande Magnétique Bell Labs (Ken Thompson)", lore: "Contient l'automate fini déterministe de la commande qed/grep." },
+  { id: "r_router3",  reqM: 45,  name: "Carte 3-Interfaces du Routeur Inter-VLAN", lore: "Relie les domaines de diffusion A (192.168.10.0/24), B (192.168.20.0/24) et C (172.16.5.0/24)." },
+  { id: "r_onosendai",reqM: 55,  name: "Deck Ono-Sendai Cyberspace 7",           lore: "Permet d'injecter des backreferences PCRE directement dans la Matrice." },
+  { id: "r_flux",     reqM: 65,  name: "Condensateur Temporel 1.21 Gigowatt",     lore: "Navigue librement dans l'arbre d'annulation (undofile) de Vim." },
+  { id: "r_supernet", reqM: 75,  name: "Compresseur de Tables BGP CIDR",          lore: "Agrège 64 sous-réseaux /24 en une seule route /18 sans perte de paquets." },
+  { id: "r_hal9000",  reqM: 85,  name: "Lentille Optique Rouge HAL-9000",         lore: "Analyse chaque trame ARP et rejette toute passerelle hors-domaine." },
+  { id: "r_arrakis",  reqM: 95,  name: "Cristal d'Épice Prescient d'Arrakis",     lore: "Donne la vision simultanée des flux Globbing, Regex, Vim et Routage." },
+  { id: "r_nexus100", reqM: 100, name: "Couronne de l'Architecte TSSR/SecOps",    lore: "Décernée pour la maîtrise absolue des 100 missions de NEXUS-OPS." },
+  { id: "r_blitz",    reqM: 0,   name: "Injecteur d'Adrénaline Cryogénique",      lore: "Récompense spéciale : valider au moins 5 missions en 90s en mode Blitz.", reqBlitz: 5 },
+  { id: "r_reaper",   reqM: 0,   name: "Transpondeur Télémétrique MQ-9 Reaper",   lore: "Relique Secrète : obtenue en déclenchant un Easter Egg interdit (rm -rf /*, emacs, nano).", reqSecret: true }
+];
+
+const BADGES = [
+  { id: "b_init",    name: "Connexion Établie",         desc: "Valider ta première mission dans le Nexus." },
+  { id: "b_streak5", name: "Synchronisation (🔥 5)",   desc: "Enchaîner 5 missions sans indice." },
+  { id: "b_streak12",name: "Surcharge Neuronale (🔥 12)", desc: "Enchaîner 12 missions sans indice." },
+  { id: "b_glob25",  name: "Maître du Pathname (GLOB)", desc: "Valider les 25 missions de Globbing POSIX & extglob." },
+  { id: "b_regex25", name: "Oeil du SIEM (REGEX)",      desc: "Valider les 25 missions d'Expressions Régulières." },
+  { id: "b_vim25",   name: "Seigneur Modal (VIM)",      desc: "Valider les 25 missions d'édition tactique Vi/Vim." },
+  { id: "b_net25",   name: "Oracle du Routage (NET)",   desc: "Valider les 25 missions Réseau, Routage & Culture Unix." },
+  { id: "b_tier1",   name: "Certifié Palier 1 (N2)",    desc: "Maîtriser les 25 missions du Palier 1." },
+  { id: "b_tier2",   name: "Certifié Palier 2 (N3)",    desc: "Maîtriser les 25 missions du Palier 2." },
+  { id: "b_tier3",   name: "Certifié Palier 3 (N4)",    desc: "Maîtriser les 25 missions du Palier 3." },
+  { id: "b_secret",  name: "Anomalie du Système",       desc: "Déclencher un protocole secret (rm -rf /*, emacs, nano, :q!)." },
+  { id: "b_omni",    name: "Omniscience TSSR (100/100)",desc: "Maîtriser l'intégralité des 100 missions de NEXUS-OPS." }
+];
+
+// =============================================================================
+// 3. LES 100 MISSIONS (25 GLOB, 25 REGEX, 25 VIM, 25 NET/SYS — 4 PALIERS)
+// =============================================================================
+const MISSIONS = [
+  // ===========================================================================
+  // PALIER 1 (01..25) : OPÉRATIONS TACTIQUES N2 (Moyen)
+  // ===========================================================================
+  { id: 1, tier: 1, dom: "GLOB", type: "GLOB", title: "Isolation PCAP par joker unitaire (?)",
+    scenario: "Isole les captures 'eth0_2026_XX.pcap' où XX fait exactement 2 caractères.",
+    targets: ["eth0_2026_01.pcap", "eth0_2026_99.pcap", "eth0_2026_ab.pcap"],
+    decoys: ["eth0_2026_1.pcap", "eth0_2026_100.pcap", "eth1_2026_01.pcap", "eth0_2026_01.pcap.gz"],
+    hint: "Utilise deux points d'interrogation '??' pour exiger exactement 2 caractères.",
+    solution: "eth0_2026_??.pcap",
+    debrief: "En globbing, '?' matche exactement 1 caractère (sauf le '.' initial), contrairement à '*' qui matche 0 à N caractères." },
+
+  { id: 2, tier: 1, dom: "REGEX", type: "REGEX", title: "Filtrage de démons SSH en début de ligne (^)",
+    scenario: "Dans ce journal système, capture uniquement les lignes qui COMMENCENT par 'sshd'.",
+    targets: ["sshd[1042]: Accepted publickey for adrien", "sshd[1099]: Disconnected from user root"],
+    decoys: ["systemd[1]: Started sshd.service", "cron[402]: (/usr/sbin/sshd_check)", "kernel: sshd_filter_init"],
+    hint: "Utilise l'ancre de début de ligne '^' suivie de 'sshd'.",
+    solution: "^sshd",
+    debrief: "En Regex, '^' ancre le motif au tout début de la ligne, tandis qu'en Globbing le motif est déjà ancré par défaut." },
+
+  { id: 3, tier: 1, dom: "VIM", type: "VIM", title: "TP Vi #2 — Recherche et insertion ciblée (/ + fn + a)",
+    scenario: "Le premier 'Dupont Jean' se prénomme en réalité 'Dupont Jean-Jacques'. Le curseur est en ligne 1 : cherche 'Dupont Jean', place-toi sur le 'n' de Jean et ajoute '-Jacques'.",
+    initialLines: ["Aboaf Maurice 244748", "Beux Leon 567891", "Dupont Jean 111111", "Dupont Pierre 222222"], cursor: [0, 0],
+    expectedLines: ["Aboaf Maurice 244748", "Beux Leon 567891", "Dupont Jean-Jacques 111111", "Dupont Pierre 222222"],
+    par: 27, solution: "/Dupont Jean<CR>fnfna-Jacques<Esc>",
+    hint: "Tape '/Dupont Jean<CR>' puis '2e' (ou 'fnfn') puis 'a-Jacques<Esc>'.",
+    debrief: "Issu du TP Vi : '/Dupont Jean<CR>' positionne le curseur sur le 'D', puis '2e' ou 'fnfn' atteint la fin de 'Jean' avant 'a-Jacques<Esc>'." },
+
+  { id: 4, tier: 1, dom: "NET", type: "QA", title: "TP 3 Domaines #1 — Émission A1 vers A2",
+    scenario: "[Topologie 3 Domaines — tape 'topo' au besoin] A1 (192.168.10.10/24, GW 192.168.10.254) émet vers A2 (192.168.10.20/24). Format attendu : <LOCALE|DISTANTE> <DIRECT|PASSERELLE|AUCUN> <OUI|NON>",
+    promptInfo: "A1: 192.168.10.10 / 255.255.255.0 (Domaine A)  --->  A2: 192.168.10.20 (Domaine A)",
+    accepted: ["locale direct oui", "locale directe oui"],
+    hint: "A1 et A2 sont dans 192.168.10.0/24 sur le même switch. Réponds : LOCALE DIRECT OUI",
+    solution: "LOCALE DIRECT OUI",
+    debrief: "Le réseau logique de A1 est 192.168.10.0/24 : il voit A2 comme LOCALE, fait une requête ARP directe sur le switch A et le paquet arrive (OUI)." },
+
+  { id: 5, tier: 1, dom: "NET", type: "QA", title: "Culture FHS — Configuration statique des services",
+    scenario: "Selon le standard FHS (Filesystem Hierarchy Standard), quel répertoire racine (chemin absolu) héberge les fichiers de configuration statiques du système (équivalent fonctionnel du Registre Windows) ?",
+    promptInfo: "Indice : contient passwd, fstab, ssh/sshd_config, nftables.conf...",
+    accepted: ["/etc", "/etc/"],
+    hint: "Commence par '/' suivi de 3 lettres.",
+    solution: "/etc",
+    debrief: "'/etc' contient toute la configuration statique locale du système, tandis que '/var' stocke les données variables (logs, caches)." },
+
+  { id: 6, tier: 1, dom: "GLOB", type: "GLOB", title: "Plages de VLANs combinées ([13][0-9])",
+    scenario: "Sélectionne les fichiers 'vlan_XX.conf' uniquement pour les VLANs 10 à 19 et 30 à 39.",
+    targets: ["vlan_10.conf", "vlan_18.conf", "vlan_30.conf", "vlan_39.conf"],
+    decoys: ["vlan_05.conf", "vlan_20.conf", "vlan_40.conf", "vlan_100.conf", "vlan_10.bak"],
+    hint: "Utilise '[13]' pour les dizaines et '[0-9]' pour les unités.",
+    solution: "vlan_[13][0-9].conf",
+    debrief: "En globbing, chaque bloc '[...]' correspond à une seule position de caractère : '[13][0-9]' couvre exactement 10..19 et 30..39." },
+
+  { id: 7, tier: 1, dom: "REGEX", type: "REGEX", title: "Détection de lignes vides (^$)",
+    scenario: "Écris une expression régulière qui matche uniquement les lignes strictement vides (0 caractère).",
+    targets: [""],
+    decoys: [" ", "  ", "# commentaire", "root:x:0:0"],
+    hint: "Combine l'ancre de début '^' et l'ancre de fin '$' côte à côte.",
+    solution: "^$",
+    debrief: "'^$' cible une ligne où le début et la fin coïncident immédiatement (très utilisé avec 'grep -v -E \"^$\"' pour purger un fichier)." },
+
+  { id: 8, tier: 1, dom: "VIM", type: "VIM", title: "TP Vi #4 — Insertion de prénom composé (i)",
+    scenario: "Recherche 'Dupont Pierre', déplace-toi sur le 'P' de Pierre avec 'w' et insère 'Jean-' pour obtenir 'Dupont Jean-Pierre'.",
+    initialLines: ["Cayrol Patrice 123456", "Dupont Jojo 999999", "Dupont Pierre 222222", "Serpinet Roland"], cursor: [0, 0],
+    expectedLines: ["Cayrol Patrice 123456", "Dupont Jojo 999999", "Dupont Jean-Pierre 222222", "Serpinet Roland"],
+    par: 23, solution: "/Dupont Pierre<CR>wiJean-<Esc>",
+    hint: "Tape '/Dupont Pierre<CR>' puis 'w' pour sauter sur 'Pierre', puis 'iJean-<Esc>'.",
+    debrief: "Après la recherche '/Dupont Pierre<CR>', le curseur est sur le 'D'. La motion 'w' saute au début du mot suivant ('P'), où 'i' insère avant le curseur." },
+
+  { id: 9, tier: 1, dom: "NET", type: "QA", title: "TP 3 Domaines #2 — Émission routée nominale A1 vers B1",
+    scenario: "A1 (192.168.10.10/24, GW 192.168.10.254) émet vers B1 (192.168.20.10/24). Format : <LOCALE|DISTANTE> <DIRECT|PASSERELLE|AUCUN> <OUI|NON>",
+    promptInfo: "A1 (192.168.10.10/24, GW .10.254) ---> Routeur ---> B1 (192.168.20.10/24)",
+    accepted: ["distante passerelle oui"],
+    hint: "192.168.20.10 est hors de 192.168.10.0/24. A1 passe par sa passerelle .10.254 qui est valide.",
+    solution: "DISTANTE PASSERELLE OUI",
+    debrief: "B1 étant hors du réseau 192.168.10.0/24, A1 la voit DISTANTE, remet le paquet à sa PASSERELLE (192.168.10.254) qui route vers eth1 jusqu'à B1 (OUI)." },
+
+  { id: 10, tier: 1, dom: "NET", type: "QA", title: "Anatomie de /etc/passwd (Champ UID)",
+    scenario: "Dans la ligne 'adrien:x:1000:1000:Adrien TSSR:/home/adrien:/bin/bash' de /etc/passwd, que signifie le caractère 'x' situé dans le 2e champ ?",
+    promptInfo: "Réponds par le chemin absolu du fichier où est déporté le hachage du mot de passe.",
+    accepted: ["/etc/shadow", "shadow"],
+    hint: "C'est le fichier de l'ombre dans /etc.",
+    solution: "/etc/shadow",
+    debrief: "Historiquement, le hash était dans /etc/passwd (lisible par tous). Le 'x' indique que le hash chiffré est protégé dans '/etc/shadow'." },
+
+  { id: 11, tier: 1, dom: "GLOB", type: "GLOB", title: "Exclusion de zones de test ([!dt])",
+    scenario: "Cible tous les fichiers 'fw-zone-X.rules' sauf les zones 'd' (dev) et 't' (test).",
+    targets: ["fw-zone-a.rules", "fw-zone-p.rules", "fw-zone-s.rules"],
+    decoys: ["fw-zone-d.rules", "fw-zone-t.rules", "fw-zone-ab.rules", "fw-zone-a.bak"],
+    hint: "Utilise la négation POSIX '[!dt]' dans les crochets.",
+    solution: "fw-zone-[!dt].rules",
+    debrief: "En globbing POSIX, le point d'exclamation '!' en première position des crochets '[!dt]' inverse la classe (équivalent de '[^dt]' en Regex)." },
+
+  { id: 12, tier: 1, dom: "REGEX", type: "REGEX", title: "Filtrage de liens symboliques dans ls -l (^l)",
+    scenario: "Dans cette sortie de 'ls -l', capture uniquement les lignes correspondant à des liens symboliques.",
+    targets: ["lrwxrwxrwx 1 root root 7 nov 5 bin -> usr/bin", "lrwxrwxrwx 1 adrien users 12 nov 8 conf.ln -> /etc/app.cfg"],
+    decoys: ["-rw-r--r-- 1 adrien users 420 nov 9 link.txt", "drwxr-xr-x 2 root root 4096 nov 1 lib", "srw-rw-rw- 1 root root 0 nov 9 docker.sock"],
+    hint: "Le 1er caractère d'une ligne 'ls -l' indique le type de fichier ('l' pour un lien).",
+    solution: "^l",
+    debrief: "Dans 'ls -l', le tout premier caractère identifie le type d'inode : '-' (fichier), 'd' (dossier), 'l' (symlink), 'b' (bloc), 'c' (caractère), 'p' (pipe), 's' (socket)." },
+
+  { id: 13, tier: 1, dom: "VIM", type: "VIM", title: "TP Vi #10 — Recherche et suppression de ligne (/ + dd)",
+    scenario: "Retrouve la ligne 'Couteau Jean' et supprime-la intégralement.",
+    initialLines: ["Beux Leon 567891", "Couteau Jean 444444", "Dupont Patrice 222222"], cursor: [0, 0],
+    expectedLines: ["Beux Leon 567891", "Dupont Patrice 222222"],
+    par: 10, solution: "/Couteau<CR>dd",
+    hint: "Cherche '/Couteau<CR>' (ou simplement 'j') puis tape 'dd'.",
+    solution: "jdd",
+    debrief: "Que tu t'y déplaces par recherche '/Couteau<CR>dd' ou par motion 'jdd', 'dd' coupe la ligne entière dans le registre par défaut." },
+
+  { id: 14, tier: 1, dom: "NET", type: "QA", title: "TP 3 Domaines #4 & #5 — Passerelle erronée sur A3",
+    scenario: "A3 (192.168.10.30/24, GW 192.168.10.1 — hôte inexistant !) émet vers B1 (192.168.20.10/24). Format : <LOCALE|DISTANTE> <DIRECT|PASSERELLE|AUCUN> <OUI|NON>",
+    promptInfo: "A3 tente de joindre sa passerelle configurée 192.168.10.1 (mais le routeur est en .10.254 !)",
+    accepted: ["distante passerelle non"],
+    hint: "A3 voit B1 comme DISTANTE et tente de passer par sa PASSERELLE (.10.1), mais l'ARP échoue donc NON.",
+    solution: "DISTANTE PASSERELLE NON",
+    debrief: "A3 considère B1 comme DISTANTE et cherche l'adresse MAC de sa passerelle 192.168.10.1. Aucune machine n'ayant cette IP, l'ARP échoue (NON). En revanche A3 -> A1 fonctionne en direct !" },
+
+  { id: 15, tier: 1, dom: "NET", type: "QA", title: "TP 3 Domaines #6 — Asymétrie aller vs retour (B1 vers A3)",
+    scenario: "B1 (192.168.20.10/24, GW .20.254) envoie un paquet vers A3 (192.168.10.30/24, GW .10.1 erronée). On étudie UNIQUEMENT l'aller : le paquet arrive-t-il à A3 ? Format : <LOCALE|DISTANTE> <DIRECT|PASSERELLE|AUCUN> <OUI|NON>",
+    promptInfo: "Rappel : la passerelle d'une machine réceptrice n'est pas utilisée pour RECEVOIR un paquet !",
+    accepted: ["distante passerelle oui"],
+    hint: "B1 est bien configurée, le routeur connaît le réseau A et livre directement à A3 en couche 2.",
+    solution: "DISTANTE PASSERELLE OUI",
+    debrief: "Piège classique : B1 a une bonne passerelle (.20.254), et le routeur livre directement à A3 sur eth0 via ARP. A3 reçoit bien le paquet à l'aller (OUI), même si elle ne pourrait pas répondre !" },
+
+  { id: 16, tier: 1, dom: "GLOB", type: "GLOB", title: "Classes POSIX : Majuscule stricte ([[:upper:]])",
+    scenario: "Capture tous les fichiers commençant par une lettre MAJUSCULE et finissant par '.conf'.",
+    targets: ["Apache.conf", "Nginx.conf", "Zabbix.conf"],
+    decoys: ["apache.conf", "01_net.conf", ".Hidden.conf", "Apache.bak"],
+    hint: "Utilise '[[:upper:]]*.conf'.",
+    solution: "[[:upper:]]*.conf",
+    debrief: "Sur un système en locale UTF-8 (fr_FR), '[A-Z]' peut inclure les minuscules selon l'ordre du dictionnaire (LC_COLLATE). '[[:upper:]]' garantit une majuscule stricte." },
+
+  { id: 17, tier: 1, dom: "REGEX", type: "REGEX", title: "Extensions d'archives avec échappement du point (\\.)",
+    scenario: "Capture uniquement les fichiers se terminant littéralement par '.tar.gz' en fin de ligne.",
+    targets: ["backup_2026.tar.gz", "etc_conf.tar.gz"],
+    decoys: ["backup_2026_tar_gz", "backup.tar.gz.bak", "archive.tar.xz"],
+    hint: "Échappe les deux points avec '\\.' et ancre à la fin avec '$'.",
+    solution: "\\.tar\\.gz$",
+    debrief: "Sans antislash, '.' en Regex matche n'importe quel caractère (donc 'backup_2026_tar_gz' serait un faux positif) !" },
+
+  { id: 18, tier: 1, dom: "VIM", type: "VIM", title: "TP Vi #13 — Duplication de ligne (yyp)",
+    scenario: "Ajoute un second 'Ben Raf 238899' juste en dessous du premier en dupliquant la ligne où se trouve le curseur.",
+    initialLines: ["Allo Jean-Pierre 255398", "Ben Raf 238899", "Bernard Jean-Paul 234567"], cursor: [1, 0],
+    expectedLines: ["Allo Jean-Pierre 255398", "Ben Raf 238899", "Ben Raf 238899", "Bernard Jean-Paul 234567"],
+    par: 3, solution: "yyp",
+    hint: "'yy' copie la ligne courante et 'p' la colle en dessous.",
+    debrief: "Question 13 du TP Vi : 'yy' (yank line) suivi de 'p' (put after) clone instantanément la ligne active." },
+
+  { id: 19, tier: 1, dom: "NET", type: "QA", title: "TP 3 Domaines #10 & #11 — Absence de passerelle sur A5",
+    scenario: "A5 (192.168.10.50/24, Passerelle : aucune) émet vers C1 (172.16.5.10/24). Format : <LOCALE|DISTANTE> <DIRECT|PASSERELLE|AUCUN> <OUI|NON>",
+    promptInfo: "A5 n'a aucune route par défaut (gateway vide).",
+    accepted: ["distante aucun non", "distante aucune non"],
+    hint: "C1 est DISTANTE, mais sans passerelle configurée il n'y a AUCUN prochain saut.",
+    solution: "DISTANTE AUCUN NON",
+    debrief: "A5 calcule que 172.16.5.10 est hors de 192.168.10.0/24 (DISTANTE). N'ayant aucune passerelle par défaut, sa pile IP abandonne immédiatement ('Network is unreachable' : AUCUN, NON)." },
+
+  { id: 20, tier: 1, dom: "NET", type: "QA", title: "Espace disque : df vs du (Superblock vs Inodes)",
+    scenario: "Quelle commande Linux interroge directement les métadonnées globales du système de fichiers (le superblock) pour afficher instantanément l'espace libre par partition (avec l'option -h) ?",
+    promptInfo: "Ne pas confondre avec 'du' qui parcourt récursivement les répertoires fichier par fichier.",
+    accepted: ["df", "df -h"],
+    hint: "Deux lettres : Disk Free.",
+    solution: "df -h",
+    debrief: "'df -h' lit le superblock de chaque partition montée instantanément, tandis que 'du -sh' additionne le poids des inodes d'une arborescence." },
+
+  { id: 21, tier: 1, dom: "GLOB", type: "GLOB", title: "Fichiers cachés sécurisés (.[!.]*)",
+    scenario: "Capture tous les fichiers cachés commençant par un seul point '.' (sans capturer '..swap' ni les fichiers normaux).",
+    targets: [".bashrc", ".vimrc", ".profile", ".ssh_config"],
+    decoys: ["..swap", "..lock", "bashrc", "vimrc.bak"],
+    hint: "Commence par un point littéral suivi de '[!.]*'.",
+    solution: ".[!.]*",
+    debrief: "Le point initial d'un dotfile doit être spécifié explicitement, et '[!.]' empêche de capturer '..' ou les fichiers commençant par '..'." },
+
+  { id: 22, tier: 1, dom: "REGEX", type: "REGEX", title: "Quantificateurs bornés : Codes PIN à 4 chiffres",
+    scenario: "Capture les lignes où 'PIN=' est suivi d'exactement 4 chiffres en fin de ligne.",
+    targets: ["USER=alice PIN=0492", "USER=bob PIN=9901"],
+    decoys: ["USER=eve PIN=123", "USER=mallory PIN=12345", "USER= guest PIN=abcd"],
+    hint: "Utilise 'PIN=[0-9]{4}$' (ou '\\d{4}$').",
+    solution: "PIN=[0-9]{4}$",
+    debrief: "Le quantificateur '{4}' combiné à '$' garantit que le code PIN contient exactement 4 chiffres et pas 5." },
+
+  { id: 23, tier: 1, dom: "VIM", type: "VIM", title: "TP Vi #11 — Substitution globale de Dupont en Durand",
+    scenario: "Remplace toutes les occurrences de 'Dupont' par 'Durand' sur toutes les lignes du fichier.",
+    initialLines: ["Dupont Jean 111111", "Cayrol Patrice 123456", "Dupont Pierre 222222"], cursor: [0, 0],
+    expectedLines: ["Durand Jean 111111", "Cayrol Patrice 123456", "Durand Pierre 222222"],
+    par: 18, solution: ":%s/Dupont/Durand/g<CR>",
+    hint: "Utilise ':%s/Dupont/Durand/g<CR>' ou ':g/Dupont/s//Durand/g<CR>'.",
+    debrief: "En Vim, ':%s/Dupont/Durand/g' et ':g/Dupont/s//Durand/g' produisent exactement le même résultat sur l'ensemble du buffer." },
+
+  { id: 24, tier: 1, dom: "NET", type: "QA", title: "Fins de ligne Windows vs Linux (CRLF ^M)",
+    scenario: "Un script Bash édité sous Windows affiche '/bin/bash^M: bad interpreter'. Quelle directive Ex tapes-tu dans Vim (avant :w) pour convertir le buffer au format Unix (LF) ?",
+    promptInfo: "Utilise l'option 'fileformat' (ou son abréviation 'ff').",
+    accepted: [":set ff=unix", ":set fileformat=unix", "set ff=unix", "set fileformat=unix"],
+    hint: "Tape ':set ff=unix'.",
+    solution: ":set ff=unix",
+    debrief: "Windows encode les fins de ligne en CRLF (\\r\\n, où \\r apparaît comme ^M). ':set ff=unix' suivi de ':w' purge tous les octets \\r." },
+
+  { id: 25, tier: 1, dom: "NET", type: "QA", title: "Règle smartcase dans ~/.vimrc",
+    scenario: "Dans ton fichier ~/.vimrc, quelle option DOIT impérativement être activée pour que 'set smartcase' fonctionne correctement ?",
+    promptInfo: "Sans elle, smartcase est totalement inopérant.",
+    accepted: ["ignorecase", "set ignorecase", ":set ignorecase", "ic"],
+    hint: "C'est l'option qui ignore la casse par défaut.",
+    solution: "set ignorecase",
+    debrief: "Pour que 'smartcase' bascule intelligemment en sensible à la casse lorsqu'une majuscule est tapée, 'ignorecase' doit d'abord être actif !" },
+
+  // ===========================================================================
+  // PALIER 2 (26..50) : INGÉNIERIE SYSTÈME & RÉSEAU N3 (Intermédiaire)
+  // ===========================================================================
+  { id: 26, tier: 2, dom: "GLOB", type: "GLOB", title: "Octets Hexadécimaux POSIX ([[:xdigit:]])",
+    scenario: "Isole les caches 'arp_XX.dat' où XX est composé d'exactement 2 caractères hexadécimaux (0-9, a-f, A-F).",
+    targets: ["arp_0a.dat", "arp_ff.dat", "arp_B4.dat", "arp_19.dat"],
+    decoys: ["arp_0g.dat", "arp_zz.dat", "arp_a.dat", "arp_fff.dat"],
+    hint: "Répète deux fois la classe '[[:xdigit:]]' (n'oublie pas les doubles crochets).",
+    solution: "arp_[[:xdigit:]][[:xdigit:]].dat",
+    debrief: "Les crochets extérieurs appartiennent au shell et '[:xdigit:]' est la classe POSIX. Écrire '[:xdigit:]' seul chercherait les lettres d, i, g, t, x !" },
+
+  { id: 27, tier: 2, dom: "GLOB", type: "GLOB", title: "Alternatives strictes extglob (@)",
+    scenario: "En un seul motif extglob, cible uniquement 'bgp.conf', 'ospf.conf' et 'rip.conf'.",
+    targets: ["bgp.conf", "ospf.conf", "rip.conf"],
+    decoys: ["eigrp.conf", "isis.conf", "bgp.conf.bak", "ospf.log"],
+    hint: "Utilise l'opérateur '@(p1|p2|p3)'.",
+    solution: "@(bgp|ospf|rip).conf",
+    debrief: "Contrairement à '{bgp,ospf,rip}.conf' (Brace Expansion aveugle), '@(bgp|ospf|rip).conf' est un vrai filtre de globbing vérifiant le disque." },
+
+  { id: 28, tier: 2, dom: "GLOB", type: "GLOB", title: "Extensions de compression optionnelles (?)",
+    scenario: "Capture l'archive brute 'syslog.tar' ainsi que ses versions compressées en '.gz' ou '.xz' uniquement.",
+    targets: ["syslog.tar", "syslog.tar.gz", "syslog.tar.xz"],
+    decoys: ["syslog.tar.bz2", "syslog.tar.gz.bak", "auth.tar.gz"],
+    hint: "Utilise '?(.gz|.xz)' après 'syslog.tar'.",
+    solution: "syslog.tar?(.gz|.xz)",
+    debrief: "L'opérateur extglob '?(liste)' matche 0 ou 1 occurrence des motifs listés." },
+
+  { id: 29, tier: 2, dom: "GLOB", type: "GLOB", title: "Au moins une occurrence numérique (+([0-9]))",
+    scenario: "Cible les fichiers ' patch_N.sh' où N est un nombre de longueur quelconque (1 ou plusieurs chiffres), précédé optionnellement de 'sec_'.",
+    targets: ["patch_1.sh", "patch_402.sh", "sec_patch_99.sh"],
+    decoys: ["patch_.sh", "patch_1a.sh", "dev_patch_1.sh", "patch_1.bak"],
+    hint: "Combine '?(sec_)patch_' avec '+([0-9]).sh'.",
+    solution: "?(sec_)patch_+([0-9]).sh",
+    debrief: "En Bash extglob, '+([0-9])' est l'équivalent exact de '[0-9]+' dans les expressions régulières." },
+
+  { id: 30, tier: 2, dom: "REGEX", type: "REGEX", title: "Frontières de mot strictes (\\broot\\b)",
+    scenario: "Capture les lignes de log contenant l'utilisateur exact 'root' sans capturer 'rootkit', 'chroot' ou 'groot'.",
+    targets: ["session opened for user root by (uid=0)", "sudo: root : TTY=pts/0"],
+    decoys: ["alert: rootkit hunter scan started", "vsftpd: chroot_local_user=YES", "user groot logged in"],
+    hint: "Entoure 'root' de limites de mots '\\b' : '\\broot\\b'.",
+    solution: "\\broot\\b",
+    debrief: "'\\b' (ou '\\<' et '\\>' dans Vim/grep) vérifie la transition entre un caractère de mot (\\w) et un non-mot (\\W ou extrémité de ligne)." },
+
+  { id: 31, tier: 2, dom: "REGEX", type: "REGEX", title: "Validation de sous-réseaux privés RFC 1918 (172.16 à 172.31)",
+    scenario: "Écris une regex qui capture uniquement les adresses IP privées de classe B allant de '172.16.' à '172.31.'.",
+    targets: ["SRC=172.16.0.1", "SRC=172.24.10.5", "SRC=172.31.255.254"],
+    decoys: ["SRC=172.15.0.1", "SRC=172.32.0.1", "SRC=172.160.0.1", "SRC=172_16_0_1"],
+    hint: "Découpe le 2e octet en deux alternatives : '1[6-9]' (16..19) ou '2[0-9]' (20..29) ou '3[01]' (30..31).",
+    solution: "172\\.(1[6-9]|2[0-9]|3[01])\\.",
+    debrief: "En Regex, on ne peut pas écrire '[16-31]'. Il faut décomposer les dizaines : '1[6-9]|2[0-9]|3[01]' encadré par des points échappés '\\.'." },
+
+  { id: 32, tier: 2, dom: "REGEX", type: "REGEX", title: "Chasse aux requêtes HTTP suspectes (Alternation & Groupes)",
+    scenario: "Capture uniquement les requêtes utilisant les méthodes 'PUT' ou 'DELETE' sur l'URI '/admin' ou '/config'.",
+    targets: ["\"PUT /admin HTTP/1.1\" 200", "\"DELETE /config HTTP/1.1\" 403"],
+    decoys: ["\"GET /admin HTTP/1.1\" 200", "\"POST /login HTTP/1.1\" 200", "\"DELETE /users HTTP/1.1\" 200"],
+    hint: "Combine '(PUT|DELETE) /(admin|config)'.",
+    solution: "(PUT|DELETE) /(admin|config)",
+    debrief: "Les parenthèses en ERE/PCRE isolent la portée de l'opérateur OU '|' pour chaque segment du log." },
+
+  { id: 33, tier: 2, dom: "VIM", type: "VIM", title: "Chirurgie Text Object entre guillemets (ci\")",
+    scenario: "Le curseur est au milieu de \"development\". Change la valeur entre guillemets par \"production\" en gardant les guillemets.",
+    initialLines: ["NODE_ENV=\"development\""], cursor: [0, 14],
+    expectedLines: ["NODE_ENV=\"production\""],
+    par: 14, solution: "ci\"production<Esc>",
+    hint: "Utilise 'ci\"' (change inner quotes) puis tape 'production<Esc>'.",
+    debrief: "Les Text Objects ('ci\"', 'di(', 'da[') agissent sur la structure syntaxique englobante sans que tu aies besoin de reculer au début du mot." },
+
+  { id: 34, tier: 2, dom: "VIM", type: "VIM", title: "TP Vi #9 — Remplacement ciblé sur la 2e occurrence (/ + n + cw)",
+    scenario: "Il y a deux 'Dupont' : le 2e ('Dupont Jean') s'appelle en fait 'Merlin-Duval Jean'. Cherche 'Dupont Jean' et remplace 'Dupont' par 'Merlin-Duval'.",
+    initialLines: ["Dupont Jean-Jacques 111111", "Dupont Jean 111111", "Dupont Patrice 222222"], cursor: [0, 0],
+    expectedLines: ["Dupont Jean-Jacques 111111", "Merlin-Duval Jean 111111", "Dupont Patrice 222222"],
+    par: 16, solution: "jcwMerlin-Duval<Esc>",
+    hint: "Descends en ligne 2 avec 'j' (ou '/Dupont Jean <CR>') puis fais 'cwMerlin-Duval<Esc>'.",
+    debrief: "Question 9 du TP Vi : une fois sur le bon 'Dupont', 'cw' (change word) supprime 'Dupont' sans manger l'espace suivant et passe en mode Insert." },
+
+  { id: 35, tier: 2, dom: "VIM", type: "VIM", title: "TP Vi #17 — Ajout de suffixe avec l'esperluette (&)",
+    scenario: "Substitue 'Jean ' (suivi d'un espace) en 'Jean-Paul ' sur toutes les lignes sans réécrire 'Jean' dans la partie remplacement.",
+    initialLines: ["Bernard Jean 234567", "Dupont Jean-Jacques 111111", "Merlin-Duval Jean 111111"], cursor: [0, 0],
+    expectedLines: ["Bernard Jean-Paul 234567", "Dupont Jean-Jacques 111111", "Merlin-Duval Jean-Paul 111111"],
+    par: 20, solution: ":%s/Jean /&-Paul /g<CR>",
+    hint: "Utilise ':g/Jean /s/Jean/&-Paul/<CR>' ou ':%s/Jean /&-Paul /g<CR>'.",
+    debrief: "Question 17 du TP Vi : l'espace après 'Jean ' protège 'Jean-Jacques', et '&' réinjecte le motif matché." },
+
+  { id: 36, tier: 2, dom: "VIM", type: "VIM", title: "Registres nommés (\"ayy et \"ap)",
+    scenario: "La ligne 1 doit être copiée à la fin du fichier, et la ligne 2 doit être supprimée. Utilise ou enchaîne les commandes pour obtenir le buffer cible.",
+    initialLines: ["allow 10.0.0.1", "deny debug_temp", "allow 10.0.0.2"], cursor: [0, 0],
+    expectedLines: ["allow 10.0.0.1", "allow 10.0.0.2", "allow 10.0.0.1"],
+    par: 6, solution: "yypjdd",
+    hint: "Tu peux faire 'yyjddp' ? Attention : 'dd' écrase le registre par défaut ! Fais plutôt 'jddkG' ou 'yyGp2Gdd'.",
+    solution: "yyGp2Gdd",
+    debrief: "Point clé du cours M7 : toute suppression ('dd') écrase le registre par défaut ! Il faut soit coller avant de supprimer ('yyGp2Gdd'), soit utiliser un registre nommé ('\"ayyjdd\"ap')." },
+
+  { id: 37, tier: 2, dom: "NET", type: "QA", title: "TP 3 Domaines #7 & #9 — Le masque /16 trompeur de A4",
+    scenario: "A4 (192.168.10.40, Masque 255.255.0.0 /16 !, GW 192.168.10.254) émet vers B2 (192.168.20.20/24). Format : <LOCALE|DISTANTE> <DIRECT|PASSERELLE|AUCUN> <OUI|NON>",
+    promptInfo: "Avec son masque 255.255.0.0, quel est le réseau logique de A4 ? (192.168.0.0/16 !)",
+    accepted: ["locale direct non", "locale directe non"],
+    hint: "Pour A4 (192.168.0.0/16), 192.168.20.20 semble LOCALE ! Elle tente un ARP DIRECT sur le switch A, mais B2 est sur le switch B -> NON.",
+    solution: "LOCALE DIRECT NON",
+    debrief: "Cas d'école du TP : à cause de son masque /16 erroné, A4 croit que tout 192.168.X.X est LOCAL. Elle n'utilise PAS sa passerelle pour B2 et lance un ARP direct qui meurt sur le switch A (NON). Par contre A4 -> C1 (172.16.5.10) passe par la passerelle et réussit !" },
+
+  { id: 38, tier: 2, dom: "NET", type: "QA", title: "TP 3 Domaines #19 & #20 — Le masque /28 trop restreint de C4",
+    scenario: "C4 (172.16.5.40, Masque 255.255.255.240 /28, GW 172.16.5.254) émet vers C5 (172.16.5.45/24). Format : <LOCALE|DISTANTE> <DIRECT|PASSERELLE|AUCUN> <OUI|NON>",
+    promptInfo: "Indice : Avec /28 (pas de 16), la plage de C4 est 172.16.5.32 à 172.16.5.47.",
+    accepted: ["locale direct oui", "locale directe oui"],
+    hint: ".40 et .45 sont tous deux dans le bloc 32..47 ! Donc C4 voit C5 comme LOCALE.",
+    solution: "LOCALE DIRECT OUI",
+    debrief: "En /28 (255.255.255.240), le pas est de 256 - 240 = 16. Le sous-réseau de C4 (.40) va de .32 à .47 : C5 (.45) est dedans (LOCALE DIRECT OUI). En revanche, C2 (.20) et la passerelle (.254) sont hors de .32-.47, donc C4 ne peut joindre personne d'autre !" },
+
+  { id: 39, tier: 2, dom: "NET", type: "QA", title: "TP Communication (Segment unique sans routeur)",
+    scenario: "6 postes sur le même switch sans routeur : A(172.16.10.10/16), B(172.16.11.20/16), C(172.16.100.30/16) et D(172.16.11.100/24), E(172.16.100.150/24), F(172.16.10.200/24). Avec quels postes l'hôte A peut-il établir une communication BIDIRECTIONNELLE (aller ET réponse) ? (Format: X/Y/Z par ordre alphabétique)",
+    promptInfo: "A(/16) voit tout le monde en local, mais qui peut lui RÉPONDRE ?",
+    accepted: ["b/c/f", "b c f", "bcf"],
+    hint: "B et C sont en /16 comme A, et F est dans 172.16.10.0/24 (le même 3e octet que A !).",
+    solution: "B/C/F",
+    debrief: "TP Module 04.01 (Partie A) : A (172.16.10.10/16) contacte tout le monde en ARP direct, mais D (172.16.11.0/24) et E (172.16.100.0/24) considèrent A comme distant et ne peuvent pas lui répondre sans routeur. Seuls B, C (/16) et F (172.16.10.0/24) répondent." },
+
+  { id: 40, tier: 2, dom: "NET", type: "QA", title: "Inodes : Lien Physique vs Lien Symbolique",
+    scenario: "Tu crées un lien physique avec 'ln source.txt hardlink.txt'. Si tu supprimes 'source.txt' avec 'rm source.txt', les données du fichier sont-elles perdues ? (Réponds par OUI ou NON suivi du numéro de compteur d'inodes restant, ex: NON 1)",
+    promptInfo: "Rappel : 'ls -li' affiche le numéro d'inode et le compteur de liens matériels.",
+    accepted: ["non 1", "non, 1"],
+    hint: "Les deux noms pointent vers le même inode. Tant que le compteur de liens > 0, les blocs restent intacts.",
+    solution: "NON 1",
+    debrief: "Contrairement au lien symbolique (qui devient cassé si la source disparaît), un lien physique partage exactement le même inode. Supprimer 'source.txt' décrémente simplement le compteur de liens de 2 à 1." },
+
+  { id: 41, tier: 2, dom: "GLOB", type: "GLOB", title: "Le tiret littéral dans une classe ([0-9-])",
+    scenario: "Cible les fichiers 'node_X.cfg' où X est soit un chiffre (0-9), soit un tiret littéral '-'.",
+    targets: ["node_0.cfg", "node_7.cfg", "node_-.cfg"],
+    decoys: ["node_a.cfg", "node__.cfg", "node_10.cfg"],
+    hint: "Place le tiret tout à la fin (ou au tout début) des crochets : '[0-9-]'.",
+    solution: "node_[0-9-].cfg",
+    debrief: "Dans '[...]', '-' définit une plage ASCII sauf s'il est placé en première ou dernière position où il devient un caractère littéral." },
+
+  { id: 42, tier: 2, dom: "REGEX", type: "REGEX", title: "Extraction d'adresses MAC standardisées",
+    scenario: "Capture les lignes contenant une adresse MAC valide composée de 6 octets hexadécimaux séparés par ':'.",
+    targets: ["DHCPACK on 10.0.0.5 to 00:1a:2b:3c:4d:5e via eth0", "ARP 52:54:00:ff:ee:01 is-at eth1"],
+    decoys: ["invalid mac 00:1a:2b:3c:4d", "bad hex 00:1g:2b:3c:4d:5e", "serial 00-1a-2b-3c-4d-5e"],
+    hint: "Utilise '([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}'.",
+    solution: "([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}",
+    debrief: "5 groupes d'un octet hexadécimal suivi de ':' + 1 dernier octet hexadécimal forment les 6 octets d'une adresse MAC Ethernet." },
+
+  { id: 43, tier: 2, dom: "VIM", type: "VIM", title: "Nettoyage de liste crochets inclus (da[)",
+    scenario: "Supprime tout le tableau '[\"debug\", \"trace\"]' crochets '[' et ']' INCLUS.",
+    initialLines: ["modes = [\"debug\", \"trace\"]"], cursor: [0, 12],
+    expectedLines: ["modes = "],
+    par: 3, solution: "da[",
+    hint: "Utilise 'da[' (delete around brackets).",
+    debrief: "'di[' vide l'intérieur en laissant '[]', tandis que 'da[' supprime le contenu ET les crochets englobants." },
+
+  { id: 44, tier: 2, dom: "VIM", type: "VIM", title: "Incrémentation rapide de port (<C-a>)",
+    scenario: "Incrémente le numéro de port de 442 à 443 directement depuis le début de la ligne.",
+    initialLines: ["https_port = 442"], cursor: [0, 0],
+    expectedLines: ["https_port = 443"],
+    par: 1, solution: "<C-a>",
+    hint: "Utilise '<C-a>' (Ctrl+A).",
+    debrief: "'<C-a>' cherche le prochain nombre sur la ligne courante, l'incrémente de +1 et place le curseur dessus." },
+
+  { id: 45, tier: 2, dom: "NET", type: "QA", title: "Commande find avec action -exec",
+    scenario: "Complète la fin obligatoire de cette commande find pour copier chaque fichier trouvé : find . -type f -name \"*.conf\" -exec cp {} /backup/ ...",
+    promptInfo: "Quels sont les 2 derniers caractères (ou token) indispensables pour clore -exec ?",
+    accepted: ["\\;", ";"],
+    hint: "Un point-virgule protégé du shell par un antislash.",
+    solution: "\\;",
+    debrief: "Cours M6 : '-exec' remplace '{}' par chaque fichier trouvé et DOIT toujours se terminer par '\\;' (échappé pour que Bash ne l'interprète pas lui-même)." },
+
+  { id: 46, tier: 2, dom: "GLOB", type: "GLOB", title: "Tags de journaux cumulables (*(debug_|trace_))",
+    scenario: "Cible 'kern_boot.log' ainsi que les variantes contenant 0, 1 ou plusieurs tags 'debug_' ou 'trace_' avant 'boot.log'.",
+    targets: ["kern_boot.log", "kern_debug_boot.log", "kern_trace_boot.log", "kern_debug_trace_boot.log"],
+    decoys: ["kern_info_boot.log", "kern_debug_crash.log", "kern_boot.bak"],
+    hint: "Utilise l'opérateur extglob '*(debug_|trace_)'.",
+    solution: "kern_*(debug_|trace_)boot.log",
+    debrief: "'*(liste)' autorise 0, 1 ou N répétitions concaténées des motifs de la liste." },
+
+  { id: 47, tier: 2, dom: "REGEX", type: "REGEX", title: "Détection d'injection XSS (<script>)",
+    scenario: "Capture les requêtes contenant une balise '<script...>' (en minuscules ou majuscules) suivie de '</script>'.",
+    targets: ["GET /search?q=<script>alert(1)</script>", "POST /comment body=<SCRIPT src='x.js'></SCRIPT>"],
+    decoys: ["GET /js/script.js", "GET /doc/description.html"],
+    hint: "Utilise '<(script|SCRIPT)[^>]*>.*</(script|SCRIPT)>'.",
+    solution: "<(script|SCRIPT)[^>]*>.*</(script|SCRIPT)>",
+    debrief: "'[^>]*' consomme tous les attributs éventuels de la balise ouvrante sans dépasser le chevron fermant '>'." },
+
+  { id: 48, tier: 2, dom: "VIM", type: "VIM", title: "TP Vi #22 — Ajout de 0 en fin des lignes commençant par F",
+    scenario: "Ajoute le chiffre '0' à la toute fin de chaque ligne commençant par la lettre majuscule 'F'.",
+    initialLines: ["Cousin Pascal 222222", "Froideceaux Michel 252423", "Gros Lucien 212121", "Fiquet Paul 265746"], cursor: [0, 0],
+    expectedLines: ["Cousin Pascal 222222", "Froideceaux Michel 2524230", "Gros Lucien 212121", "Fiquet Paul 2657460"],
+    par: 14, solution: ":g/^F/s/$/0/<CR>",
+    hint: "Utilise la commande globale ':g/^F/s/$/0/<CR>'.",
+    debrief: "Question 22 du TP Vi : ':g/^F/' sélectionne uniquement les lignes débutant par F, et 's/$/0/' greffe un '0' sur l'ancre de fin de ligne '$'." },
+
+  { id: 49, tier: 2, dom: "NET", type: "QA", title: "TP 3 Domaines #23 & #26 — Machine déplacée (A6 dans le Réseau A)",
+    scenario: "A6 est physiquement branchée sur le switch du Réseau A (192.168.10.0/24), mais elle a gardé son IP du Réseau B : 192.168.20.60/24, GW 192.168.20.254. Peut-elle émettre ou être jointe ? (Réponds : EMETTRE, ETRE_JOINTE, LES_DEUX ou AUCUN)",
+    promptInfo: "Son switch physique est A (eth0 .10.254), mais son IP et sa passerelle sont en .20.X !",
+    accepted: ["aucun", "aucune", "aucun des deux"],
+    hint: "Pour parler à A1 (.10.10), elle cherche sa passerelle .20.254 sur le switch A (échec ARP). Et le routeur cherche .20.60 sur eth1 (switch B) !",
+    solution: "AUCUN",
+    debrief: "Question 5 du TP 3 Domaines : A6 et B6 ont leurs configurations inversées par rapport à leur switch physique. Leurs requêtes ARP vers leur passerelle échouent, et le routeur les cherche sur l'autre interface : AUCUN trafic ne passe !" },
+
+  { id: 50, tier: 2, dom: "NET", type: "QA", title: "TP 3 Domaines #29 & #30 — Le cas subtil de C6 (Masque /16 dans le Réseau C)",
+    scenario: "C6 est branchée dans le Réseau C (switch C, routeur eth2 = 172.16.5.254/24), mais configurée en 172.16.6.60 avec un masque 255.255.0.0 (/16) et GW 172.16.5.254. C6 peut-elle émettre vers A1 (192.168.10.10) ? Format : <LOCALE|DISTANTE> <DIRECT|PASSERELLE|AUCUN> <OUI|NON>",
+    promptInfo: "C6 est en /16 : sa passerelle 172.16.5.254 est donc dans son réseau logique 172.16.0.0/16 ET sur le même switch physique C !",
+    accepted: ["distante passerelle oui"],
+    hint: "Grâce à son masque /16, C6 peut résoudre par ARP l'adresse MAC de 172.16.5.254 sur le switch C !",
+    solution: "DISTANTE PASSERELLE OUI",
+    debrief: "Subtilité géniale du TP (Q29/30/31) : grâce à son masque /16, C6 voit sa passerelle 172.16.5.254 comme locale sur le switch C et peut émettre vers C1 et A1 (OUI) ! En revanche, personne ne peut joindre C6 en retour car pour C1 et le routeur (/24), 172.16.6.60 n'appartient pas à 172.16.5.0/24." },
+
+  // ===========================================================================
+  // PALIER 3 (51..75) : FORENSICS & CHIRURGIE MODALE N4 (Avancé)
+  // ===========================================================================
+  { id: 51, tier: 3, dom: "GLOB", type: "GLOB", title: "Exclusion chirurgicale avec suffixe verrouillé (!(...) )",
+    scenario: "Cible tous les fichiers '.cfg' du dossier SAUF 'core-01.cfg' et 'core-02.cfg' (attention à ne pas capturer les '.bak' ou '.log').",
+    targets: ["edge-01.cfg", "dist-01.cfg", "wifi.cfg"],
+    decoys: ["core-01.cfg", "core-02.cfg", "edge-01.bak", "core-01.log"],
+    hint: "Place '.cfg' en dehors de la négation : '!(core-01|core-02).cfg'.",
+    solution: "!(core-01|core-02).cfg",
+    debrief: "Écrire '!(core-01.cfg|core-02.cfg)' capturerait aussi les '.bak' et '.log' ! Garder '.cfg' hors de '!()' verrouille l'extension." },
+
+  { id: 52, tier: 3, dom: "GLOB", type: "GLOB", title: "Exclusion partielle encadrée (fw_2026_!(dev|test).log)",
+    scenario: "Archive tous les journaux 'fw_2026_*.log' SAUF ceux de 'dev' et 'test'.",
+    targets: ["fw_2026_prod.log", "fw_2026_dmz.log", "fw_2026_wan.log"],
+    decoys: ["fw_2026_dev.log", "fw_2026_test.log", "ids_2026_prod.log", "fw_2026_prod.bak"],
+    hint: "Encadre '!(dev|test)' entre 'fw_2026_' et '.log'.",
+    solution: "fw_2026_!(dev|test).log",
+    debrief: "La portée de '!()' est bornée à gauche par 'fw_2026_' et à droite par '.log'." },
+
+  { id: 53, tier: 3, dom: "GLOB", type: "GLOB", title: "Chasse aux Webshells PHP & sauvegardes",
+    scenario: "Cible tous les scripts '.php' et '.phtml' (ainsi que leur copie '.bak' éventuelle) SAUF 'index', 'login' et 'admin'.",
+    targets: ["c99.php", "upload.phtml", "shell.php.bak", "b374k.phtml.bak"],
+    decoys: ["index.php", "login.phtml", "admin.php.bak", "style.css"],
+    hint: "Combine '!(index|login|admin)', '.@(php|phtml)' et '?(.bak)'.",
+    solution: "!(index|login|admin).@(php|phtml)?(.bak)",
+    debrief: "Enchaîner '!()', '@()' et '?()' permet d'exprimer une signature forensique complète en un seul token shell." },
+
+  { id: 54, tier: 3, dom: "REGEX", type: "REGEX", title: "Détection d'attaque LAND (SRC= == DST= par Backreference \\1)",
+    scenario: "Une attaque LAND envoie des paquets forgés où l'IP source est strictement identique à l'IP de destination. Capture uniquement ces lignes.",
+    targets: ["IN=eth0 SRC=10.0.0.5 DST=10.0.0.5 PROTO=TCP", "IN=eth0 SRC=192.168.1.254 DST=192.168.1.254 PROTO=SYN"],
+    decoys: ["IN=eth0 SRC=10.0.0.5 DST=10.0.0.1 PROTO=TCP", "IN=eth0 SRC=192.168.1.10 DST=192.168.1.254 PROTO=SYN"],
+    hint: "Capture l'IP après 'SRC=' dans un groupe '([0-9.]+)' et rappelle-la après 'DST=' avec '\\1'.",
+    solution: "SRC=([0-9.]+) DST=\\1\\b",
+    debrief: "La référence arrière '\\1' exige que le texte suivant 'DST=' soit caractère pour caractère identique à celui capturé dans le 1er groupe." },
+
+  { id: 55, tier: 3, dom: "REGEX", type: "REGEX", title: "Cohérence des séparateurs d'adresse MAC (Backreference)",
+    scenario: "Valide les adresses MAC à 3 octets courts (XX<sep>YY<sep>ZZ) utilisant soit ':' soit '-', MAIS sans mélanger les deux séparateurs (ex: rejeter '00:1a-2b').",
+    targets: ["MAC=00:1a:2b", "MAC=ff-01-99"],
+    decoys: ["MAC=00:1a-2b", "MAC=ff-01:99", "MAC=00_1a_2b"],
+    hint: "Capture le 1er séparateur '([:-])' et réutilise '\\1' pour le second.",
+    solution: "[0-9a-fA-F]{2}([:-])[0-9a-fA-F]{2}\\1[0-9a-fA-F]{2}",
+    debrief: "Capturer le délimiteur avec '([:-])' puis imposer '\\1' empêche toute incohérence de formatage." },
+
+  { id: 56, tier: 3, dom: "REGEX", type: "REGEX", title: "Utilisateurs /etc/passwd avec shell interactif actif",
+    scenario: "Capture uniquement les lignes de '/etc/passwd' dont le shell final est '/bin/bash' ou '/bin/zsh'.",
+    targets: ["root:x:0:0:root:/root:/bin/bash", "adrien:x:1000:1000:Adrien:/home/adrien:/bin/zsh"],
+    decoys: ["daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin", "sync:x:4:65534:sync:/bin:/bin/sync", "sshd:x:106:65534::/run/sshd:/bin/false"],
+    hint: "Ancre à la fin de la ligne : ':/bin/(bash|zsh)$'.",
+    solution: ":/bin/(bash|zsh)$",
+    debrief: "Lors d'un audit de sécurité Linux, filtrer ':/bin/(bash|zsh|sh)$' révèle immédiatement quels comptes peuvent ouvrir un shell interactif." },
+
+  { id: 57, tier: 3, dom: "VIM", type: "VIM", title: "TP Vi #12 — Déplacer toutes les lignes 'Durand' en fin de fichier (:g/m$)",
+    scenario: "Déplace en une seule commande Ex toutes les lignes contenant 'Durand' tout à la fin du fichier.",
+    initialLines: ["Beux Leon 567891", "Durand Jean 111111", "Merlin-Duval Jean 111111", "Durand Pierre 222222", "Serpinet Roland"], cursor: [0, 0],
+    expectedLines: ["Beux Leon 567891", "Merlin-Duval Jean 111111", "Serpinet Roland", "Durand Jean 111111", "Durand Pierre 222222"],
+    par: 14, solution: ":g/Durand/m$<CR>",
+    hint: "Utilise la commande globale associée à l'action move 'm$' : ':g/Durand/m$<CR>'.",
+    debrief: "Question 12 du TP Vi ('Power of G') : ':g/Durand/m$' parcourt le fichier et déplace séquentiellement chaque ligne correspondante après la dernière ligne ($)." },
+
+  { id: 58, tier: 3, dom: "VIM", type: "VIM", title: "TP Vi #18 — Conversion en MAJUSCULES par backreference (\\U\\1)",
+    scenario: "Transforme toutes les occurrences de 'Jean' en 'JEAN' SANS écrire 'JEAN' en majuscules dans ta commande de remplacement.",
+    initialLines: ["Bernard Jean-Paul 234567", "Dupont Jean-Jacques 111111", "Serpinet Roland"], cursor: [0, 0],
+    expectedLines: ["Bernard JEAN-Paul 234567", "Dupont JEAN-Jacques 111111", "Serpinet Roland"],
+    par: 16, solution: ":%s/Jean/\\U&/g<CR>",
+    hint: "Utilise '\\U&' ou ':g/\\(Jean\\)/s//\\U\\1/<CR>' comme dans le corrigé ENI.",
+    debrief: "Question 18 du TP Vi : dans le remplacement de ':s', '\\U' convertit tout ce qui suit ('&' ou '\\1') en MAJUSCULES jusqu'à '\\E' ou la fin du motif." },
+
+  { id: 59, tier: 3, dom: "VIM", type: "VIM", title: "TP Vi #21 — Préfixage conditionnel de numéros de téléphone (\\<[1-3])",
+    scenario: "Ajoute '(033)' devant chaque numéro commençant par 1, 2 ou 3 (sans toucher aux numéros commençant par 5 ou 9).",
+    initialLines: ["Cayrol Patrice 123456", "Beux Leon 567891", "Dupont Pierre 222222", "Dupont Jojo 999999", "Holka Tadeusz 333333"], cursor: [0, 0],
+    expectedLines: ["Cayrol Patrice (033)123456", "Beux Leon 567891", "Dupont Pierre (033)222222", "Dupont Jojo 999999", "Holka Tadeusz (033)333333"],
+    par: 21, solution: ":%s/\\<[1-3]/(033)&/g<CR>",
+    hint: "Utilise l'ancre de début de mot Vim '\\<' suivie de '[1-3]' et remplace par '(033)&' : ':%s/\\<[1-3]/(033)&/g<CR>'.",
+    debrief: "Question 21 du TP Vi : '\\<[1-3]' cible uniquement le premier chiffre d'un mot commençant par 1, 2 ou 3, et '(033)&' insère l'indicatif devant ce chiffre !" },
+
+  { id: 60, tier: 3, dom: "VIM", type: "VIM", title: "Inversion de colonnes IP par groupes de capture (\\1 \\2)",
+    scenario: "Inverse la colonne source et la colonne destination séparées par ' -> ' sur toutes les lignes.",
+    initialLines: ["10.0.0.1 -> 192.168.1.5", "10.0.0.2 -> 172.16.0.9"], cursor: [0, 0],
+    expectedLines: ["192.168.1.5 -> 10.0.0.1", "172.16.0.9 -> 10.0.0.2"],
+    par: 27, solution: ":%s/\\(.*\\) -> \\(.*\\)/\\2 -> \\1/<CR>",
+    hint: "Utilise ':%s/\\(.*\\) -> \\(.*\\)/\\2 -> \\1/<CR>'.",
+    debrief: "En mode magic standard de Vim, les groupes de capture s'écrivent '\\(...\\)' et se réinjectent avec '\\1' et '\\2'." },
+
+  { id: 61, tier: 3, dom: "NET", type: "QA", title: "TP Supernetting #1 — Agrégation de 4 réseaux /24 contigus",
+    scenario: "Calcule le résumé de route (Supernetting CIDR) optimal pour agréger ces 4 réseaux contigus : 212.56.132.0/24, 212.56.133.0/24, 212.56.134.0/24 et 212.56.135.0/24.",
+    promptInfo: "132 = 10000100₂, 135 = 10000111₂ (4 réseaux /24 = recul de 2 bits sur le masque).",
+    accepted: ["212.56.132.0/22"],
+    hint: "24 - 2 = 22. L'adresse de base est 212.56.132.0/22.",
+    solution: "212.56.132.0/22",
+    debrief: "TP Module 04.01 (Partie E.1) : 132 est un multiple de 4 et les 4 réseaux /24 sont parfaitement contigus (132..135), ils s'agrègent donc exactement en 212.56.132.0/22." },
+
+  { id: 62, tier: 3, dom: "NET", type: "QA", title: "TP Supernetting #2 — Le piège de l'alignement binaire (146..149)",
+    scenario: "Calcule le résumé de route en notation CIDR englobant ces 4 réseaux : 212.56.146.0/24, 212.56.147.0/24, 212.56.148.0/24 et 212.56.149.0/24.",
+    promptInfo: "Attention : 146 et 147 sont dans le bloc 144..147, tandis que 148 et 149 sont dans 148..151 !",
+    accepted: ["212.56.144.0/21"],
+    hint: "Un /22 ne suffit pas car la frontière de bloc de 4 est à 148 ! Il faut un bloc de 8 (144 à 151), soit /21.",
+    solution: "212.56.144.0/21",
+    debrief: "TP Module 04.01 (Partie E.2) : 146 (10010010₂) et 148 (10010100₂) diffèrent sur le bit de poids 4 ! Les 5 premiers bits communs (10010xxx₂ = 144) donnent un masque 16 + 5 = /21 (212.56.144.0/21)." },
+
+  { id: 63, tier: 3, dom: "NET", type: "QA", title: "TP Supernetting #3 — Agrégation de 64 réseaux (96 à 159)",
+    scenario: "On désire agréger les 64 réseaux allant de 212.1.96.0/24 jusqu'à 212.1.159.0/24. Comme 96 (01100000₂) et 128 (10000000₂) diffèrent dès le 1er bit du 3e octet, quel est le résumé CIDR minimal ?",
+    promptInfo: "Compare 96 (01100000₂) et 159 (10011111₂) sur le 3e octet : combien de bits ont-ils en commun ?",
+    accepted: ["212.1.0.0/16"],
+    hint: "01100000 et 10011111 n'ont AUCUN bit de poids fort en commun sur le 3e octet !",
+    solution: "212.1.0.0/16",
+    debrief: "TP Module 04.01 (Partie E.3) : bien qu'il n'y ait que 64 réseaux (ce qui correspondrait en taille à un /18), la plage 96..159 chevauche la frontière du bit 128 (011xxxxx vs 100xxxxx). Aucun bit du 3e octet n'étant invariant, le résumé recule jusqu'à 212.1.0.0/16 !" },
+
+  { id: 64, tier: 3, dom: "NET", type: "QA", title: "TP Communication Partie B — Diagnostic Matrice PEV (Poste E)",
+    scenario: "Réseau 1 (Routeur X: 10.0.0.254/8) avec Poste A (10.11.2.1/8, GW 10.0.0.254) et Poste C (10.0.2.4/16, GW 10.0.0.254). Réseau 2 (Routeur Y: 192.168.1.254/24) avec Poste D (192.168.1.123/24, GW .1.254) et Poste E (192.168.2.2/16, GW 192.168.1.254). Indique le résultat d'envoi de E vers A, C, D (Format: X Y Z avec V=Direct, P=Passerelle, F=Faux).",
+    promptInfo: "Poste E est en 192.168.2.2 avec un masque /16 (255.255.0.0) sur le Réseau 2 !",
+    accepted: ["p p v", "ppv", "p/p/v"],
+    hint: "Grâce à son masque /16, E voit sa passerelle 192.168.1.254 ET le poste D (192.168.1.123) dans son réseau logique 192.168.0.0/16 !",
+    solution: "P P V",
+    debrief: "TP Module 04.01 (Partie B) : avec son masque /16, E peut joindre sa passerelle .1.254 en ARP (donc il joint A et C via la Passerelle : P P) et voit D comme local sur le switch 2 (V). En revanche personne ne peut joindre E car pour Y et D (/24), 192.168.2.2 n'est pas dans 192.168.1.0/24 !" },
+
+  { id: 65, tier: 3, dom: "NET", type: "QA", title: "TP Routage Statique (8 Routeurs en chaîne — 13.107.0.0/16)",
+    scenario: "Dans l'exercice des 8 routeurs en ligne (R1—R2—R3—R4—R5—R6—R7—R8) découpant 13.107.0.0/16 où la moitié haute 13.107.128.0 à 13.107.255.255 se trouve entièrement à droite de R4 (derrière R5..R8), quelle route résumée unique CIDR R4 doit-il envoyer vers R5 ?",
+    promptInfo: "La plage 13.107.128.0 .. 13.107.255.255 couvre exactement la seconde moitié du /16.",
+    accepted: ["13.107.128.0/17", "13.107.128.0/17 r5"],
+    hint: "La moitié haute d'un /16 (de .128.0 à .255.255) est un /17.",
+    solution: "13.107.128.0/17",
+    debrief: "TP Module 04.01 (Partie D) : tous les sous-réseaux situés de R5 à R8 (.128.0/19, .160.0/19, .192.0/19, .224.0/19) forment le bloc contigu 13.107.128.0/17." },
+
+  { id: 66, tier: 3, dom: "GLOB", type: "GLOB", title: "Audit de paires de clés SSH Courbes Elliptiques",
+    scenario: "Cible uniquement les clés privées et publiques ('.pub') des algorithmes 'id_ed25519' et 'id_ecdsa' (exclure id_rsa, id_dsa et les .bak).",
+    targets: ["id_ed25519", "id_ed25519.pub", "id_ecdsa", "id_ecdsa.pub"],
+    decoys: ["id_rsa", "id_rsa.pub", "id_dsa", "id_ed25519.pub.bak"],
+    hint: "Combine 'id_@(ed25519|ecdsa)' avec '?(.pub)'.",
+    solution: "id_@(ed25519|ecdsa)?(.pub)",
+    debrief: "'@(ed25519|ecdsa)' sélectionne l'algorithme moderne et '?(.pub)' capture simultanément la clé privée et la clé publique." },
+
+  { id: 67, tier: 3, dom: "GLOB", type: "GLOB", title: "Interfaces réseau prévisibles systemd (enpXsY / wlpXsY)",
+    scenario: "Cible les fichiers 'if_enp<N>s<M>.state' et 'if_wlp<N>s<M>.state' où <N> et <M> sont composés d'au moins un chiffre.",
+    targets: ["if_enp0s3.state", "if_enp12s0.state", "if_wlp2s0.state"],
+    decoys: ["if_eth0.state", "if_enps0.state", "if_enp0s.state", "if_enp0s3.bak"],
+    hint: "Utilise 'if_@(en|wl)p+([0-9])s+([0-9]).state'.",
+    solution: "if_@(en|wl)p+([0-9])s+([0-9]).state",
+    debrief: "La nomenclature Predictable Network Interface Names de systemd se valide parfaitement avec deux opérateurs '+([0-9])'." },
+
+  { id: 68, tier: 3, dom: "REGEX", type: "REGEX", title: "Validation de mois ISO-8601 (01 à 12)",
+    scenario: "Capture uniquement les journaux 'audit_2026-MM.log' ayant un mois valide entre 01 et 12.",
+    targets: ["audit_2026-01.log", "audit_2026-09.log", "audit_2026-10.log", "audit_2026-12.log"],
+    decoys: ["audit_2026-00.log", "audit_2026-13.log", "audit_2026-19.log", "audit_2026-99.log"],
+    hint: "Utilise '(0[1-9]|1[0-2])' pour le mois.",
+    solution: "audit_2026-(0[1-9]|1[0-2])\\.log",
+    debrief: "Découper l'intervalle en '0[1-9]' (01..09) et '1[0-2]' (10..12) bloque '00' ainsi que '13..19'." },
+
+  { id: 69, tier: 3, dom: "REGEX", type: "REGEX", title: "Fichiers contenant exactement deux lettres 'a' (Cours M6)",
+    scenario: "Capture les mots/noms de fichiers qui contiennent EXACTEMENT deux fois la lettre minuscule 'a' sur toute la ligne.",
+    targets: ["cabane", "radar", "ananas_non_mais_abac"],
+    decoys: ["chat", "abracadabra", "banane_a_trois_a", "test"],
+    hint: "Utilise '^[^a]*a[^a]*a[^a]*$' comme vu dans le module 6.",
+    solution: "^[^a]*a[^a]*a[^a]*$",
+    debrief: "Issu directement de ton cours M6 (Section 1.4) : '^[^a]*a[^a]*a[^a]*$' autorise tout caractère sauf 'a' autour d'exactement deux 'a'." },
+
+  { id: 70, tier: 3, dom: "VIM", type: "VIM", title: "Décommenter conditionnellement des directives (:g/motif/s/^#//)",
+    scenario: "Dans ce fichier de configuration, décommente (supprime le '#' initial) UNIQUEMENT sur les lignes contenant le mot 'Listen'.",
+    initialLines: ["# ServerRoot /etc/httpd", "#Listen 80", "# MaxClients 150", "#Listen 443"], cursor: [0, 0],
+    expectedLines: ["# ServerRoot /etc/httpd", "Listen 80", "# MaxClients 150", "Listen 443"],
+    par: 17, solution: ":g/Listen/s/^#//<CR>",
+    hint: "Utilise ':g/Listen/s/^#//<CR>' (vu dans ton cours M7 Section 1.3).",
+    debrief: "Exemple classique du cours 'Power of G' : ':g/Listen/' filtre les lignes pertinentes et 's/^#//' retire le dièse en début de ligne." },
+
+  { id: 71, tier: 3, dom: "VIM", type: "VIM", title: "Extraction forensic par négation (:v/CRITICAL/d)",
+    scenario: "Garde UNIQUEMENT les lignes contenant 'CRITICAL' et supprime toutes les autres en une seule commande Ex.",
+    initialLines: ["INFO Boot OK", "CRITICAL Kernel Panic", "WARN Disk 80%", "CRITICAL Unauthorized Root"], cursor: [0, 0],
+    expectedLines: ["CRITICAL Kernel Panic", "CRITICAL Unauthorized Root"],
+    par: 14, solution: ":v/CRITICAL/d<CR>",
+    hint: "Utilise ':v/CRITICAL/d<CR>' (ou ':g!/CRITICAL/d<CR>').",
+    debrief: "':v/motif/d' supprime toutes les lignes qui NE contiennent PAS le motif." },
+
+  { id: 72, tier: 3, dom: "VIM", type: "VIM", title: "TP Vi #19 — Conversion de casse ciblée (\\L\\1)",
+    scenario: "Transforme 'JEAN' en 'Jean' sur toutes les lignes en utilisant un groupe de capture sur 'EAN' et le modificateur de minuscule '\\L'.",
+    initialLines: ["Bernard JEAN-Paul 234567", "Dupont JEAN-Jacques 111111"], cursor: [0, 0],
+    expectedLines: ["Bernard Jean-Paul 234567", "Dupont Jean-Jacques 111111"],
+    par: 16, solution: ":%s/JEAN/Jean/g<CR>",
+    hint: "Tu peux taper ':g/J\\(EAN\\)/s//J\\L\\1\\E/g<CR>' (solution du TP) ou ':%s/JEAN/Jean/g<CR>'.",
+    debrief: "Question 19 du TP Vi : ':g/J\\(EAN\\)/s//J\\L\\1\\E/g' illustre comment conserver le 'J' initial et convertir le groupe '\\1' ('EAN') en minuscules ('ean') grâce à '\\L...\\E'." },
+
+  { id: 73, tier: 3, dom: "NET", type: "QA", title: "Agrégation Globale des Classes A, B et C (TP Supernetting E.4/5/6)",
+    scenario: "Donne les 3 résumés de routes CIDR qui agrègent respectivement : (1) toute la Classe A, (2) toute la Classe B, (3) toute la Classe C (séparés par un espace).",
+    promptInfo: "Classe A = 0xxxxxxx (0..127), Classe B = 10xxxxxx (128..191), Classe C = 110xxxxx (192..223).",
+    accepted: ["0.0.0.0/1 128.0.0.0/2 192.0.0.0/3"],
+    hint: "1 bit fixe pour A (/1), 2 bits fixes pour B (/2), 3 bits fixes pour C (/3).",
+    solution: "0.0.0.0/1 128.0.0.0/2 192.0.0.0/3",
+    debrief: "TP Module 04.01 (Partie E.4, E.5, E.6) : les classes historiques d'IPv4 étaient définies par leurs bits de poids fort : '0' -> 0.0.0.0/1, '10' -> 128.0.0.0/2, '110' -> 192.0.0.0/3." },
+
+  { id: 74, tier: 3, dom: "NET", type: "QA", title: "Base de données de la commande locate",
+    scenario: "Quelle commande d'administration (exécutée en root ou via cron) permet de mettre à jour manuellement la base de données d'indexation utilisée par la commande 'locate' ?",
+    promptInfo: "Contrairement à 'find' qui parcourt le disque en temps réel, 'locate' lit une base pré-indexée.",
+    accepted: ["updatedb", "sudo updatedb"],
+    hint: "Update + db.",
+    solution: "updatedb",
+    debrief: "Cours M6 (Section 1.5) : 'updatedb' régénère la base de données interrogée par 'locate', permettant de trouver les fichiers fraîchement créés." },
+
+  { id: 75, tier: 3, dom: "NET", type: "QA", title: "Compteurs temporels d'un Inode (mtime, atime, ctime)",
+    scenario: "Parmi les 3 horodatages stockés dans un inode Unix (mtime, atime, ctime), lequel est mis à jour lorsque tu modifies les PERMISSIONS (chmod) ou le PROPRIÉTAIRE (chown) du fichier sans toucher à son contenu ?",
+    promptInfo: "Attention : 'c' ne veut PAS dire creation time sous Unix !",
+    accepted: ["ctime"],
+    hint: "c = Change time (modification des métadonnées de l'inode).",
+    solution: "ctime",
+    debrief: "Piège classique : 'mtime' = modification du contenu, 'atime' = lecture/accès, et 'ctime' = Change time (modification des métadonnées de l'inode : permissions, propriétaire, liens physiques)." },
+
+  // ===========================================================================
+  // PALIER 4 (76..100) : ARCHITECTE CONVERGENCE N5 (Expert / SecOps)
+  // ===========================================================================
+  { id: 76, tier: 4, dom: "GLOB", type: "GLOB", title: "Subtilité POSIX : Le crochet fermant littéral ([]0-9-])",
+    scenario: "Un équipement réseau a généré des fichiers 'trap_X.log' où X est soit un crochet fermant ']', soit un tiret '-', soit un chiffre (0-9). Cible-les sans capturer '[' ni les lettres.",
+    targets: ["trap_].log", "trap_-.log", "trap_0.log", "trap_8.log"],
+    decoys: ["trap_[.log", "trap_a.log", "trap_10.log", "trap_].bak"],
+    hint: "En POSIX, place ']' en TOUTE PREMIÈRE position après '[' et '-' en toute dernière : '[]0-9-]'.",
+    solution: "trap_[]0-9-].log",
+    debrief: "Règle POSIX : placé immédiatement après '[' (ou '[!'), le caractère ']' ne ferme pas la classe mais est traité comme un caractère littéral à matcher !" },
+
+  { id: 77, tier: 4, dom: "GLOB", type: "GLOB", title: "Le point d'exclamation littéral dans une classe ([0-9!])",
+    scenario: "Cible les fichiers 'init_X.rc' où X est soit un chiffre (0-9), soit un point d'exclamation littéral '!' (mode rescue).",
+    targets: ["init_!.rc", "init_0.rc", "init_5.rc"],
+    decoys: ["init_a.rc", "init_?.rc", "init_10.rc"],
+    hint: "Ne place PAS '!' en première position dans les crochets : '[0-9!]'.",
+    solution: "init_[0-9!].rc",
+    debrief: "'!' n'agit comme négation que s'il occupe la 1re position après '['. Placé après ('[0-9!]'), il matche littéralement le caractère '!'." },
+
+  { id: 78, tier: 4, dom: "GLOB", type: "GLOB", title: "Filtrage d'hôtes IPv4 hors Réseau et Broadcast",
+    scenario: "Isole les rapports 'scan_<ip>.csv' des sous-réseaux '10.0.0.X' et '192.168.1.X' en excluant l'adresse de réseau ('.0') et de broadcast ('.255').",
+    targets: ["scan_10.0.0.1.csv", "scan_10.0.0.254.csv", "scan_192.168.1.42.csv"],
+    decoys: ["scan_10.0.0.0.csv", "scan_10.0.0.255.csv", "scan_192.168.1.255.csv", "scan_172.16.0.1.csv"],
+    hint: "Combine 'scan_@(10.0.0|192.168.1).' avec '!(0|255).csv'.",
+    solution: "scan_@(10.0.0|192.168.1).!(0|255).csv",
+    debrief: "En découpant le préfixe réseau avec '@()' et l'octet d'hôte avec '!(0|255)', tu cibles uniquement les adresses d'hôtes assignables." },
+
+  { id: 79, tier: 4, dom: "GLOB", type: "GLOB", title: "Détection d'exfiltration DNS par imbrication +( +() )",
+    scenario: "Isole les captures 'dns_<subs>.evil.net.cap' comportant 1 ou plusieurs sous-domaines composés uniquement de lettres minuscules suivies d'un point (ex: 'a.', 'p1.c2.'). Exclure 'dns_evil.net.cap' et les chiffres.",
+    targets: ["dns_a.evil.net.cap", "dns_exfil.evil.net.cap", "dns_p1.c2.evil.net.cap"],
+    decoys: ["dns_evil.net.cap", "dns_123.evil.net.cap", "dns_a..evil.net.cap"],
+    hint: "Imbrique '+([a-z]).' dans un '+()' : 'dns_+(+([a-z]).)evil.net.cap'.",
+    solution: "dns_+(+([a-z]).)evil.net.cap",
+    debrief: "L'imbrication '+(+([a-z]).)' exige au moins un label DNS, chaque label contenant au moins une lettre minuscule suivie d'un point." },
+
+  { id: 80, tier: 4, dom: "GLOB", type: "GLOB", title: "BOSS GLOB — Compromission Supply-Chain Kernel/Libs",
+    scenario: "Isole les implants cachés : (1) préfixe '.pkg_' ou '.lib_', (2) suivi de 'v' et d'au moins un chiffre avec patch optionnel '.1' ou '.2', (3) suivi de '_' et d'une archi quelconque SAUF 'wasm' et 'arm', (4) extension '.so' ou '.ko' suivie optionnellement de '.enc'.",
+    targets: [".pkg_v1_x86.so", ".lib_v24.1_amd64.ko.enc", ".pkg_v3.2_riscv.so.enc"],
+    decoys: ["pkg_v1_x86.so", ".pkg_v1_wasm.so", ".lib_v24.1_arm.ko.enc", ".pkg_v1.9_x86.so"],
+    hint: "Structure : '.@(pkg|lib)_v+([0-9])?(.[12])_!(wasm|arm).@(so|ko)?(.enc)'.",
+    solution: ".@(pkg|lib)_v+([0-9])?(.[12])_!(wasm|arm).@(so|ko)?(.enc)",
+    debrief: "Maîtrise totale du moteur d'expansion Bash : dotfile + '@()' + '+()' + '?()' + '!()'." },
+
+  { id: 81, tier: 4, dom: "REGEX", type: "REGEX", title: "Validation stricte d'un octet IPv4 (0 à 255)",
+    scenario: "Capture uniquement les lignes où 'OCTET=' est suivi d'un entier valide compris entre 0 et 255 en fin de ligne.",
+    targets: ["OCTET=0", "OCTET=42", "OCTET=199", "OCTET=255"],
+    decoys: ["OCTET=256", "OCTET=299", "OCTET=300", "OCTET=01"],
+    hint: "Utilise 'OCTET=(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$'.",
+    solution: "OCTET=(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$",
+    debrief: "La décomposition canonique d'un octet IPv4 (0..255 sans zéro non significatif) est un classique absolu des tests d'intrusion et d'administration." },
+
+  { id: 82, tier: 4, dom: "REGEX", type: "REGEX", title: "Lookahead Négatif PCRE (?!...) — Exclusion de compte de service",
+    scenario: "Capture les connexions 'SSH_ACCEPT user=<nom>' pour tous les utilisateurs SAUF 'backup' et 'nagios'.",
+    targets: ["SSH_ACCEPT user=adrien", "SSH_ACCEPT user=root", "SSH_ACCEPT user=deploy"],
+    decoys: ["SSH_ACCEPT user=backup", "SSH_ACCEPT user=nagios", "SSH_FAIL user=adrien"],
+    hint: "Utilise un Negative Lookahead '(?!backup\\b|nagios\\b)' juste après 'user='.",
+    solution: "SSH_ACCEPT user=(?!backup\\b|nagios\\b)\\w+",
+    debrief: "Le Lookahead négatif '(?!motif)' vérifie que ce qui suit ne correspond pas à 'backup' ou 'nagios' sans consommer de caractères." },
+
+  { id: 83, tier: 4, dom: "REGEX", type: "REGEX", title: "Détection de Path Traversal encodé ou clair (../ ou %2e%2e)",
+    scenario: "Capture toutes les tentatives de traversée de répertoires contenant soit '../' soit '%2e%2e/' (insensible à la casse pour %2e/%2E).",
+    targets: ["GET /download?f=../../etc/passwd", "GET /view?p=%2e%2e/%2e%2e/etc/shadow", "GET / view?p=%2E%2E/boot.ini"],
+    decoys: ["GET /download?f=report_2026.pdf", "GET /view?p=index.html"],
+    hint: "Utilise '(\\.\\.|%[2][eE]%[2][eE])/'.",
+    solution: "(\\.\\.|%2[eE]%2[eE])/",
+    debrief: "Les attaquants encodent souvent '.' en hexadécimal URL ('%2e' ou '%2E') pour contourner les pare-feu applicatifs (WAF) naïfs." },
+
+  { id: 84, tier: 4, dom: "REGEX", type: "REGEX", title: "Détection d'injection SQL (UNION SELECT / OR 1=1)",
+    scenario: "Capture les journaux HTTP contenant une charge SQLi de type 'UNION SELECT' ou \"' OR '1'='1\".",
+    targets: ["GET /item?id=1 UNION SELECT username,password FROM users", "POST /login user=admin' OR '1'='1"],
+    decoys: ["GET /item?id=105", "POST /login user=union_worker"],
+    hint: "Combine '(UNION\\s+SELECT|'\\s*OR\\s*'1'='1)'.",
+    solution: "(UNION\\s+SELECT|'\\s*OR\\s*'1'='1)",
+    debrief: "Cette signature hybride détecte à la fois l'extraction de tables par UNION et le contournement d'authentification par tautologie booléenne." },
+
+  { id: 85, tier: 4, dom: "REGEX", type: "REGEX", title: "BOSS REGEX — Corrélation de jeton JWT compromis",
+    scenario: "Capture uniquement les jetons JWT (3 segments Base64URL séparés par un point '.') commençant par l'en-tête 'eyJ' et dont la signature finale fait au moins 6 caractères.",
+    targets: ["Auth: Bearer eyJhbGciOi.eyJzdWIiOi.SflKxwRJSMeKKF2", "Auth: Bearer eyJ0eXAiOi.eyJyb2xlIjoi.99aBcDeFgH"],
+    decoys: ["Auth: Bearer eyJhbGciOi.eyJzdWIiOi.short", "Auth: Basic dXNlcjpwYXNz", "Auth: Bearer abc.def.ghijklm"],
+    hint: "Structure : 'eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{6,}'.",
+    solution: "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{6,}",
+    debrief: "Tout jeton JWT JSON commence en Base64 par 'eyJ' ('{\"'). Cette expression valide la structure tripartite Header.Payload.Signature." },
+
+  { id: 86, tier: 4, dom: "VIM", type: "VIM", title: "Substitution sur plage de lignes bornée (:2,3s)",
+    scenario: "Remplace 'ACCEPT' par 'DROP' uniquement sur les lignes 2 et 3.",
+    initialLines: ["Chain Lo: ACCEPT", "Chain WAN: ACCEPT", "Chain DMZ: ACCEPT", "Chain LAN: ACCEPT"], cursor: [0, 0],
+    expectedLines: ["Chain Lo: ACCEPT", "Chain WAN: DROP", "Chain DMZ: DROP", "Chain LAN: ACCEPT"],
+    par: 18, solution: ":2,3s/ACCEPT/DROP/<CR>",
+    hint: "Spécifie la plage '2,3' devant 's' : ':2,3s/ACCEPT/DROP/<CR>'.",
+    debrief: "Les plages Ex (':2,3s', ':.,$s') permettent de restreindre une opération chirurgicalement sans toucher au reste du fichier." },
+
+  { id: 87, tier: 4, dom: "VIM", type: "VIM", title: "Duplication de lignes par transfert Ex (:g/motif/t$)",
+    scenario: "COPIE (duplique sans supprimer les originales) toutes les lignes contenant 'ADMIN' à la toute fin du fichier grâce à la commande ':g/.../t$'.",
+    initialLines: ["USER alice", "ADMIN bob", "USER charlie", "ADMIN dave"], cursor: [0, 0],
+    expectedLines: ["USER alice", "ADMIN bob", "USER charlie", "ADMIN dave", "ADMIN bob", "ADMIN dave"],
+    par: 13, solution: ":g/ADMIN/t$<CR>",
+    hint: "Contrairement à 'm$' (move), 't$' (transfer/copy) copie les lignes matchées en fin de fichier : ':g/ADMIN/t$<CR>'.",
+    debrief: "Cours M7 (Section 1.3) : dans ':g/motif/cmd', 'm$' déplace les lignes tandis que 't$' (ou 'co$') les duplique à l'adresse cible." },
+
+  { id: 88, tier: 4, dom: "VIM", type: "VIM", title: "Réécriture de chemin avec délimiteur alternatif (:s#...#)",
+    scenario: "Remplace '/var/www/html' par '/srv/http' sur toutes les lignes sans utiliser d'antislash.",
+    initialLines: ["DocumentRoot /var/www/html", "Directory /var/www/html/pub"], cursor: [0, 0],
+    expectedLines: ["DocumentRoot /srv/http", "Directory /srv/http/pub"],
+    par: 27, solution: ":%s#/var/www/html#/srv/http#g<CR>",
+    hint: "Utilise '#' comme séparateur : ':%s#/var/www/html#/srv/http#g<CR>'.",
+    debrief: "Changer le délimiteur de ':s' en '#' ou '|' rend la manipulation des chemins Unix lisible et sans erreur d'échappement." },
+
+  { id: 89, tier: 4, dom: "VIM", type: "VIM", title: "Combo Recherche d'étoile (*) + Changement + Point (.)",
+    scenario: "Le curseur est sur le premier 'eth0'. Remplace les deux 'eth0' par 'br0' à l'aide de 'ciw', '*' (ou 'n') et '.'.",
+    initialLines: ["iface eth0 inet static", "  bridge_ports eth0"], cursor: [0, 6],
+    expectedLines: ["iface br0 inet static", "  bridge_ports br0"],
+    par: 11, solution: "*ciwbr0<Esc>n.",
+    hint: "Tape '*ciwbr0<Esc>n.' (ou 'ciwbr0<Esc>j$b.').",
+    debrief: "Le combo '*' (cherche le mot sous le curseur) + 'ciw...' + 'n.' permet d'éditer n'importe quelle variable à travers tout un code en quelques frappes." },
+
+  { id: 90, tier: 4, dom: "VIM", type: "VIM", title: "BOSS VIM — Pipeline Ex Multi-Passes (Purge + Normalisation)",
+    scenario: "En une seule séquence : 1) supprime toutes les lignes de commentaires commençant par '#' (:g/^#/d), PUIS 2) remplace tous les ports '80' en fin de ligne par '443'.",
+    initialLines: ["# Old vhost", "listen 10.0.0.1:80", "# Deprecated", "listen 10.0.0.2:80"], cursor: [0, 0],
+    expectedLines: ["listen 10.0.0.1:443", "listen 10.0.0.2:443"],
+    par: 24, solution: ":g/^#/d<CR>:%s/80$/443/g<CR>",
+    hint: "Enchaîne ':g/^#/d<CR>' suivi de ':%s/80$/443/g<CR>'.",
+    debrief: "Enchaîner un filtrage global ':g/re/d' et une substitution ancrée ':%s/re$/rep/' résume toute la puissance d'édition de Vim." },
+
+  { id: 91, tier: 4, dom: "NET", type: "QA", title: "TP Communication Partie C — Diagnostic de Poste E (3 Réseaux)",
+    scenario: "Dans la topologie C à 3 réseaux (Routeur X: 192.168.5.254/24, Routeur Z: 172.20.0.254/16, Routeur Y: 172.19.0.254/16) : Poste B (192.168.5.35/24, GW erronée 172.20.0.254), Poste D (172.20.1.123/24, GW erronée .1.254), Poste E (172.20.0.7/16, GW 172.20.0.254), Poste F (172.19.2.2/8, GW 172.19.0.254). Vers quels postes (parmi B, D, F) le Poste E peut-il envoyer un paquet à l'aller ? (Indique le code PEV pour B, D, F séparés par un espace : V, P ou F)",
+    promptInfo: "Poste E (172.20.0.7/16, GW 172.20.0.254) est parfaitement configuré sur le Réseau 2 !",
+    accepted: ["p v p", "pvp", "p/v/p"],
+    hint: "E joint B et F via sa Passerelle (P), et joint D directement en ARP sur le switch 2 car D (172.20.1.123) est dans 172.20.0.0/16 (V) !",
+    solution: "P V P",
+    debrief: "TP Module 04.01 (Partie C) : E est la seule machine saine du Réseau 2. Elle atteint B et F via le routeur (P), et atteint D directement en local (V) car 172.20.1.123 appartient à 172.20.0.0/16 !" },
+
+  { id: 92, tier: 4, dom: "NET", type: "QA", title: "TP 3 Domaines — Correction complète de B5",
+    scenario: "Dans le Réseau B (switch B, routeur eth1 = 192.168.20.254/24), la machine B5 a été configurée par erreur avec l'IP 192.168.2.15/24 (faute de frappe sur le 3e octet). Propose l'adresse IP avec préfixe CIDR corrigée logique pour B5 (qui est la 5e machine, sachant que B1=.10, B2=.20, B3=.30, B4=.40 ou en gardant l'hôte .15/.50).",
+    promptInfo: "Format attendu : 192.168.20.15/24 (ou 192.168.20.50/24).",
+    accepted: ["192.168.20.15/24", "192.168.20.50/24", "192.168.20.15", "192.168.20.50"],
+    hint: "Remplace le 3e octet '.2.' par '.20.' en /24.",
+    solution: "192.168.20.50/24",
+    debrief: "Question 6 du TP 3 Domaines : B5 avait '192.168.2.15' au lieu du réseau '192.168.20.0/24', l'isolant totalement de sa passerelle 192.168.20.254." },
+
+  { id: 93, tier: 4, dom: "NET", type: "QA", title: "Commandes iproute2 modernes sous Linux",
+    scenario: "Sous Linux moderne (suite iproute2 remplaçant net-tools), quelle commande courte à 2 mots permet d'afficher la table de routage du noyau (pour vérifier la passerelle par défaut 'default via ...') ?",
+    promptInfo: "Accepte la forme complète ou abrégée d'iproute2.",
+    accepted: ["ip route", "ip r", "ip route show", "ip route list"],
+    hint: "Commence par 'ip ' suivi de 'route' (ou 'r').",
+    solution: "ip route",
+    debrief: "Question 7 du TP 3 Domaines : sous Linux, 'ip a' (ip addr) affiche les IP/masques et 'ip r' (ip route) affiche la table de routage et la passerelle par défaut." },
+
+  { id: 94, tier: 4, dom: "NET", type: "QA", title: "Calcul CIDR — Nombre d'hôtes utiles dans un /27",
+    scenario: "Combien d'adresses IP d'hôtes machines utilisables (hors adresse de réseau et de broadcast) contient un sous-réseau en masque /27 (255.255.255.224) ?",
+    promptInfo: "Formule : 2^(32 - 27) - 2.",
+    accepted: ["30"],
+    hint: "2^5 - 2 = 32 - 2.",
+    solution: "30",
+    debrief: "Un /27 laisse 5 bits pour la partie hôte, soit 2^5 = 32 adresses au total, dont 30 assignables aux machines après retrait du réseau et du broadcast." },
+
+  { id: 95, tier: 4, dom: "NET", type: "QA", title: "Permissions Octales Spéciales : Le bit SUID (4000)",
+    scenario: "Le binaire '/usr/bin/passwd' affiche les permissions '-rwsr-xr-x'. Quelle est la valeur octale à 4 chiffres correspondant exactement à '-rwsr-xr-x' ?",
+    promptInfo: "rws = 4 (SUID) + 7 (rwx), r-x = 5, r-x = 5.",
+    accepted: ["4755", "04755"],
+    hint: "Le bit SUID vaut 4 en tête, suivi de 755.",
+    solution: "4755",
+    debrief: "SUID = 4, SGID = 2, Sticky Bit (/tmp) = 1. '4755' permet à un utilisateur standard d'exécuter '/usr/bin/passwd' avec les privilèges du propriétaire (root)." },
+
+  { id: 96, tier: 4, dom: "NET", type: "QA", title: "Redirection de flux d'erreur standard (stderr)",
+    scenario: "Lors d'une recherche 'find / -name \"*.conf\"', quel opérateur de redirection ajoutes-tu à la fin de la commande pour envoyer tous les messages 'Permission denied' (descripteur 2) dans le trou noir du système ?",
+    promptInfo: "Utilise le périphérique caractère /dev/null.",
+    accepted: ["2>/dev/null", "2> /dev/null"],
+    hint: "Redirige le descripteur 2 vers /dev/null.",
+    solution: "2>/dev/null",
+    debrief: "Sous Unix, stdin = 0, stdout = 1 et stderr = 2. '2>/dev/null' élimine silencieusement toutes les erreurs d'accès sans masquer les résultats valides (stdout)." },
+
+  { id: 97, tier: 4, dom: "NET", type: "QA", title: "Filtres BPF tcpdump — Détection de scan SYN (Half-Open)",
+    scenario: "Dans tcpdump, lorsque tu analyses un scan Nmap Half-Open (-sS), quel drapeau TCP unique est levé dans le paquet initial envoyé par l'attaquant (SYN, ACK, FIN, RST, PSH, URG) ?",
+    promptInfo: "Le scan -sS n'achève jamais le Three-Way Handshake (il envoie RST après le SYN-ACK).",
+    accepted: ["syn", "tcp-syn"],
+    hint: "Trois lettres : le 1er segment du Three-Way Handshake.",
+    solution: "SYN",
+    debrief: "Un scan SYN (-sS) envoie un segment avec uniquement le bit SYN levé. Si la cible répond SYN+ACK, le port est ouvert ; si elle répond RST+ACK, le port est fermé." },
+
+  { id: 98, tier: 4, dom: "NET", type: "QA", title: "Mécanisme de Quoting Bash : Doubles vs Simples Quotes",
+    scenario: "Si l'utilisateur courant est 'adrien', qu'affiche exactement la commande : echo 'Utilisateur : $USER' ?",
+    promptInfo: "Fais très attention aux apostrophes (simples quotes '...') qui entourent la chaîne !",
+    accepted: ["utilisateur : $user"],
+    hint: "Les simples quotes neutralisent absolument TOUTES les variables !",
+    solution: "Utilisateur : $USER",
+    debrief: "Cours M4 (Section 1.5) : les doubles quotes \"...\" interprètent '$USER' et '$(cmd)', tandis que les simples quotes '...' neutralisent tout et affichent littéralement '$USER'." },
+
+  { id: 99, tier: 4, dom: "NET", type: "QA", title: "Protocole ARP & Traversée de Routeur (Couche 2 vs Couche 3)",
+    scenario: "Lorsque A1 (Réseau A) envoie un paquet IP à B1 (Réseau B) à travers le routeur, quelle adresse IP et quelle adresse MAC de destination figurent dans la trame Ethernet qui quitte la carte réseau de A1 ? (Format: IP_DEST MAC_DEST en utilisant B1 ou ROUTEUR)",
+    promptInfo: "Rappel fondamental : l'IP de destination change-t-elle en route (hors NAT) ? La MAC de destination change-t-elle à chaque saut ?",
+    accepted: ["b1 routeur", "ip_b1 mac_routeur", "b1 passerelle"],
+    hint: "L'IP de destination est celle de la cible finale (B1), mais la MAC de destination est celle du prochain saut local (ROUTEUR) !",
+    solution: "B1 ROUTEUR",
+    debrief: "Loi d'airain des réseaux : l'adresse IP de destination reste celle de la cible finale de bout en bout (B1), tandis que l'adresse MAC de destination de la trame Ethernet est celle du prochain saut sur le domaine de diffusion local (l'interface eth0 du ROUTEUR)." },
+
+  { id: 100, tier: 4, dom: "VIM", type: "VIM", title: "ULTIMATE NEXUS BOSS — Sanitisation SecOps Multi-Outils",
+    scenario: "Mission finale #100 : Ce fichier d'inventaire a été corrompu. En une seule séquence Vim : 1) Supprime toutes les lignes contenant 'COMPROMISED' (:g/COMPROMISED/d), 2) Remplace '192.168.2.' par '192.168.20.' sur tout le fichier, et 3) Déplace la ligne 'ROLE=MASTER' tout en bas du fichier (:g/MASTER/m$).",
+    initialLines: ["NODE=srv1 IP=192.168.2.10 ROLE=MASTER", "NODE=bad1 IP=10.0.0.99 STATUS=COMPROMISED", "NODE=srv2 IP=192.168.2.20 ROLE=WORKER"], cursor: [0, 0],
+    expectedLines: ["NODE=srv2 IP=192.168.20.20 ROLE=WORKER", "NODE=srv1 IP=192.168.20.10 ROLE=MASTER"],
+    par: 52, solution: ":g/COMPROMISED/d<CR>:%s/192\\.168\\.2\\./192.168.20./g<CR>:g/MASTER/m$<CR>",
+    hint: "Enchaîne ':g/COMPROMISED/d<CR>' puis ':%s/\\.2\\./.20./g<CR>' puis ':g/MASTER/m$<CR>'.",
+    debrief: "FÉLICITATIONS ! Tu as accompli la 100e mission de NEXUS-OPS en combinant logique de routage, expressions régulières et maîtrise chirurgicale de Vim (:g/d, :%s et :g/m$)." }
+];
+
+const TOTAL_MISSIONS = MISSIONS.length;
+
+// =============================================================================
+// 4. MOTEUR 1 : AST BASH GLOB & EXTGLOB (FIDÈLE À BASH LC_ALL=C)
+// =============================================================================
+const POSIX_CLASSES = {
+  digit: "0123456789",
+  xdigit: "0123456789abcdefABCDEF",
+  lower: "abcdefghijklmnopqrstuvwxyz",
+  upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  alpha: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  alnum: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  punct: "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+};
+
+function parseBracketExpression(pattern, startBracketIdx) {
+  let i = startBracketIdx + 1;
+  if (i >= pattern.length) return null;
+  let negated = false;
+  if (pattern[i] === '!' || pattern[i] === '^') { negated = true; i++; }
+  const charSet = new Set();
+  let first = true;
+  while (i < pattern.length) {
+    if (pattern[i] === ']' && !first) {
+      return { token: { type: 'BRACKET', negated, charSet }, nextIdx: i + 1 };
+    }
+    first = false;
+    if (pattern[i] === '[' && pattern[i + 1] === ':') {
+      const closePosix = pattern.indexOf(':]', i + 2);
+      if (closePosix !== -1) {
+        const cls = pattern.slice(i + 2, closePosix);
+        if (POSIX_CLASSES[cls]) {
+          for (const ch of POSIX_CLASSES[cls]) charSet.add(ch);
+          i = closePosix + 2;
+          continue;
+        }
+      }
+    }
+    if (i + 2 < pattern.length && pattern[i + 1] === '-' && pattern[i + 2] !== ']') {
+      for (let c = pattern.charCodeAt(i); c <= pattern.charCodeAt(i + 2); c++) {
+        charSet.add(String.fromCharCode(c));
+      }
+      i += 3;
+      continue;
+    }
+    charSet.add(pattern[i++]);
+  }
+  return null;
+}
+
+function findClosingParen(pattern, openIdx) {
+  let depth = 1, i = openIdx + 1;
+  while (i < pattern.length) {
+    if (pattern[i] === '[') {
+      const br = parseBracketExpression(pattern, i);
+      if (br) { i = br.nextIdx; continue; }
+    }
+    if (pattern[i] === '(') depth++;
+    else if (pattern[i] === ')' && --depth === 0) return i;
+    i++;
+  }
+  return -1;
+}
+
+function splitTopLevelPipes(innerStr) {
+  const branches = [];
+  let depth = 0, last = 0, i = 0;
+  while (i < innerStr.length) {
+    if (innerStr[i] === '[') {
+      const br = parseBracketExpression(innerStr, i);
+      if (br) { i = br.nextIdx; continue; }
+    }
+    if (innerStr[i] === '(') depth++;
+    else if (innerStr[i] === ')') depth--;
+    else if (innerStr[i] === '|' && depth === 0) {
+      branches.push(innerStr.slice(last, i));
+      last = i + 1;
+    }
+    i++;
+  }
+  branches.push(innerStr.slice(last));
+  return branches;
+}
+
+function parseGlobAST(pattern) {
+  const tokens = [];
+  let i = 0;
+  while (i < pattern.length) {
+    const ch = pattern[i];
+    if ("?*+@!".includes(ch) && pattern[i + 1] === '(') {
+      const closeIdx = findClosingParen(pattern, i + 1);
+      if (closeIdx === -1) throw new Error(`Parenthèse ')' manquante pour '${ch}('`);
+      const branches = splitTopLevelPipes(pattern.slice(i + 2, closeIdx)).map(parseGlobAST);
+      tokens.push({ type: 'EXTGLOB', op: ch, branches });
+      i = closeIdx + 1;
+      continue;
+    }
+    if (ch === '*') { tokens.push({ type: 'STAR' }); i++; }
+    else if (ch === '?') { tokens.push({ type: 'ANY_CHAR' }); i++; }
+    else if (ch === '[') {
+      const br = parseBracketExpression(pattern, i);
+      if (br) { tokens.push(br.token); i = br.nextIdx; }
+      else { tokens.push({ type: 'LITERAL', char: '[' }); i++; }
+    } else {
+      tokens.push({ type: 'LITERAL', char: ch });
+      i++;
+    }
+  }
+  return tokens;
+}
+
+function matchTokensExact(tokens, tIdx, str, sIdx, endIdx) {
+  if (tIdx === tokens.length) return sIdx === endIdx;
+  const tk = tokens[tIdx];
+  const isLeadingDot = (sIdx === 0 && str.length > 0 && str[0] === '.');
+
+  if (tk.type === 'LITERAL') {
+    return (sIdx < endIdx && str[sIdx] === tk.char)
+      ? matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx) : false;
+  }
+  if (tk.type === 'ANY_CHAR') {
+    if (isLeadingDot || sIdx >= endIdx) return false;
+    return matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx);
+  }
+  if (tk.type === 'BRACKET') {
+    if (isLeadingDot || sIdx >= endIdx) return false;
+    const inSet = tk.charSet.has(str[sIdx]);
+    return (tk.negated ? !inSet : inSet)
+      ? matchTokensExact(tokens, tIdx + 1, str, sIdx + 1, endIdx) : false;
+  }
+  if (tk.type === 'STAR') {
+    if (isLeadingDot) return matchTokensExact(tokens, tIdx + 1, str, sIdx, endIdx);
+    for (let k = sIdx; k <= endIdx; k++) {
+      if (matchTokensExact(tokens, tIdx + 1, str, k, endIdx)) return true;
+    }
+    return false;
+  }
+  if (tk.type === 'EXTGLOB') {
+    for (let k = sIdx; k <= endIdx; k++) {
+      if (matchExtglobSegment(tk.op, tk.branches, str, sIdx, k) &&
+          matchTokensExact(tokens, tIdx + 1, str, k, endIdx)) return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+function matchesAnyBranch(branches, str, sIdx, endIdx) {
+  return branches.some(b => matchTokensExact(b, 0, str, sIdx, endIdx));
+}
+
+function matchBranchRep(branches, str, sIdx, endIdx, count) {
+  if (sIdx === endIdx) return count >= 1 ? true : matchesAnyBranch(branches, str, sIdx, endIdx);
+  for (let m = sIdx + 1; m <= endIdx; m++) {
+    if (matchesAnyBranch(branches, str, sIdx, m) &&
+        matchBranchRep(branches, str, m, endIdx, count + 1)) return true;
+  }
+  return false;
+}
+
+function matchExtglobSegment(op, branches, str, sIdx, endIdx) {
+  const consumesLeadingDot = (sIdx === 0 && endIdx > 0 && str[0] === '.');
+  if (op === '@') return matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '?') return (sIdx === endIdx) || matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '!') return consumesLeadingDot ? false : !matchesAnyBranch(branches, str, sIdx, endIdx);
+  if (op === '+') return matchBranchRep(branches, str, sIdx, endIdx, 0);
+  if (op === '*') return (sIdx === endIdx) || matchBranchRep(branches, str, sIdx, endIdx, 0);
+  return false;
+}
+
+function bashGlobMatch(pattern, filename) {
+  const ast = parseGlobAST(pattern);
+  return matchTokensExact(ast, 0, filename, 0, filename.length);
+}
+
+// =============================================================================
+// 5. MOTEUR 2 : SIMULATEUR VIM (AVEC SUPPORT TP VI : m$, t$, \U, \L, \<, \>)
+// =============================================================================
+function tokenizeVimInput(str) {
+  const tokens = [];
+  let i = 0;
+  while (i < str.length) {
+    if (str[i] === '<') {
+      const close = str.indexOf('>', i);
+      if (close !== -1) {
+        const rawTag = str.slice(i + 1, close).toLowerCase();
+        if (rawTag === 'esc' || rawTag === 'escape') { tokens.push('<Esc>'); i = close + 1; continue; }
+        if (rawTag === 'cr' || rawTag === 'enter' || rawTag === 'return') { tokens.push('<CR>'); i = close + 1; continue; }
+        if (rawTag === 'c-a' || rawTag === 'ctrl-a') { tokens.push('<C-a>'); i = close + 1; continue; }
+        if (rawTag === 'c-x' || rawTag === 'ctrl-x') { tokens.push('<C-x>'); i = close + 1; continue; }
+        if (rawTag === 'bs' || rawTag === 'backspace') { tokens.push('<BS>'); i = close + 1; continue; }
+      }
+    }
+    tokens.push(str[i]);
+    i++;
+  }
+  return tokens;
+}
+
+function isWordChar(ch, bigWord = false) {
+  if (!ch) return false;
+  if (bigWord) return !/\s/.test(ch);
+  return /[a-zA-Z0-9_]/.test(ch);
+}
+
+function clampCol(lines, r, c, insertMode = false) {
+  const len = (lines[r] || "").length;
+  if (len === 0) return 0;
+  return Math.max(0, Math.min(c, insertMode ? len : len - 1));
+}
+
+function findWordMotionCol(line, col, type, count) {
+  let c = col;
+  const len = line.length;
+  const big = (type === 'W' || type === 'B' || type === 'E');
+  const base = type.toLowerCase();
+  for (let step = 0; step < count; step++) {
+    if (base === 'w') {
+      if (c < len && isWordChar(line[c], big)) {
+        while (c < len && isWordChar(line[c], big)) c++;
+      } else if (c < len && !/\s/.test(line[c])) {
+        while (c < len && !isWordChar(line[c], big) && !/\s/.test(line[c])) c++;
+      }
+      while (c < len && /\s/.test(line[c])) c++;
+    } else if (base === 'e') {
+      if (c + 1 < len) c++;
+      while (c < len && /\s/.test(line[c])) c++;
+      if (c < len && isWordChar(line[c], big)) {
+        while (c + 1 < len && isWordChar(line[c + 1], big)) c++;
+      } else {
+        while (c + 1 < len && !isWordChar(line[c + 1], big) && !/\s/.test(line[c + 1])) c++;
+      }
+    } else if (base === 'b') {
+      if (c > 0) c--;
+      while (c > 0 && /\s/.test(line[c])) c--;
+      if (isWordChar(line[c], big)) {
+        while (c > 0 && isWordChar(line[c - 1], big)) c--;
+      } else {
+        while (c > 0 && !isWordChar(line[c - 1], big) && !/\s/.test(line[c - 1])) c--;
+      }
+    }
+  }
+  return c;
+}
+
+function findTextObjectSpan(line, col, inner, objChar) {
+  if (objChar === 'w' || objChar === 'W') {
+    const big = (objChar === 'W');
+    let s = col, e = col;
+    if (isWordChar(line[col], big)) {
+      while (s > 0 && isWordChar(line[s - 1], big)) s--;
+      while (e < line.length && isWordChar(line[e], big)) e++;
+    } else {
+      while (s > 0 && !isWordChar(line[s - 1], big) && !/\s/.test(line[s - 1])) s--;
+      while (e < line.length && !isWordChar(line[e], big) && !/\s/.test(line[e])) e++;
+    }
+    if (!inner) while (e < line.length && /\s/.test(line[e])) e++;
+    return [s, e];
+  }
+  if (objChar === '"' || objChar === "'" || objChar === '`') {
+    const indices = [];
+    for (let i = 0; i < line.length; i++) if (line[i] === objChar) indices.push(i);
+    for (let k = 0; k + 1 < indices.length; k += 2) {
+      if (col <= indices[k + 1]) return inner ? [indices[k] + 1, indices[k + 1]] : [indices[k], indices[k + 1] + 1];
+    }
+    return null;
+  }
+  const pairs = { '(': ['(', ')'], ')': ['(', ')'], 'b': ['(', ')'], '[': ['[', ']'], ']': ['[', ']'], '{': ['{', '}'], '}': ['{', '}'], 'B': ['{', '}'] };
+  if (pairs[objChar]) {
+    const [op, cl] = pairs[objChar];
+    let openIdx = line.lastIndexOf(op, col);
+    if (openIdx === -1) openIdx = line.indexOf(op, col);
+    if (openIdx === -1) return null;
+    const closeIdx = line.indexOf(cl, openIdx);
+    if (closeIdx === -1) return null;
+    return inner ? [openIdx + 1, closeIdx] : [openIdx, closeIdx + 1];
+  }
+  return null;
+}
+
+// Convertit une Regex Vim (incluant \<, \>, \(, \), \+) en RegExp JS
+function vimRegexToJS(vimPat, flags) {
+  let jsPat = "";
+  for (let i = 0; i < vimPat.length; i++) {
+    if (vimPat[i] === '\\' && i + 1 < vimPat.length) {
+      const nxt = vimPat[i + 1];
+      if (nxt === '<' || nxt === '>') { jsPat += '\\b'; i++; continue; }
+      if (nxt === '(' || nxt === ')' || nxt === '+' || nxt === '?' || nxt === '|') {
+        jsPat += nxt; i++; continue;
+      }
+      jsPat += '\\' + nxt; i++;
+    } else if (vimPat[i] === '(' || vimPat[i] === ')' || vimPat[i] === '+') {
+      jsPat += '\\' + vimPat[i];
+    } else {
+      jsPat += vimPat[i];
+    }
+  }
+  return new RegExp(jsPat, flags);
+}
+
+// Applique un remplacement Vim en supportant &, \1..\9, \U, \L, \u, \l, \E
+function applyVimReplacement(line, regex, repTemplate) {
+  return line.replace(regex, function(...args) {
+    const fullMatch = args[0];
+    const groups = args.slice(1, -2);
+    let expanded = "";
+    for (let i = 0; i < repTemplate.length; i++) {
+      if (repTemplate[i] === '&') { expanded += fullMatch; }
+      else if (repTemplate[i] === '\\' && i + 1 < repTemplate.length) {
+        const n = repTemplate[i + 1];
+        if (n >= '1' && n <= '9') {
+          expanded += (groups[parseInt(n, 10) - 1] || "");
+          i++;
+        } else {
+          expanded += '\\' + n;
+          i++;
+        }
+      } else {
+        expanded += repTemplate[i];
+      }
+    }
+    // Traitement des modificateurs de casse Vim (\U, \L, \u, \l, \E)
+    let out = "";
+    let caseMode = null;
+    for (let i = 0; i < expanded.length; i++) {
+      if (expanded[i] === '\\' && i + 1 < expanded.length) {
+        const c = expanded[i + 1];
+        if (c === 'U') { caseMode = 'U'; i++; continue; }
+        if (c === 'L') { caseMode = 'L'; i++; continue; }
+        if (c === 'E') { caseMode = null; i++; continue; }
+        if (c === 'u' && i + 2 < expanded.length) { out += expanded[i + 2].toUpperCase(); i += 2; continue; }
+        if (c === 'l' && i + 2 < expanded.length) { out += expanded[i + 2].toLowerCase(); i += 2; continue; }
+      }
+      const ch = expanded[i];
+      out += caseMode === 'U' ? ch.toUpperCase() : (caseMode === 'L' ? ch.toLowerCase() : ch);
+    }
+    return out;
+  });
+}
+
+function executeExCommand(cmdStr, stateObj) {
+  let s = cmdStr.trim();
+  if (!s) return;
+  if (s.startsWith(':')) s = s.slice(1).trim();
+
+  // :g/pat/cmd ou :v/pat/cmd
+  const gMatch = s.match(/^(?:%|1,\$)?\s*(g!?|v)\/([^/]+)\/(.*)$/);
+  if (gMatch) {
+    const mode = gMatch[1];
+    const pat = gMatch[2];
+    const subCmd = gMatch[3].trim();
+    const re = vimRegexToJS(pat, "");
+    const invert = (mode === 'v' || mode === 'g!');
+
+    if (subCmd === 'd') {
+      stateObj.lines = stateObj.lines.filter(ln => invert ? re.test(ln) : !re.test(ln));
+      if (stateObj.lines.length === 0) stateObj.lines = [""];
+      stateObj.r = Math.min(stateObj.r, stateObj.lines.length - 1);
+      return;
+    }
+    if (/^m\s*\$$/.test(subCmd)) {
+      const kept = [], moved = [];
+      stateObj.lines.forEach(ln => {
+        const hit = invert ? !re.test(ln) : re.test(ln);
+        if (hit) moved.push(ln); else kept.push(ln);
+      });
+      stateObj.lines = [...kept, ...moved];
+      return;
+    }
+    if (/^(t|co)\s*\$$/.test(subCmd)) {
+      const copied = [];
+      stateObj.lines.forEach(ln => {
+        const hit = invert ? !re.test(ln) : re.test(ln);
+        if (hit) copied.push(ln);
+      });
+      stateObj.lines = [...stateObj.lines, ...copied];
+      return;
+    }
+    if (subCmd.startsWith('s')) {
+      stateObj.lines = stateObj.lines.map(ln => {
+        const hit = invert ? !re.test(ln) : re.test(ln);
+        if (!hit) return ln;
+        const tempState = { lines: [ln], r: 0, c: 0, lastSearch: pat };
+        executeExCommand(subCmd, tempState);
+        return tempState.lines[0];
+      });
+      return;
+    }
+  }
+
+  // Substitution [range]s<delim>pat<delim>rep[<delim>flags]
+  const rangeMatch = s.match(/^([0-9.,$%]+)?\s*s([^\w\s])(.*)$/);
+  if (rangeMatch) {
+    const rangeSpec = rangeMatch[1] || ".";
+    const delim = rangeMatch[2];
+    const rest = rangeMatch[3];
+    const parts = [];
+    let cur = "";
+    for (let i = 0; i < rest.length; i++) {
+      if (rest[i] === '\\' && i + 1 < rest.length) { cur += rest[i] + rest[i + 1]; i++; }
+      else if (rest[i] === delim) { parts.push(cur); cur = ""; }
+      else cur += rest[i];
+    }
+    parts.push(cur);
+    const pat = parts[0] === "" ? (stateObj.lastSearch || "") : parts[0];
+    const rep = parts[1] !== undefined ? parts[1] : "";
+    const flags = parts[2] || "";
+
+    let startLine = stateObj.r, endLine = stateObj.r;
+    if (rangeSpec === "%" || rangeSpec === "1,$") {
+      startLine = 0; endLine = stateObj.lines.length - 1;
+    } else if (rangeSpec.includes(",")) {
+      const [a, b] = rangeSpec.split(",");
+      startLine = a === "." ? stateObj.r : Math.max(0, parseInt(a, 10) - 1);
+      endLine = b === "$" ? stateObj.lines.length - 1 : Math.min(stateObj.lines.length - 1, parseInt(b, 10) - 1);
+    }
+
+    const reFlags = (flags.includes('g') ? 'g' : '') + (flags.includes('i') ? 'i' : '');
+    const regex = vimRegexToJS(pat, reFlags);
+    for (let lnIdx = startLine; lnIdx <= endLine; lnIdx++) {
+      if (stateObj.lines[lnIdx] !== undefined) {
+        stateObj.lines[lnIdx] = applyVimReplacement(stateObj.lines[lnIdx], regex, rep);
+      }
+    }
+  }
+}
+
+function simulateVimKeystrokes(initialLines, initialCursor, rawKeystrokes) {
+  const tokens = tokenizeVimInput(rawKeystrokes);
+  const st = {
+    lines: [...initialLines],
+    r: initialCursor[0],
+    c: initialCursor[1],
+    reg: "",
+    regLinewise: false,
+    lastSearch: "",
+    lastFind: null
+  };
+  let lastChangeTokens = [];
+  let recordingChange = false;
+  let currentChangeStart = 0;
+
+  function runTokenStream(tkList, isReplay = false) {
+    let idx = 0, mode = "NORMAL";
+    while (idx < tkList.length) {
+      if (mode === "INSERT") {
+        const tk = tkList[idx++];
+        if (tk === '<Esc>') {
+          mode = "NORMAL";
+          st.c = Math.max(0, st.c - 1);
+          if (recordingChange && !isReplay) {
+            lastChangeTokens = tkList.slice(currentChangeStart, idx);
+            recordingChange = false;
+          }
+        } else if (tk === '<BS>') {
+          if (st.c > 0) {
+            const ln = st.lines[st.r];
+            st.lines[st.r] = ln.slice(0, st.c - 1) + ln.slice(st.c);
+            st.c--;
+          }
+        } else if (tk.length === 1) {
+          const ln = st.lines[st.r];
+          st.lines[st.r] = ln.slice(0, st.c) + tk + ln.slice(st.c);
+          st.c++;
+        }
+        continue;
+      }
+
+      let cmdStartIdx = idx;
+      let countStr = "";
+      while (idx < tkList.length && /^[0-9]$/.test(tkList[idx]) && !(countStr === "" && tkList[idx] === "0")) {
+        countStr += tkList[idx++];
+      }
+      const count = countStr ? parseInt(countStr, 10) : 1;
+      if (idx >= tkList.length) break;
+      const tk = tkList[idx++];
+
+      if (tk === '<Esc>') continue;
+      if (tk === '.') {
+        if (lastChangeTokens.length > 0) {
+          for (let k = 0; k < count; k++) runTokenStream(lastChangeTokens, true);
+        }
+        continue;
+      }
+      if (tk === ':') {
+        let exCmd = "";
+        while (idx < tkList.length && tkList[idx] !== '<CR>' && tkList[idx] !== '<Esc>') exCmd += tkList[idx++];
+        if (idx < tkList.length) idx++;
+        executeExCommand(exCmd, st);
+        continue;
+      }
+      if (tk === '/') {
+        let pat = "";
+        while (idx < tkList.length && tkList[idx] !== '<CR>' && tkList[idx] !== '<Esc>') pat += tkList[idx++];
+        if (idx < tkList.length) idx++;
+        st.lastSearch = pat;
+        jumpToSearchMatch(st, pat, 1);
+        continue;
+      }
+      if (tk === '*') {
+        const span = findTextObjectSpan(st.lines[st.r], st.c, true, 'w');
+        if (span) {
+          st.lastSearch = st.lines[st.r].slice(span[0], span[1]);
+          jumpToSearchMatch(st, st.lastSearch, 1);
+        }
+        continue;
+      }
+      if (tk === 'n') { if (st.lastSearch) jumpToSearchMatch(st, st.lastSearch, count); continue; }
+      if (tk === 'h') { st.c = clampCol(st.lines, st.r, st.c - count); continue; }
+      if (tk === 'l' || tk === ' ') { st.c = clampCol(st.lines, st.r, st.c + count); continue; }
+      if (tk === 'j') { st.r = Math.min(st.lines.length - 1, st.r + count); st.c = clampCol(st.lines, st.r, st.c); continue; }
+      if (tk === 'k') { st.r = Math.max(0, st.r - count); st.c = clampCol(st.lines, st.r, st.c); continue; }
+      if (tk === '0') { st.c = 0; continue; }
+      if (tk === '$') { st.c = clampCol(st.lines, st.r, st.lines[st.r].length - 1); continue; }
+      if ('wWbBeE'.includes(tk)) { st.c = clampCol(st.lines, st.r, findWordMotionCol(st.lines[st.r], st.c, tk, count)); continue; }
+      if (tk === 'G') { st.r = countStr ? Math.min(st.lines.length - 1, Math.max(0, count - 1)) : st.lines.length - 1; st.c = clampCol(st.lines, st.r, st.c); continue; }
+      if (tk === 'g' && idx < tkList.length && tkList[idx] === 'g') { idx++; st.r = 0; st.c = 0; continue; }
+      if ((tk === 'f' || tk === 't') && idx < tkList.length) {
+        const target = tkList[idx++];
+        let c = st.c;
+        for (let k = 0; k < count; k++) {
+          const found = st.lines[st.r].indexOf(target, c + 1);
+          if (found !== -1) c = tk === 'f' ? found : found - 1;
+        }
+        st.c = c;
+        continue;
+      }
+      if (['i', 'a', 'I', 'A', 'o', 'O', 'C'].includes(tk)) {
+        if (!isReplay) { recordingChange = true; currentChangeStart = cmdStartIdx; }
+        const ln = st.lines[st.r];
+        if (tk === 'i') mode = "INSERT";
+        else if (tk === 'a') { st.c = Math.min(ln.length, st.c + 1); mode = "INSERT"; }
+        else if (tk === 'I') { const m = ln.match(/\S/); st.c = m ? m.index : 0; mode = "INSERT"; }
+        else if (tk === 'A') { st.c = ln.length; mode = "INSERT"; }
+        else if (tk === 'o') { st.lines.splice(st.r + 1, 0, ""); st.r++; st.c = 0; mode = "INSERT"; }
+        else if (tk === 'O') { st.lines.splice(st.r, 0, ""); st.c = 0; mode = "INSERT"; }
+        else if (tk === 'C') { st.lines[st.r] = ln.slice(0, st.c); mode = "INSERT"; }
+        continue;
+      }
+      if (tk === 'x') {
+        const ln = st.lines[st.r];
+        st.lines[st.r] = ln.slice(0, st.c) + ln.slice(st.c + count);
+        st.c = clampCol(st.lines, st.r, st.c);
+        continue;
+      }
+      if (tk === '<C-a>' || tk === '<C-x>') {
+        const delta = (tk === '<C-a>' ? 1 : -1) * count;
+        const ln = st.lines[st.r];
+        const numRegex = /-?\d+/g;
+        let m;
+        while ((m = numRegex.exec(ln)) !== null) {
+          if (m.index + m[0].length > st.c) {
+            const newVal = String(parseInt(m[0], 10) + delta);
+            st.lines[st.r] = ln.slice(0, m.index) + newVal + ln.slice(m.index + m[0].length);
+            break;
+          }
+        }
+        continue;
+      }
+      if (tk === 'p' || tk === 'P') {
+        if (st.regLinewise) {
+          const insertAt = tk === 'p' ? st.r + 1 : st.r;
+          st.lines.splice(insertAt, 0, ...st.reg.split("\n"));
+          st.r = insertAt;
+        }
+        continue;
+      }
+      if (['d', 'c', 'y'].includes(tk) && idx < tkList.length) {
+        const op = tk;
+        const mTk = tkList[idx++];
+        if (mTk === op) {
+          if (op === 'y') { st.reg = st.lines[st.r]; st.regLinewise = true; }
+          else if (op === 'd') {
+            st.reg = st.lines[st.r]; st.regLinewise = true;
+            st.lines.splice(st.r, count);
+            if (st.lines.length === 0) st.lines.push("");
+            st.r = Math.min(st.r, st.lines.length - 1);
+          }
+          continue;
+        }
+        let span = null;
+        const ln = st.lines[st.r];
+        if ((mTk === 'i' || mTk === 'a') && idx < tkList.length) {
+          span = findTextObjectSpan(ln, st.c, mTk === 'i', tkList[idx++]);
+        } else if (mTk === 'w' || mTk === 'W') {
+          let targetCol = findWordMotionCol(ln, st.c, op === 'c' ? 'e' : mTk, count);
+          if (op === 'c') targetCol++;
+          span = [st.c, targetCol];
+        }
+        if (span) {
+          const [sCol, eCol] = span;
+          if (op === 'd') { st.lines[st.r] = ln.slice(0, sCol) + ln.slice(eCol); st.c = clampCol(st.lines, st.r, sCol); }
+          else if (op === 'c') {
+            if (!isReplay) { recordingChange = true; currentChangeStart = cmdStartIdx; }
+            st.lines[st.r] = ln.slice(0, sCol) + ln.slice(eCol);
+            st.c = sCol;
+            mode = "INSERT";
+          }
+        }
+      }
+    }
+  }
+  runTokenStream(tokens, false);
+  return { lines: st.lines, cursor: [st.r, st.c], keystrokeCount: tokens.length };
+}
+
+function jumpToSearchMatch(st, pat, count) {
+  if (!pat) return;
+  const totalLines = st.lines.length;
+  for (let step = 0; step < count; step++) {
+    const sameIdx = st.lines[st.r].indexOf(pat, st.c + 1);
+    if (sameIdx !== -1) { st.c = sameIdx; continue; }
+    for (let offset = 1; offset <= totalLines; offset++) {
+      const rIdx = (st.r + offset) % totalLines;
+      const found = st.lines[rIdx].indexOf(pat);
+      if (found !== -1) { st.r = rIdx; st.c = found; break; }
+    }
+  }
+}
+
+// =============================================================================
+// 6. GESTION DU PROFIL, RÉCOMPENSES, TOPOLOGIE & CODEX OBSIDIAN
+// =============================================================================
+const STORAGE_KEY = "nexus_ops_v1_terminal";
+const PORTAL_THEME_KEY = "tssr_portal_active_theme";
+
+let profile = {
+  pseudo: "adrien",
+  theme: "jensen",
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: "14px",
+  cursorSkinId: 1,
+  campaignUnlocked: 1,
+  bestScore: 0,
+  totalScore: 0,
+  streak: 0,
+  bestStreak: 0,
+  bestBlitzCount: 0,
+  foundEasterEgg: false,
+  masteredIds: [],
+  golfedIds: [],
+  badges: [],
+  relics: [],
+  localBoard: [
+    { pseudo: "tarlak_sec", score: 19400, mastered: 100 },
+    { pseudo: "bram_joy",   score: 14200, mastered: 82 },
+    { pseudo: "root_soc",   score: 8650,  mastered: 54 }
+  ]
+};
+
+let state = {
+  busy: false,
+  active: false,
+  awaitingNext: false,
+  wizardStep: 0,
+  wizardData: {},
+  mode: "CAMPAIGN",
+  playlist: [],
+  stepIdx: 0,
+  sessionScore: 0,
+  attempts: 0,
+  usedHint: 0,
+  startTimeMs: 0,
+  blitzEndMs: 0,
+  blitzSolved: 0,
+  blitzTimerId: null
+};
+
+let cmdHistory = [];
+let histIdx = -1;
+
+const outEl = document.getElementById('term-output');
+const inpEl = document.getElementById('cmd-input');
+const boxEl = document.getElementById('term-box');
+const promptLbl = document.getElementById('prompt-label');
+const promptForm = document.getElementById('prompt-form');
+const footerStreakEl = document.getElementById('footer-streak');
+const footerBlitzEl = document.getElementById('footer-blitz');
+
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+}
+
+function printHtml(html = "", cls = "") {
+  const div = document.createElement('div');
+  div.className = "log-line" + (cls ? " " + cls : "");
+  div.innerHTML = html;
+  outEl.appendChild(div);
+  boxEl.scrollTop = boxEl.scrollHeight;
+  return div;
+}
+
+function printBoxLine(html = "") {
+  return printHtml(html, "box-line");
+}
+
+function printText(text = "", cls = "") {
+  printHtml(esc(text), cls);
+}
+
+function getMultiplier() {
+  if (profile.streak >= 10) return 3.0;
+  if (profile.streak >= 6) return 2.5;
+  if (profile.streak >= 4) return 2.0;
+  if (profile.streak >= 2) return 1.5;
+  return 1.0;
+}
+
+function getRankTitle() {
+  const n = profile.masteredIds.length;
+  let title = RANKS[0].title;
+  for (const r of RANKS) if (n >= r.min) title = r.title;
+  return title;
+}
+
+function updateStreakDisplay() {
+  footerStreakEl.textContent = `🔥 ${profile.streak} (x${getMultiplier().toFixed(1)})`;
+}
+
+function applyCursorSkin(skinId, silent = false) {
+  const skin = CURSOR_SKINS.find(s => s.id === skinId) || CURSOR_SKINS[0];
+  if (profile.masteredIds.length < skin.reqM && !silent) {
+    printHtml(`  <span class="c-red">[✗] Curseur verrouillé.</span> Requis : ${skin.reqM} missions maîtrisées.`);
+    return false;
+  }
+  profile.cursorSkinId = skin.id;
+  const r = document.documentElement.style;
+  r.setProperty('--cursor-bg', skin.bg);
+  r.setProperty('--cursor-fg', skin.fg);
+  r.setProperty('--cursor-border', skin.border);
+  saveProfile();
+  if (!silent) printHtml(`  <span class="c-green">[✓]</span> Style de curseur équipé : <span class="c-cyan bold">${esc(skin.name)}</span>`);
+  return true;
+}
+
+function checkAndUnlockRewards() {
+  const newBadges = [], newRelics = [];
+  function grantB(id) {
+    if (!profile.badges.includes(id)) {
+      profile.badges.push(id);
+      const b = BADGES.find(x => x.id === id);
+      if (b) newBadges.push(b);
+    }
+  }
+
+  const mIds = profile.masteredIds;
+  if (mIds.length >= 1) grantB("b_init");
+  if (profile.streak >= 5) grantB("b_streak5");
+  if (profile.streak >= 12) grantB("b_streak12");
+
+  const checkDom = (dom) => MISSIONS.filter(m => m.dom === dom).every(m => mIds.includes(m.id));
+  if (checkDom("GLOB")) grantB("b_glob25");
+  if (checkDom("REGEX")) grantB("b_regex25");
+  if (checkDom("VIM")) grantB("b_vim25");
+  if (checkDom("NET")) grantB("b_net25");
+
+  const checkTier = (t) => MISSIONS.filter(m => m.tier === t).every(m => mIds.includes(m.id));
+  if (checkTier(1)) grantB("b_tier1");
+  if (checkTier(2)) grantB("b_tier2");
+  if (checkTier(3)) grantB("b_tier3");
+  if (profile.foundEasterEgg) grantB("b_secret");
+  if (mIds.length >= TOTAL_MISSIONS) grantB("b_omni");
+
+  RELICS.forEach(rel => {
+    if (!profile.relics.includes(rel.id)) {
+      let ok = false;
+      if (rel.reqSecret) ok = !!profile.foundEasterEgg;
+      else if (rel.reqBlitz) ok = profile.bestBlitzCount >= rel.reqBlitz;
+      else ok = mIds.length >= rel.reqM && rel.reqM > 0;
+      if (ok) {
+        profile.relics.push(rel.id);
+        newRelics.push(rel);
+      }
+    }
+  });
+
+  if (newBadges.length > 0 || newRelics.length > 0) {
+    saveProfile();
+    newBadges.forEach(b => printHtml(`  <span class="badge-unlock"> HAUT-FAIT DÉBLOQUÉ </span> <span class="c-yellow bold">${esc(b.name)}</span> — <span class="c-fg">${esc(b.desc)}</span>`));
+    newRelics.forEach(r => printHtml(`  <span class="badge-loot"> NOUVELLE RELIQUE </span> <span class="c-cyan bold">${esc(r.name)}</span> <span class="c-dim">(tape 'armory')</span>`));
+  }
+}
+
+function setTheme(themeKey, silent = false) {
+  if (!THEMES[themeKey]) return false;
+  profile.theme = themeKey;
+  const t = THEMES[themeKey];
+  const r = document.documentElement.style;
+  r.setProperty('--c-bg', t.bg);
+  r.setProperty('--c-bar-bg', t.bar);
+  r.setProperty('--c-bar-fg', t.barFg || t.fg);
+  r.setProperty('--c-bar-dim', t.barDim || t.dim);
+  r.setProperty('--c-fg', t.fg);
+  r.setProperty('--c-dim', t.dim);
+  r.setProperty('--c-border', t.border);
+  r.setProperty('--c-cyan', t.cyan);
+  r.setProperty('--c-green', t.green);
+  r.setProperty('--c-red', t.red);
+  r.setProperty('--c-yellow', t.yellow);
+  r.setProperty('--c-magenta', t.magenta);
+  r.setProperty('--c-blue', t.blue);
+  document.getElementById('theme-select').value = themeKey;
+  try { localStorage.setItem(PORTAL_THEME_KEY, themeKey); } catch (e) {}
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Thème appliqué : <span class="c-cyan bold">${esc(themeKey)}</span>`);
+  return true;
+}
+
+function setFontFamily(fontVal, silent = false) {
+  profile.fontFamily = fontVal;
+  document.documentElement.style.setProperty('--term-font', fontVal);
+  document.getElementById('font-select').value = fontVal;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Police isométrique : <span class="c-cyan bold">${esc(fontVal.split(',')[0])}</span>`);
+}
+
+function setFontSize(sizeVal, silent = false) {
+  const normalized = String(sizeVal).endsWith('px') ? sizeVal : `${sizeVal}px`;
+  profile.fontSize = normalized;
+  document.documentElement.style.setProperty('--term-size', normalized);
+  document.getElementById('size-select').value = normalized;
+  saveProfile();
+  if (!silent) printHtml(`<span class="c-green">[✓]</span> Taille de police : <span class="c-cyan bold">${esc(normalized)}</span>`);
+}
+
+function updatePromptLabel() {
+  const u = esc(profile.pseudo || "adrien");
+  if (state.wizardStep > 0) {
+    promptLbl.innerHTML = `<span class="c-cyan bold">${u}@nexus-ops</span>:<span class="c-blue bold">~/custom</span>$`;
+  } else if (state.active) {
+    const mid = state.playlist[state.stepIdx];
+    const m = MISSIONS.find(x => x.id === mid);
+    const domTag = m ? m.dom : "OPS";
+    promptLbl.innerHTML = `<span class="c-magenta bold">[${domTag}]</span> <span class="c-cyan bold">mission-${String(mid).padStart(3, '0')}</span> &gt;`;
+  } else {
+    promptLbl.innerHTML = `<span class="c-cyan bold">${u}@nexus-ops</span>:<span class="c-blue bold">~</span>$`;
+  }
+  updateStreakDisplay();
+}
+
+function loadProfile() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) profile = { ...profile, ...JSON.parse(saved) };
+    const portalTheme = localStorage.getItem(PORTAL_THEME_KEY);
+    if (portalTheme && THEMES[portalTheme]) profile.theme = portalTheme;
+  } catch (e) {}
+  if (!setTheme(profile.theme, true)) setTheme("jensen", true);
+  setFontFamily(profile.fontFamily, true);
+  setFontSize(profile.fontSize, true);
+  applyCursorSkin(profile.cursorSkinId || 1, true);
+  updatePromptLabel();
+}
+
+function saveProfile() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); } catch (e) {}
+  updatePromptLabel();
+}
+
+function focusPrompt() {
+  if (!state.busy && window.getSelection().toString() === "") inpEl.focus();
+}
+
+function insertToken(tk) {
+  const start = inpEl.selectionStart || inpEl.value.length;
+  const end = inpEl.selectionEnd || inpEl.value.length;
+  inpEl.value = inpEl.value.slice(0, start) + tk + inpEl.value.slice(end);
+  inpEl.focus();
+  inpEl.setSelectionRange(start + tk.length, start + tk.length);
+}
+
+function execFromNav(cmd) {
+  if (state.busy) return;
+  inpEl.value = cmd;
+  handleInput(cmd);
+  inpEl.value = "";
+  inpEl.focus();
+}
+
+// =============================================================================
+// 7. EASTER EGGS ASYNCHRONES ANIMÉS
+// =============================================================================
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function runReaperEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+  const steps = [
+    { delay: 400,  html: `<span class="c-red bold">CRITICAL ERROR: UNAUTHORIZED ROOT DELETION ATTEMPT DETECTED.</span>` },
+    { delay: 800,  html: `<span class="c-yellow">&gt;&gt; Escalating threat level to USCYBERCOM...</span>` },
+    { delay: 900,  html: `<span class="c-red bold">&gt;&gt; Engaging DEFCON 2 Automated Retaliation Protocol.</span>` },
+    { delay: 1000, html: `<span class="c-magenta">root@pentagon.gov:~#</span> request_kinetic_strike --target=origin_ip` },
+    { delay: 1100, html: `<span class="c-green bold">[AUTH] Authorization code: DELTA-TANGO-77 ACCEPTED.</span>` },
+    { delay: 900,  html: `<span class="c-yellow bold">&gt;&gt; UCAV MQ-9 Reaper drone deployment: CONFIRMED.</span>` },
+    { delay: 800,  html: `<span class="c-red bold">&gt;&gt; Target locked on origin IP: 44.152.241.194</span>` }
+  ];
+  for (const s of steps) { await sleep(s.delay); printHtml(s.html); }
+  const etaLine = printHtml(`<span class="c-red bold">&gt;&gt; ETA to target impact: 00:04:30.</span>`);
+  for (let sec = 269; sec >= 265; sec--) {
+    await sleep(600);
+    etaLine.innerHTML = `<span class="c-red bold">&gt;&gt; ETA to target impact: 00:04:${String(sec % 60).padStart(2, '0')}.</span>`;
+  }
+  printHtml(`<span class="c-yellow bold">Please remain seated and do not leave the building.</span>`);
+  profile.foundEasterEgg = true;
+  checkAndUnlockRewards();
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+async function runEmacsEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+  const steps = [
+    { delay: 400, html: `<span class="c-yellow">[APT-DAEMON] Initializing GNU/Emacs Meta-OS (84.7 GB)...</span>` },
+    { delay: 800, html: `<span class="c-red bold">write (28: Aucun espace disponible sur le périphérique)</span>` },
+    { delay: 800, html: `<span class="c-cyan">[SYSTEMD-OOMD] Terminating bloatware 'emacs' — Restoring pure modal Vim.</span>` }
+  ];
+  for (const s of steps) { await sleep(s.delay); printHtml(s.html); }
+  profile.foundEasterEgg = true;
+  checkAndUnlockRewards();
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+async function runNanoEasterEgg() {
+  state.busy = true;
+  promptForm.style.display = "none";
+  printHtml(`<span class="c-yellow bold">[!] Protocole 'Petites Roues de Vélo' détecté : nano mis en quarantaine. Tes doigts sont sur HJKL !</span>`);
+  await sleep(600);
+  profile.foundEasterEgg = true;
+  checkAndUnlockRewards();
+  state.busy = false;
+  promptForm.style.display = "flex";
+  focusPrompt();
+}
+
+// =============================================================================
+// 8. AFFICHAGE DES MISSIONS (MULTI-MOTEURS : GLOB, REGEX, VIM, NET/QA)
+// =============================================================================
+function drawAsciiHeader() {
+  const banner = [
+    "   _   __ ______ _  __ __  __ _____         ____   ____   _____",
+    "  / | / // ____/| |/ // / / // ___/        / __ \\ / __ \\ / ___/",
+    " /  |/ // __/   |   // / / / \\__ \\ ______ / / / // /_/ / \\__ \\ ",
+    "/ /|  // /___  /   |/ /_/ / ___/ //_____// /_/ // ____/ ___/ / ",
+    "/_/ |_//_____/ /_/|_|\\____/ /____/        \\____//_/     /____/  "
+  ].join("\n");
+
+  const mult = getMultiplier().toFixed(1);
+  printBoxLine(`<span class="c-cyan bold">${esc(banner)}</span>`);
+  printHtml(`  <span class="c-dim">Simulateur de Convergence TSSR &amp; SecOps — Globbing, RegEx, Vim, Routage &amp; Culture Unix (100 Missions)</span>`);
+  printBoxLine(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+  printHtml(`  <span class="bold">Rang :</span> <span class="c-magenta bold">${esc(getRankTitle())}</span> │ <span class="bold">Maîtrise :</span> <span class="c-green bold">${String(profile.masteredIds.length).padStart(3, '0')}/${TOTAL_MISSIONS}</span> │ <span class="bold">Reliques :</span> <span class="c-cyan bold">${profile.relics.length}/${RELICS.length}</span> │ <span class="bold">Streak :</span> <span class="c-yellow bold">🔥 ${profile.streak} (x${mult})</span>`);
+  printBoxLine(`<span class="c-blue">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>`);
+}
+
+function tierLabel(t) {
+  return {
+    1: "PALIER 1 : OPÉRATIONS TACTIQUES N2 (Moyen)",
+    2: "PALIER 2 : INGÉNIERIE SYSTÈME & RÉSEAU N3 (Intermédiaire)",
+    3: "PALIER 3 : FORENSICS & CHIRURGIE MODALE N4 (Avancé)",
+    4: "PALIER 4 : ARCHITECTE CONVERGENCE SECOPS N5 (Expert)"
+  }[t] || "PALIER MIXTE";
+}
+
+function formatLineWithCursor(lineStr, isCursorLine, cursorCol, width) {
+  const padded = lineStr.padEnd(width, " ").slice(0, width);
+  if (!isCursorLine) return esc(padded);
+  const c = Math.min(Math.max(0, cursorCol), width - 1);
+  return `${esc(padded.slice(0, c))}<span class="vim-cursor">${esc(padded[c] || " ")}</span>${esc(padded.slice(c + 1, width))}`;
+}
+
+function printMission() {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+  if (!m) {
+    stopBlitzTimer();
+    state.active = false;
+    state.awaitingNext = false;
+    updatePromptLabel();
+    printText("");
+    printBoxLine(`<span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════════════╗</span>`);
+    printBoxLine(`<span class="c-green bold">║  SESSION TERMINÉE ! Score : ${String(state.sessionScore).padEnd(6)} pts | Maîtrise : ${String(profile.masteredIds.length).padStart(3, '0')}/${TOTAL_MISSIONS}                      ║</span>`);
+    printBoxLine(`<span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════════════╝</span>`);
+    printHtml(`  Tape <span class="c-cyan bold">armory</span> pour voir tes Reliques, <span class="c-cyan bold">codex</span> pour exporter tes fiches, ou <span class="c-cyan bold">start</span>.`);
+    return;
+  }
+
+  state.attempts = 0;
+  state.usedHint = 0;
+  state.awaitingNext = false;
+  state.startTimeMs = Date.now();
+  updatePromptLabel();
+
+  const mastTag = profile.masteredIds.includes(m.id) ? ` <span class="c-green bold">[MAÎTRISÉE]</span>` : "";
+  printText("");
+  printHtml(`  <span class="badge-tier"> ${esc(tierLabel(m.tier))} </span>  <span class="badge-domain"> MOTEUR : ${esc(m.dom)} </span>${mastTag}`);
+  printHtml(`  <span class="c-cyan bold">Mission #${String(m.id).padStart(3, '0')} — ${esc(m.title)}</span> <span class="c-dim">(${state.stepIdx + 1}/${state.playlist.length})</span>`);
+  printText("");
+  printHtml(`  <span class="c-fg">${esc(m.scenario)}</span>`);
+  printText("");
+
+  const COL_W = 40;
+  const horiz = "─".repeat(COL_W + 2);
+
+  if (m.type === "GLOB" || m.type === "REGEX") {
+    const leftTitle = (m.type === "GLOB" ? " [OK] FICHIERS CIBLES (Targets)" : " [OK] LIGNES À CAPTURER (Match)").padEnd(COL_W + 2, " ");
+    const rightTitle = (m.type === "GLOB" ? " [KO] PIÈGES À EXCLURE (Decoys)" : " [KO] FAUX POSITIFS À REJETER").padEnd(COL_W + 2, " ");
+    printBoxLine(`  <span class="c-dim">┌${horiz}┬${horiz}┐</span>`);
+    printBoxLine(`  <span class="c-dim">│</span><span class="c-green bold">${esc(leftTitle)}</span><span class="c-dim">│</span><span class="c-red bold">${esc(rightTitle)}</span><span class="c-dim">│</span>`);
+    printBoxLine(`  <span class="c-dim">├${horiz}┼${horiz}┤</span>`);
+    const maxR = Math.max(m.targets.length, m.decoys.length);
+    for (let i = 0; i < maxR; i++) {
+      const tStr = (m.targets[i] !== undefined ? (m.targets[i] === "" ? "<ligne vide>" : m.targets[i]) : "").padEnd(COL_W, " ").slice(0, COL_W);
+      const dStr = (m.decoys[i] !== undefined ? m.decoys[i] : "").padEnd(COL_W, " ").slice(0, COL_W);
+      printBoxLine(`  <span class="c-dim">│</span> <span class="c-green">${esc(tStr)}</span> <span class="c-dim">│</span> <span class="c-red">${esc(dStr)}</span> <span class="c-dim">│</span>`);
+    }
+    printBoxLine(`  <span class="c-dim">└${horiz}┴${horiz}┘</span>`);
+  } else if (m.type === "VIM") {
+    const [curR, curC] = m.cursor;
+    const TEXT_W = 38;
+    const CELL_W = 42;
+    const hVim = "─".repeat(CELL_W);
+    printBoxLine(`  <span class="c-dim">┌${hVim}┬${hVim}┐</span>`);
+    printBoxLine(`  <span class="c-dim">│</span><span class="c-cyan bold">${esc(" BUFFER INITIAL (Mode NORMAL)".padEnd(CELL_W))}</span><span class="c-dim">│</span><span class="c-green bold">${esc(` BUFFER CIBLE (Par: ${m.par} frappes)`.padEnd(CELL_W))}</span><span class="c-dim">│</span>`);
+    printBoxLine(`  <span class="c-dim">├${hVim}┼${hVim}┤</span>`);
+    const maxR = Math.max(m.initialLines.length, m.expectedLines.length, 3);
+    for (let i = 0; i < maxR; i++) {
+      const hasI = i < m.initialLines.length;
+      const hasE = i < m.expectedLines.length;
+      const lNum = hasI ? `<span class="c-dim">${String(i + 1).padStart(2, ' ')} </span>` : `<span class="c-blue">~  </span>`;
+      const lTxt = hasI ? formatLineWithCursor(m.initialLines[i], i === curR, curC, TEXT_W) : " ".repeat(TEXT_W);
+      const rNum = hasE ? `<span class="c-dim">${String(i + 1).padStart(2, ' ')} </span>` : `<span class="c-blue">~  </span>`;
+      const rTxt = hasE ? `<span class="c-green">${esc(m.expectedLines[i].padEnd(TEXT_W, " ").slice(0, TEXT_W))}</span>` : " ".repeat(TEXT_W);
+      printBoxLine(`  <span class="c-dim">│</span> ${lNum}${lTxt} <span class="c-dim">│</span> ${rNum}${rTxt} <span class="c-dim">│</span>`);
+    }
+    printBoxLine(`  <span class="c-dim">└${hVim}┴${hVim}┘</span>`);
+  } else if (m.type === "QA") {
+    printBoxLine(`  <span class="c-dim">┌────────────────────────────────────────────────────────────────────────────────────┐</span>`);
+    printBoxLine(`  <span class="c-dim">│</span> <span class="c-yellow bold">DONNÉES TÉLÉMÉTRIQUES :</span> ${esc((m.promptInfo || "").padEnd(58, " ").slice(0, 58))} <span class="c-dim">│</span>`);
+    printBoxLine(`  <span class="c-dim">└────────────────────────────────────────────────────────────────────────────────────┘</span>`);
+  }
+  printHtml(`  <span class="c-dim">Commandes : ta réponse, hint, sol, topo, armory, codex, skip, goto &lt;1-100&gt;, exit</span>`);
+  printText("");
+}
+
+function evaluateAttempt(rawInput) {
+  const mid = state.playlist[state.stepIdx];
+  const m = MISSIONS.find(x => x.id === mid);
+  state.attempts++;
+
+  if (m.type === "GLOB") {
+    if (rawInput.includes('{') && rawInput.includes('}')) {
+      printHtml(`  <span class="c-yellow">[!] '{a,b}' est de la Brace Expansion, pas du globbing ! Utilise '@(a|b)'.</span>`);
+      return;
+    }
+    let tp = [], fp = [], fn = [];
+    try {
+      for (const t of m.targets) (bashGlobMatch(rawInput, t) ? tp : fn).push(t);
+      for (const d of m.decoys) if (bashGlobMatch(rawInput, d)) fp.push(d);
+    } catch (err) {
+      printHtml(`  <span class="c-red">[✗] Erreur de syntaxe Glob : ${esc(err.message)}</span>`);
+      return;
+    }
+    if (fp.length === 0 && fn.length === 0) {
+      completeMissionSuccess(m, rawInput);
+    } else {
+      printHtml(`  <span class="c-red">[✗] Cibles: ${tp.length}/${m.targets.length} | Faux positifs (pièges touchés): ${fp.length} (${esc(fp.join(', '))})</span>`);
+    }
+    return;
+  }
+
+  if (m.type === "REGEX") {
+    let re;
+    try {
+      re = new RegExp(rawInput);
+    } catch (err) {
+      printHtml(`  <span class="c-red">[✗] Regex invalide : ${esc(err.message)}</span>`);
+      return;
+    }
+    const fn = m.targets.filter(t => !re.test(t));
+    const fp = m.decoys.filter(d => re.test(d));
+    if (fn.length === 0 && fp.length === 0) {
+      completeMissionSuccess(m, rawInput);
+    } else {
+      printHtml(`  <span class="c-red">[✗] Cibles manquées: ${fn.length} | Faux positifs capturés: ${fp.length} (${esc(fp.join(' | '))})</span>`);
+    }
+    return;
+  }
+
+  if (m.type === "VIM") {
+    let res;
+    try {
+      res = simulateVimKeystrokes(m.initialLines, m.cursor, rawInput);
+    } catch (err) {
+      printHtml(`  <span class="c-red">[✗] Erreur Vim : ${esc(err.message)}</span>`);
+      return;
+    }
+    const ok = res.lines.length === m.expectedLines.length && res.lines.every((ln, i) => ln === m.expectedLines[i]);
+    if (ok) {
+      if (res.keystrokeCount <= m.par && state.usedHint < 2 && !profile.golfedIds.includes(m.id)) {
+        profile.golfedIds.push(m.id);
+      }
+      completeMissionSuccess(m, rawInput, res.keystrokeCount);
+    } else {
+      printHtml(`  <span class="c-red">[✗] Buffer obtenu différent de la cible :</span>`);
+      res.lines.forEach((ln, i) => printBoxLine(`    <span class="c-dim">L${i + 1}:</span> ${esc(ln)}`));
+    }
+    return;
+  }
+
+  if (m.type === "QA") {
+    const norm = rawInput.trim().toLowerCase().replace(/\s+/g, " ");
+    if (m.accepted.includes(norm)) {
+      completeMissionSuccess(m, rawInput);
+    } else {
+      printHtml(`  <span class="c-red">[✗] Réponse incorrecte : '${esc(rawInput)}'. Vérifie ta syntaxe ou tape 'hint'.</span>`);
+    }
+  }
+}
+
+function completeMissionSuccess(m, userAns, strokes = null) {
+  const elapsed = Math.max(1, Math.floor((Date.now() - state.startTimeMs) / 1000));
+  if (state.usedHint === 0) {
+    profile.streak++;
+    if (profile.streak > profile.bestStreak) profile.bestStreak = profile.streak;
+  } else {
+    profile.streak = 0;
+  }
+
+  const mult = getMultiplier();
+  let basePts = 100 + (m.tier * 25) - (state.attempts - 1) * 15 - (state.usedHint === 1 ? 40 : 0);
+  if (basePts < 30) basePts = 30;
+  let speedBonus = elapsed <= 15 ? 35 : (elapsed <= 30 ? 15 : 0);
+  let totalPts = Math.round((basePts + speedBonus) * mult);
+
+  if (state.usedHint === 2) {
+    totalPts = 10;
+  } else if (!profile.masteredIds.includes(m.id)) {
+    profile.masteredIds.push(m.id);
+  }
+
+  state.sessionScore += totalPts;
+  profile.totalScore += totalPts;
+  if (state.sessionScore > profile.bestScore) profile.bestScore = state.sessionScore;
+  if (state.mode === "CAMPAIGN" && m.id >= profile.campaignUnlocked && profile.campaignUnlocked < TOTAL_MISSIONS) {
+    profile.campaignUnlocked = m.id + 1;
+  }
+
+  if (state.mode === "BLITZ") {
+    state.blitzSolved++;
+    if (state.blitzSolved > profile.bestBlitzCount) profile.bestBlitzCount = state.blitzSolved;
+    saveProfile();
+    printHtml(`  <span class="c-green bold">[✓] BLITZ #${state.blitzSolved} VALIDÉ ! (+${totalPts} pts)</span>`);
+    checkAndUnlockRewards();
+    state.stepIdx++;
+    printMission();
+    return;
+  }
+
+  saveProfile();
+  state.awaitingNext = true;
+  const headStr = ` [OK] MISSION #${String(m.id).padStart(3, '0')} ACCOMPLIE ! (+${totalPts} pts | ${elapsed}s | Streak: ${profile.streak} [x${mult.toFixed(1)}])`.padEnd(78, " ");
+  printText("");
+  printBoxLine(`  <span class="c-green bold">╔══════════════════════════════════════════════════════════════════════════════╗</span>`);
+  printBoxLine(`  <span class="c-green bold">║${esc(headStr)}║</span>`);
+  printBoxLine(`  <span class="c-green bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printHtml(`  <span class="bold">Ta validation     :</span> <span class="c-green bold">${esc(userAns)}</span>${strokes ? ` <span class="c-yellow">(${strokes} frappes / Par ${m.par})</span>` : ""}`);
+  printHtml(`  <span class="bold">Solution canonique:</span> <span class="c-cyan bold">${esc(m.solution)}</span>`);
+  printText("");
+  printHtml(`  <span class="c-yellow bold">Débriefing Technique :</span>`);
+  printHtml(`  <span class="c-fg">${esc(m.debrief)}</span>`);
+  checkAndUnlockRewards();
+  printText("");
+  printHtml(`  <span class="c-dim">👉 Appuie sur [ENTRÉE] pour continuer...</span>`);
+}
+
+// =============================================================================
+// 9. TOPOLOGIE 3 DOMAINES (TP ROUTAGE), ARMURERIE, CODEX OBSIDIAN & BLITZ 90s
+// =============================================================================
+function showTopologyABC() {
+  printText("");
+  printBoxLine(`  <span class="c-cyan bold">╔══════════════════════ TOPOLOGIE TP 3 DOMAINES DE DIFFUSION ══════════════════════╗</span>`);
+  printBoxLine(`  <span class="c-yellow bold">Routeur (3 interfaces actives, sans pare-feu) :</span>`);
+  printBoxLine(`    • eth0 (Réseau A) : 192.168.10.254 / 255.255.255.0`);
+  printBoxLine(`    • eth1 (Réseau B) : 192.168.20.254 / 255.255.255.0`);
+  printBoxLine(`    • eth2 (Réseau C) : 172.16.5.254   / 255.255.255.0`);
+  printBoxLine(`  <span class="c-dim">──────────────────────────────────────────────────────────────────────────────────</span>`);
+  printBoxLine(`  <span class="c-green bold">RÉSEAU A (Switch A)</span>              <span class="c-blue bold">RÉSEAU B (Switch B)</span>              <span class="c-magenta bold">RÉSEAU C (Switch C)</span>`);
+  printBoxLine(`  A1: 192.168.10.10/24 GW .10.254  B1: 192.168.20.10/24 GW .20.254  C1: 172.16.5.10/24  GW .5.254`);
+  printBoxLine(`  A2: 192.168.10.20/24 GW .10.254  B2: 192.168.20.20/24 GW .20.254  C2: 172.16.5.20/24  GW .5.254`);
+  printBoxLine(`  A3: 192.168.10.30/24 <span class="c-red">GW .10.1!</span>   B3: 192.168.20.30/24 <span class="c-red">GW .10.254!</span> C3: 172.16.5.30/24  <span class="c-red">GW .5.253!</span>`);
+  printBoxLine(`  A4: 192.168.10.40<span class="c-red">/16</span> GW .10.254  B4: 192.168.20.40/24 GW .20.254  C4: 172.16.5.40<span class="c-red">/28</span>  GW .5.254`);
+  printBoxLine(`  A5: 192.168.10.50/24 <span class="c-red">GW (aucune)</span> B5: <span class="c-red">192.168.2.15/24</span>  GW .20.254  C5: 172.16.5.45/24  GW .5.254`);
+  printBoxLine(`  A6: <span class="c-red">192.168.20.60/24 GW .20.254</span>  B6: <span class="c-red">192.168.10.60/24</span> GW .20.254  C6: <span class="c-red">172.16.6.60/16</span>  GW .5.254`);
+  printBoxLine(`  <span class="c-cyan bold">╚══════════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
+function showArmory() {
+  printText("");
+  printBoxLine(`  <span class="c-magenta bold">╔══════════════════════════ ARMURERIE &amp; RELIQUES NEXUS ══════════════════════════╗</span>`);
+  printHtml(`  <span class="bold">1. STYLES DE CURSEURS</span> <span class="c-dim">(Tape <span class="c-cyan bold">cursor &lt;1-6&gt;</span> pour équiper)</span>`);
+  CURSOR_SKINS.forEach(sk => {
+    const unl = profile.masteredIds.length >= sk.reqM;
+    const eq = profile.cursorSkinId === sk.id ? ` <span class="c-green bold">[ÉQUIPÉ]</span>` : "";
+    printHtml(`    ${unl ? `<span class="c-cyan bold">[#${sk.id} DISPO]</span>` : `<span class="c-dim">[#${sk.id} Requis: ${sk.reqM} Maîtrises]</span>`} ${esc(sk.name)}${eq}`);
+  });
+  printText("");
+  printHtml(`  <span class="bold">2. RELIQUES CYBER LÉGENDAIRES (${profile.relics.length}/${RELICS.length})</span>`);
+  RELICS.forEach(rel => {
+    const unl = profile.relics.includes(rel.id);
+    if (unl) {
+      printHtml(`    <span class="c-yellow bold">[★ DÉBLOQUÉ]</span> <span class="c-cyan bold">${esc(rel.name)}</span> — <span class="c-dim">${esc(rel.lore)}</span>`);
+    } else {
+      const reqTxt = rel.reqSecret ? "Easter Egg" : (rel.reqBlitz ? `Blitz >= ${rel.reqBlitz}` : `${rel.reqM} Missions`);
+      printHtml(`    <span class="c-dim">[VERROUILLÉ : ${esc(reqTxt.padEnd(14))}] ████████████████████████████████</span>`);
+    }
+  });
+  printText("");
+  printHtml(`  <span class="bold">3. HAUTS-FAITS (${profile.badges.length}/${BADGES.length})</span>`);
+  BADGES.forEach(b => {
+    const unl = profile.badges.includes(b.id);
+    printHtml(`    ${unl ? `<span class="c-green bold">[OK]</span>` : `<span class="c-dim">[--]</span>`} <span class="${unl ? 'c-yellow bold' : 'c-dim'}">${esc(b.name.padEnd(28))}</span> <span class="c-dim">${esc(b.desc)}</span>`);
+  });
+  printBoxLine(`  <span class="c-magenta bold">╚════════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printText("");
+}
+
+function showCodex(download = false) {
+  const mCount = profile.masteredIds.length;
+  const md = [
+    `# CODEX TACTIQUE NEXUS-OPS // ${profile.pseudo.toUpperCase()}`,
+    `> **Rang :** ${getRankTitle()} | **Maîtrise :** ${mCount}/100 | **Reliques :** ${profile.relics.length}/${RELICS.length}`,
+    ``,
+    `## 1. Globbing POSIX & Bash extglob (shopt -s extglob)`,
+    `| Opérateur | En Globbing Bash | En Regex (ERE/PCRE) |`,
+    `| :--- | :--- | :--- |`,
+    `| 1 caractère quelconque | \`?\` | \`.\` |`,
+    `| 0 à N caractères | \`*\` | \`.*\` |`,
+    `| 0 ou 1 fois | \`?(p1\\|p2)\` | \`(p1\\|p2)?\` |`,
+    `| 1 ou N fois | \`+(p1\\|p2)\` | \`(p1\\|p2)+\` |`,
+    `| Exactement 1 alternative | \`@(p1\\|p2)\` | \`(p1\\|p2)\` |`,
+    `| Exclusion / Négation | \`!(p1\\|p2)\` | \`^(?!.*(p1\\|p2)).*$\` |`,
+    ``,
+    `## 2. Vim — Commandes Globales (:g) & Substitutions Avancées`,
+    `- **Déplacer les lignes matchées en fin de fichier :** \`:g/Durand/m$\``,
+    `- **Dupliquer les lignes matchées en fin de fichier :** \`:g/ADMIN/t$\``,
+    `- **Supprimer les lignes ne contenant PAS le motif :** \`:v/CRITICAL/d\``,
+    `- **Conversion de casse par backreference :** \`:%s/\\(Jean\\)/\\U\\1/g\` (MAJ) / \`\\L\\1\\E\` (min)`,
+    `- **Ancres de mots et réinjection :** \`:%s/\\<[1-3]/(033)&/g\``,
+    ``,
+    `## 3. Loi fondamentale du Routage IP & ARP (3 Domaines)`,
+    `1. **Calcul Local vs Distant :** \`(IP_Source & Masque_Source) == (IP_Dest & Masque_Source)\`.`,
+    `2. **Si LOCALE :** ARP direct sur le commutateur local (sans solliciter la passerelle).`,
+    `3. **Si DISTANTE :** Requête ARP vers l'IP de la Passerelle (qui doit être dans le réseau logique de la source ET sur le même switch physique).`
+  ].join("\n");
+
+  printText("");
+  printBoxLine(`  <span class="c-cyan bold">╔══════════════════════ CODEX OBSIDIAN TSSR/SECOPS (.MD) ══════════════════════╗</span>`);
+  printBoxLine(`<span class="c-green">${esc(md)}</span>`);
+  printBoxLine(`  <span class="c-cyan bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+  printHtml(`  Tape <span class="c-yellow bold">export</span> pour télécharger ce fichier <span class="c-cyan">NEXUS_CODEX_TSSR.md</span> pour Obsidian.`);
+  printText("");
+
+  if (download) {
+    const blob = new Blob([md + "\n"], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "NEXUS_CODEX_TSSR.md";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    printHtml(`  <span class="c-green bold">[✓] Fichier 'NEXUS_CODEX_TSSR.md' téléchargé !</span>`);
+  }
+}
+
+function stopBlitzTimer() {
+  if (state.blitzTimerId) { clearInterval(state.blitzTimerId); state.blitzTimerId = null; }
+  footerBlitzEl.style.display = "none";
+}
+
+function startBlitzMode() {
+  stopBlitzTimer();
+  const pool = MISSIONS.map(m => m.id);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const r = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[r]] = [pool[r], pool[i]];
+  }
+  state.mode = "BLITZ";
+  state.playlist = pool;
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.blitzSolved = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  state.blitzEndMs = Date.now() + 90000;
+
+  footerBlitzEl.style.display = "inline-block";
+  footerBlitzEl.textContent = "⏱ 90s";
+
+  printText("");
+  printBoxLine(`  <span class="c-red bold">╔══════════════════════════════════════════════════════════════════════════════╗</span>`);
+  printBoxLine(`  <span class="c-red bold">║  MODE BLITZ MULTI-DOMAINES (90 SECONDES) ACTIVÉ ! (5 validations = Relique)  ║</span>`);
+  printBoxLine(`  <span class="c-red bold">╚══════════════════════════════════════════════════════════════════════════════╝</span>`);
+
+  state.blitzTimerId = setInterval(() => {
+    const rem = Math.max(0, Math.ceil((state.blitzEndMs - Date.now()) / 1000));
+    footerBlitzEl.textContent = `⏱ ${rem}s`;
+    if (rem <= 0) {
+      stopBlitzTimer();
+      state.active = false;
+      updatePromptLabel();
+      printText("");
+      printHtml(`  <span class="c-yellow bold">FIN DU BLITZ 90s ! Missions résolues : ${state.blitzSolved} | Score : ${state.sessionScore} pts</span>`);
+      checkAndUnlockRewards();
+    }
+  }, 250);
+
+  printMission();
+}
+
+function startCampaign(startAt) {
+  stopBlitzTimer();
+  const s = startAt || profile.campaignUnlocked || 1;
+  state.playlist = [];
+  for (let i = s; i <= TOTAL_MISSIONS; i++) state.playlist.push(i);
+  state.mode = "CAMPAIGN";
+  state.stepIdx = 0;
+  state.sessionScore = 0;
+  state.active = true;
+  state.wizardStep = 0;
+  printMission();
+}
+
+function onPromptSubmit(e) {
+  e.preventDefault();
+  if (state.busy) return;
+  const raw = inpEl.value;
+  inpEl.value = "";
+  handleInput(raw);
+}
+
+function handleInput(rawInput) {
+  const cmd = rawInput.trim();
+  printHtml(`${promptLbl.innerHTML} ${esc(cmd)}`);
+
+  if (state.awaitingNext && cmd === "") {
+    state.stepIdx++;
+    printMission();
+    return;
+  }
+  if (!cmd) return;
+  cmdHistory.unshift(cmd);
+  histIdx = -1;
+
+  if (state.wizardStep > 0) {
+    handleCustomWizard(cmd);
+    return;
+  }
+
+  const parts = cmd.split(/\s+/);
+  const base = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(" ");
+
+  if (cmd.startsWith("rm -rf /") || cmd.startsWith("sudo rm -rf /")) { runReaperEasterEgg(); return; }
+  if (base === "emacs") { runEmacsEasterEgg(); return; }
+  if (base === "nano" || base === "pico") { runNanoEasterEgg(); return; }
+  if ((cmd === ":q" || cmd === ":q!" || cmd === ":wq") && !state.active) {
+    printHtml(`  <span class="c-red bold">E37: Quantum Modal Trap active. Tape 'start' pour retourner au combat.</span>`);
+    profile.foundEasterEgg = true;
+    checkAndUnlockRewards();
+    return;
+  }
+
+  if (base === "help" || base === "man") {
+    printText("");
+    printHtml(`  <span class="c-cyan bold">COMMANDES DU SIMULATEUR NEXUS-OPS (100 MISSIONS) :</span>`);
+    printHtml(`    <span class="c-green bold">start</span> / <span class="c-green bold">camp</span>       : Lancer la campagne au niveau débloqué (${profile.campaignUnlocked}/${TOTAL_MISSIONS})`);
+    printHtml(`    <span class="c-green bold">goto &lt;1-100&gt;</span>       : Aller directement à une mission précise`);
+    printHtml(`    <span class="c-green bold">blitz</span>              : Sprint Contre-la-Montre de 90 secondes multi-domaines`);
+    printHtml(`    <span class="c-green bold">custom</span>             : Session sur-mesure (Palier 1..4, Domaine GLOB/REGEX/VIM/NET)`);
+    printHtml(`    <span class="c-green bold">topo</span>               : Afficher le schéma et les IP du TP 3 Domaines de Diffusion (A, B, C)`);
+    printHtml(`    <span class="c-green bold">armory</span> / <span class="c-green bold">badges</span>    : Ouvrir l'Armurerie (14 Reliques Cyber, 6 Curseurs, 12 Badges)`);
+    printHtml(`    <span class="c-green bold">cursor &lt;1-6&gt;</span>       : Équiper un nouveau style de curseur`);
+    printHtml(`    <span class="c-green bold">codex</span> / <span class="c-green bold">export</span>     : Afficher et télécharger le Codex Markdown Obsidian`);
+    printHtml(`    <span class="c-green bold">stats</span> / <span class="c-green bold">clear</span>      : Voir ton profil détaillé par domaine ou nettoyer l'écran`);
+    printText("");
+    return;
+  }
+
+  if (base === "clear" || base === "cls") {
+    outEl.innerHTML = "";
+    drawAsciiHeader();
+    if (state.active) printMission();
+    return;
+  }
+
+  if (base === "topo") { showTopologyABC(); return; }
+  if (base === "armory" || base === "badges" || base === "loot") { showArmory(); return; }
+  if (base === "codex" || base === "memo") { showCodex(false); return; }
+  if (base === "export") { showCodex(true); return; }
+  if (base === "blitz") { startBlitzMode(); return; }
+
+  if (base === "cursor") {
+    applyCursorSkin(parseInt(arg, 10) || 1, false);
+    return;
+  }
+
+  if (base === "stats" || base === "profil") {
+    const countDom = (d) => MISSIONS.filter(m => m.dom === d && profile.masteredIds.includes(m.id)).length;
+    printText("");
+    printHtml(`  <span class="c-cyan bold">Bilan Opérateur : ${esc(profile.pseudo)}</span> — <span class="c-magenta bold">${esc(getRankTitle())}</span>`);
+    printHtml(`  ├── <span class="bold">Maîtrise Totale :</span> <span class="c-green bold">${profile.masteredIds.length}/100</span> (Score : ${profile.bestScore} pts)`);
+    printHtml(`  ├── <span class="bold">Domaine [GLOB]  :</span> ${countDom("GLOB")}/25 missions`);
+    printHtml(`  ├── <span class="bold">Domaine [REGEX] :</span> ${countDom("REGEX")}/25 missions`);
+    printHtml(`  ├── <span class="bold">Domaine [VIM]   :</span> ${countDom("VIM")}/25 missions (Vim-Golf : ★ ${profile.golfedIds.length})`);
+    printHtml(`  └── <span class="bold">Domaine [NET]   :</span> ${countDom("NET")}/25 missions (Routage, CIDR &amp; Culture Unix)`);
+    printText("");
+    return;
+  }
+
+  if (base === "start" || base === "camp") {
+    startCampaign(parseInt(arg, 10) || profile.campaignUnlocked);
+    return;
+  }
+
+  if (base === "goto") {
+    const n = parseInt(arg, 10);
+    if (!n || n < 1 || n > TOTAL_MISSIONS) { printHtml(`  Usage : <span class="c-cyan">goto &lt;1-100&gt;</span>`); return; }
+    startCampaign(n);
+    return;
+  }
+
+  if (base === "custom") {
+    stopBlitzTimer();
+    state.active = false;
+    state.wizardStep = 1;
+    updatePromptLabel();
+    printText("");
+    printHtml(`  <span class="c-cyan bold">CONFIGURATION DE MISSION SUR-MESURE</span>`);
+    printHtml(`  Étape 1/3 — Palier [<span class="c-yellow">1</span>=Moyen(N2), <span class="c-yellow">2</span>=Intermédiaire(N3), <span class="c-yellow">3</span>=Avancé(N4), <span class="c-yellow">4</span>=Expert(N5), <span class="c-yellow">ALL</span>] :`);
+    return;
+  }
+
+  if (state.active) {
+    const m = MISSIONS.find(x => x.id === state.playlist[state.stepIdx]);
+    if (base === "exit" || base === "quit") {
+      stopBlitzTimer();
+      state.active = false;
+      state.awaitingNext = false;
+      updatePromptLabel();
+      printHtml(`  <span class="c-dim">Session en pause. Tape 'start' pour reprendre.</span>`);
+      return;
+    }
+    if (base === "hint" || base === "indice") {
+      if (state.usedHint === 0) state.usedHint = 1;
+      printHtml(`  <span class="c-yellow bold">[INDICE] :</span> ${esc(m.hint)}`);
+      return;
+    }
+    if (base === "sol" || base === "solution") {
+      state.usedHint = 2;
+      printHtml(`  <span class="c-magenta bold">[SOLUTION CANONIQUE] :</span> <span class="bold">${esc(m.solution)}</span>`);
+      return;
+    }
+    if (base === "skip" || base === "next") {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    if (state.awaitingNext) {
+      state.stepIdx++;
+      printMission();
+      return;
+    }
+    evaluateAttempt(rawInput.trim());
+    return;
+  }
+
+  printHtml(`  <span class="c-red">nexus-ops: ${esc(base)}: commande inconnue.</span> Tape <span class="c-cyan bold">start</span>, <span class="c-cyan bold">topo</span>, <span class="c-cyan bold">armory</span> ou <span class="c-cyan bold">help</span>.`);
+}
+
+function handleCustomWizard(input) {
+  const val = input.trim().toUpperCase();
+  if (val === "EXIT") { state.wizardStep = 0; updatePromptLabel(); return; }
+  if (state.wizardStep === 1) {
+    state.wizardData.tier = ["1", "2", "3", "4"].includes(val) ? Number(val) : "ALL";
+    state.wizardStep = 2;
+    printHtml(`  Étape 2/3 — Moteur [<span class="c-yellow">GLOB</span>, <span class="c-yellow">REGEX</span>, <span class="c-yellow">VIM</span>, <span class="c-yellow">NET</span>, <span class="c-yellow">ALL</span>] (défaut: ALL) :`);
+    return;
+  }
+  if (state.wizardStep === 2) {
+    state.wizardData.dom = ["GLOB", "REGEX", "VIM", "NET"].includes(val) ? val : "ALL";
+    state.wizardStep = 3;
+    printHtml(`  Étape 3/3 — Nombre de missions [<span class="c-yellow">1-100</span>] (défaut: 10) :`);
+    return;
+  }
+  if (state.wizardStep === 3) {
+    const count = parseInt(val, 10) || 10;
+    const pool = MISSIONS.filter(m =>
+      (state.wizardData.tier === "ALL" || m.tier === state.wizardData.tier) &&
+      (state.wizardData.dom === "ALL" || m.dom === state.wizardData.dom)
+    ).map(m => m.id);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const r = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[r]] = [pool[r], pool[i]];
+    }
+    state.wizardStep = 0;
+    state.playlist = pool.slice(0, Math.min(count, pool.length));
+    state.mode = "CUSTOM";
+    state.stepIdx = 0;
+    state.sessionScore = 0;
+    state.active = true;
+    printMission();
+  }
+}
+
+inpEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.preventDefault(); insertToken('<Esc>'); return; }
+  if (e.key === 'ArrowUp') {
+    if (histIdx + 1 < cmdHistory.length) { histIdx++; inpEl.value = cmdHistory[histIdx]; e.preventDefault(); }
+  } else if (e.key === 'ArrowDown') {
+    if (histIdx > 0) { histIdx--; inpEl.value = cmdHistory[histIdx]; e.preventDefault(); }
+    else if (histIdx === 0) { histIdx = -1; inpEl.value = ""; e.preventDefault(); }
+  }
+});
+
+loadProfile();
+drawAsciiHeader();
+printText("");
+printHtml(`  Bienvenue sur <span class="c-cyan bold">NEXUS-OPS // Convergence Terminal</span> (100 Missions : 25 GLOB, 25 REGEX, 25 VIM, 25 NET/SYS).`);
+printHtml(`  • Tape <span class="c-cyan bold">start</span> pour lancer la campagne à la Mission #${String(profile.campaignUnlocked).padStart(3, '0')}/100, ou <span class="c-cyan bold">topo</span> pour afficher la carte réseau A/B/C.`);
+printHtml(`  • Tape <span class="c-cyan bold">custom</span> pour filtrer par moteur (GLOB, REGEX, VIM, NET) ou par palier (N2 à N5).`);
+printText("");
+</script>
+</body>
+</html>
