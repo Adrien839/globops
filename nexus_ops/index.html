@@ -758,12 +758,12 @@ const MISSIONS = [
     debrief: "Question 9 du TP Vi : une fois sur le bon 'Dupont', 'cw' (change word) supprime 'Dupont' sans manger l'espace suivant et passe en mode Insert." },
 
   { id: 35, tier: 2, dom: "VIM", type: "VIM", title: "TP Vi #17 — Ajout de suffixe avec l'esperluette (&)",
-    scenario: "Substitue 'Jean ' (suivi d'un espace) en 'Jean-Paul ' sur toutes les lignes sans réécrire 'Jean' dans la partie remplacement.",
+    scenario: "Ajoute '-Paul' après 'Jean' uniquement quand il est suivi d'un espace, sans consommer cet espace ni réécrire 'Jean' dans le remplacement.",
     initialLines: ["Bernard Jean 234567", "Dupont Jean-Jacques 111111", "Merlin-Duval Jean 111111"], cursor: [0, 0],
     expectedLines: ["Bernard Jean-Paul 234567", "Dupont Jean-Jacques 111111", "Merlin-Duval Jean-Paul 111111"],
-    par: 20, solution: ":%s/Jean /&-Paul /g<CR>",
-    hint: "Utilise ':g/Jean /s/Jean/&-Paul/<CR>' ou ':%s/Jean /&-Paul /g<CR>'.",
-    debrief: "Question 17 du TP Vi : l'espace après 'Jean ' protège 'Jean-Jacques', et '&' réinjecte le motif matché." },
+    par: 20, solution: ":%s/Jean\\ze /&-Paul/g<CR>",
+    hint: "Utilise '\\ze' pour terminer la correspondance avant l'espace : ':%s/Jean\\ze /&-Paul/g<CR>'.",
+    debrief: "Question 17 du TP Vi : '\\ze' marque la fin de la correspondance avant l'espace qui suit. '&' réinjecte uniquement 'Jean', et l'espace reste dans le texte." },
 
   { id: 36, tier: 2, dom: "VIM", type: "VIM", title: "Registres nommés (\"ayy et \"ap)",
     scenario: "La ligne 1 doit être copiée à la fin du fichier, et la ligne 2 doit être supprimée. Utilise ou enchaîne les commandes pour obtenir le buffer cible.",
@@ -855,8 +855,8 @@ const MISSIONS = [
     debrief: "'*(liste)' autorise 0, 1 ou N répétitions concaténées des motifs de la liste." },
 
   { id: 47, tier: 2, dom: "REGEX", type: "REGEX", title: "Détection d'injection XSS (<script>)",
-    scenario: "Capture les requêtes contenant une balise '<script...>' (en minuscules ou majuscules) suivie de '</script>'.",
-    targets: ["GET /search?q=<script>alert(1)</script>", "POST /comment body=<SCRIPT src='x.js'></SCRIPT>"],
+    scenario: "Capture les requêtes contenant une balise '<script...>' (en minuscules ou majuscules) suivie de '<\/script>'.",
+    targets: ["GET /search?q=<script>alert(1)<\/script>", "POST /comment body=<SCRIPT src='x.js'><\/SCRIPT>"],
     decoys: ["GET /js/script.js", "GET /doc/description.html"],
     hint: "Utilise '<(script|SCRIPT)[^>]*>.*</(script|SCRIPT)>'.",
     solution: "<(script|SCRIPT)[^>]*>.*</(script|SCRIPT)>",
@@ -1035,7 +1035,7 @@ const MISSIONS = [
 
   { id: 69, tier: 3, dom: "REGEX", type: "REGEX", title: "Fichiers contenant exactement deux lettres 'a' (Cours M6)",
     scenario: "Capture les mots/noms de fichiers qui contiennent EXACTEMENT deux fois la lettre minuscule 'a' sur toute la ligne.",
-    targets: ["cabane", "radar", "ananas_non_mais_abac"],
+    targets: ["cabane", "radar", "abacus_non_test"],
     decoys: ["chat", "abracadabra", "banane_a_trois_a", "test"],
     hint: "Utilise '^[^a]*a[^a]*a[^a]*$' comme vu dans le module 6.",
     solution: "^[^a]*a[^a]*a[^a]*$",
@@ -1117,12 +1117,12 @@ const MISSIONS = [
     debrief: "En découpant le préfixe réseau avec '@()' et l'octet d'hôte avec '!(0|255)', tu cibles uniquement les adresses d'hôtes assignables." },
 
   { id: 79, tier: 4, dom: "GLOB", type: "GLOB", title: "Détection d'exfiltration DNS par imbrication +( +() )",
-    scenario: "Isole les captures 'dns_<subs>.evil.net.cap' comportant 1 ou plusieurs sous-domaines composés uniquement de lettres minuscules suivies d'un point (ex: 'a.', 'p1.c2.'). Exclure 'dns_evil.net.cap' et les chiffres.",
+    scenario: "Isole les captures 'dns_<subs>.evil.net.cap' comportant 1 ou plusieurs sous-domaines formés d'une ou plusieurs lettres minuscules, éventuellement suivies de chiffres, puis d'un point (ex: 'a.', 'p1.c2.'). Exclure les labels vides et ceux composés uniquement de chiffres.",
     targets: ["dns_a.evil.net.cap", "dns_exfil.evil.net.cap", "dns_p1.c2.evil.net.cap"],
     decoys: ["dns_evil.net.cap", "dns_123.evil.net.cap", "dns_a..evil.net.cap"],
-    hint: "Imbrique '+([a-z]).' dans un '+()' : 'dns_+(+([a-z]).)evil.net.cap'.",
-    solution: "dns_+(+([a-z]).)evil.net.cap",
-    debrief: "L'imbrication '+(+([a-z]).)' exige au moins un label DNS, chaque label contenant au moins une lettre minuscule suivie d'un point." },
+    hint: "Chaque label requiert '+([a-z])' et autorise ensuite des chiffres avec '?(+([0-9]))' : 'dns_+(+([a-z])?(+([0-9])).)evil.net.cap'.",
+    solution: "dns_+(+([a-z])?(+([0-9])).)evil.net.cap",
+    debrief: "L'imbrication '+()' exige au moins un label DNS ; chaque label commence par une ou plusieurs lettres minuscules et peut se terminer par des chiffres." },
 
   { id: 80, tier: 4, dom: "GLOB", type: "GLOB", title: "BOSS GLOB — Compromission Supply-Chain Kernel/Libs",
     scenario: "Isole les implants cachés : (1) préfixe '.pkg_' ou '.lib_', (2) suivi de 'v' et d'au moins un chiffre avec patch optionnel '.1' ou '.2', (3) suivi de '_' et d'une archi quelconque SAUF 'wasm' et 'arm', (4) extension '.so' ou '.ko' suivie optionnellement de '.enc'.",
@@ -1575,6 +1575,12 @@ function findTextObjectSpan(line, col, inner, objChar) {
 
 // Convertit une Regex Vim (incluant \<, \>, \(, \), \+) en RegExp JS
 function vimRegexToJS(vimPat, flags) {
+  const endOfMatchIdx = vimPat.indexOf('\\ze');
+  if (endOfMatchIdx !== -1) {
+    const before = vimRegexToJS(vimPat.slice(0, endOfMatchIdx), "").source;
+    const after = vimRegexToJS(vimPat.slice(endOfMatchIdx + 3), "").source;
+    return new RegExp(`${before}(?=${after})`, flags);
+  }
   let jsPat = "";
   for (let i = 0; i < vimPat.length; i++) {
     if (vimPat[i] === '\\' && i + 1 < vimPat.length) {
